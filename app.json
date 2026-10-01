@@ -1,23 +1,18 @@
 {
   "expo": {
-    "name": "synth-glitch",
-    "slug": "synth-glitch",
+    "name": "SynthVJ",
+    "slug": "synth-vj",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "synthglitch",
+    "scheme": "synthvj",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SynthVJ necesita acceder a la cámara para capturar imágenes y clips.",
+        "NSPhotoLibraryAddUsageDescription": "SynthVJ necesita permiso para guardar tus creaciones en Fotos."
+      }
     },
     "web": {
       "output": "static",

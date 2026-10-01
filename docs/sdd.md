@@ -66,13 +66,12 @@ expo-camera ──► archivo (foto/clip) ──► Editor
 ### 4.2 Estructura de carpetas
 
 ```
-app/
+src/app/
   _layout.tsx            # Stack, gesture root, permisos
   index.tsx              # Cámara
   editor.tsx             # Editor (recibe uri, tipo, ancho, alto)
   history/index.tsx      # Lista
   history/[id].tsx       # Detalle
-src/
   effects/
     chromatic.sksl.ts    # Cada shader exporta su string SkSL
     scanlines.sksl.ts
@@ -115,7 +114,7 @@ src/
 
 1. **Foto:** `takePictureAsync` → archivo original. `prepareMedia` genera una copia de preview con lado largo ≤ 2048 px (`expo-image-manipulator`). Se conserva la ruta original para exportar.
 2. **Clip:** `recordAsync({ maxDuration: 5 })` → `.mp4`. En el editor se abre con `useVideo(uri, { looping: true })`; `currentFrame` alimenta el `ImageShader`.
-3. **Exportación:** `drawAsImage(<mismo árbol Group + Shader>, { width, height })` con el tamaño final (lado largo ≤ 4096), `encodeToBytes(JPEG, 95)`, escritura en `documentDirectory/creations/`, `MediaLibrary.saveToLibraryAsync`.
+3. **Exportación:** `drawAsImage(<mismo árbol Group + Shader>, { width, height })` con el tamaño final (lado largo ≤ 4096), `encodeToBytes(JPEG, 95)`, escritura en `new Directory(Paths.document, 'creations')` y creación del asset con `Asset.create(uri)`.
 4. **Cuadro de clip:** el `SkImage` de `currentFrame` en el instante de pulsar Guardar se usa como fuente del `ImageShader` offscreen.
 
 > Los nombres de API de Skia usados en este documento (`drawAsImage`, `useVideo`, `makeImageSnapshot`, `encodeToBytes`) deben confirmarse contra la versión instalada en la prueba de humo de la fase 0.
@@ -268,22 +267,23 @@ Reglas: al superar 30 elementos se eliminan el más antiguo y sus archivos. Escr
 | 6. Video Nivel 2 | RF-03 (clip), RF-09, RF-11, S2 |
 | 7. Cierre | RNF-05, CA-01 a CA-12 |
 
-## 12. Pendientes para la versión 0.3
+## 12. Versiones y pendientes para la versión 0.3
 
-- Completar la tabla de versiones al instalar el proyecto (fase 0):
+Versiones confirmadas en la fase 0:
 
 | Paquete | Versión instalada |
 | --- | --- |
-| `expo` (mínimo 57.0.17) | *por completar* |
-| `react-native` | *por completar* |
-| `@shopify/react-native-skia` | *por completar* |
-| `react-native-reanimated` | *por completar* |
-| `react-native-worklets` | *por completar* |
-| `react-native-gesture-handler` | *por completar* |
-| `expo-camera` | *por completar* |
-| `expo-media-library` | *por completar* |
-| `expo-file-system` | *por completar* |
+| `expo` (mínimo 57.0.17) | `57.0.26` |
+| `react-native` | `0.86.3` |
+| `@shopify/react-native-skia` | `2.6.2` |
+| `react-native-reanimated` | `4.5.1` |
+| `react-native-worklets` | `0.10.1` |
+| `react-native-gesture-handler` | `2.32.0` |
+| `expo-camera` | `57.0.6` |
+| `expo-media-library` | `57.0.5` |
+| `expo-file-system` | `57.0.7` |
 
-- Confirmar qué API de `expo-media-library` y de `expo-file-system` se usa en esa versión.
+- API fijada: `expo-media-library` con `usePermissions({ writeOnly: true })` y `Asset.create(uri)`; `expo-file-system` con `File`, `Directory` y `Paths.document` (API nueva, sin imports de `/legacy`).
+- Skia 2.6.2 confirma `drawAsImage` (asíncrona y nullable), `useVideo` (exportada desde el paquete raíz; `currentFrame` es `SharedValue<SkImage | null>`), `encodeToBytes` (devuelve `Uint8Array`) y `makeImageSnapshot`.
 - Especificar el diseño visual de la barra de herramientas y de la retícula.
 - Resultados de S1 y S2 para cerrar las decisiones D1 y el contrato de exportación.
