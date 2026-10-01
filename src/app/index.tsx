@@ -1,22 +1,27 @@
-import { Canvas, Fill } from "@shopify/react-native-skia";
-import { useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
-import { useEffect } from "react";
+import { router, useIsFocused } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
     Linking,
     Pressable,
-    SafeAreaView,
     StatusBar,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [photosPermission, requestPhotosPermission] = MediaLibrary.usePermissions({
     writeOnly: true,
   });
+  const cameraRef = useRef<CameraView | null>(null);
+  const isFocused = useIsFocused();
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
     if (cameraPermission?.status === "undetermined") {
@@ -94,55 +99,88 @@ export default function HomeScreen() {
     );
   }
 
+  const capturePhoto = async () => {
+    if (!cameraRef.current || !isCameraReady || isCapturing) {
+      return;
+    }
+
+    setIsCapturing(true);
+    setCameraError(null);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
+      router.push({
+        pathname: "/editor",
+        params: {
+          uri: photo.uri,
+          width: String(photo.width),
+          height: String(photo.height),
+        },
+      });
+    } catch {
+      setCameraError("No se pudo capturar la foto. Inténtalo de nuevo.");
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.screen}>
+    <View style={styles.cameraScreen}>
       <StatusBar barStyle="light-content" />
-      <View style={styles.copy}>
-        <Text style={styles.eyebrow}>SYNTHVJ / FASE 00</Text>
-        <Text style={styles.title}>Permisos concedidos</Text>
-      </View>
-      <View accessible accessibilityLabel="Lienzo de prueba de Skia" style={styles.canvasFrame}>
-        <Canvas style={styles.canvas}>
-          <Fill color="#c9f36a" />
-        </Canvas>
-      </View>
-      <Text style={styles.caption}>Skia Canvas activo</Text>
-    </SafeAreaView>
+      <CameraView
+        ref={cameraRef}
+        active={isFocused}
+        facing="back"
+        mode="picture"
+        onCameraReady={() => setIsCameraReady(true)}
+        onMountError={(event) =>
+          setCameraError(`No se pudo iniciar la cámara: ${event.message}`)
+        }
+        style={styles.camera}
+      />
+      <SafeAreaView pointerEvents="box-none" style={styles.overlay}>
+        <View style={styles.topBar}>
+          <Text style={styles.eyebrow}>SYNTHVJ</Text>
+          <Text style={styles.modeLabel}>FOTO</Text>
+        </View>
+        <View style={styles.bottomBar}>
+          {cameraError && <Text style={styles.errorMessage}>{cameraError}</Text>}
+          <Pressable
+            accessibilityLabel="Capturar foto"
+            accessibilityRole="button"
+            disabled={!isCameraReady || isCapturing}
+            onPress={() => void capturePhoto()}
+            style={[
+              styles.captureButton,
+              (!isCameraReady || isCapturing) && styles.captureButtonDisabled,
+            ]}
+          >
+            <View style={styles.captureButtonInner} />
+          </Pressable>
+          <Text style={styles.caption}>
+            {isCapturing ? "Capturando..." : "Toca para capturar"}
+          </Text>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  cameraScreen: {
     flex: 1,
     backgroundColor: "#101512",
-    paddingHorizontal: 28,
-    paddingVertical: 24,
-    justifyContent: "space-between",
-  },
-  copy: {
-    gap: 12,
-    paddingTop: 24,
   },
   eyebrow: {
-    color: "#c9f36a",
+    color: "#f1f5ee",
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.2,
-  },
-  title: {
-    color: "#f1f5ee",
-    fontSize: 30,
-    fontWeight: "700",
   },
   message: {
     color: "#b7c1ba",
     fontSize: 16,
     lineHeight: 24,
     marginTop: 8,
-  },
-  actions: {
-    gap: 12,
-    paddingBottom: 16,
   },
   primaryButton: {
     alignItems: "center",
@@ -171,23 +209,79 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  canvasFrame: {
-    alignItems: "center",
-    alignSelf: "center",
-    backgroundColor: "#1b251f",
-    borderColor: "#354138",
-    borderWidth: 1,
-    justifyContent: "center",
-    padding: 16,
+  camera: {
+    ...StyleSheet.absoluteFill,
   },
-  canvas: {
-    height: 220,
-    width: 220,
+  overlay: {
+    flex: 1,
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+  },
+  topBar: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 12,
+  },
+  modeLabel: {
+    color: "#f1f5ee",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+  },
+  bottomBar: {
+    alignItems: "center",
+    gap: 12,
+    paddingBottom: 20,
+  },
+  captureButton: {
+    alignItems: "center",
+    aspectRatio: 1,
+    borderColor: "#ffffff",
+    borderRadius: 36,
+    borderWidth: 3,
+    height: 72,
+    justifyContent: "center",
+  },
+  captureButtonDisabled: {
+    opacity: 0.45,
+  },
+  captureButtonInner: {
+    aspectRatio: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    height: 48,
+  },
+  errorMessage: {
+    color: "#ffffff",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
   },
   caption: {
-    color: "#b7c1ba",
+    color: "#f1f5ee",
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
+  },
+  screen: {
+    flex: 1,
+    backgroundColor: "#101512",
+    paddingHorizontal: 28,
+    paddingVertical: 24,
+    justifyContent: "space-between",
+  },
+  copy: {
+    gap: 12,
+    paddingTop: 24,
+  },
+  actions: {
+    gap: 12,
+    paddingBottom: 16,
+  },
+  title: {
+    color: "#f1f5ee",
+    fontSize: 30,
+    fontWeight: "700",
   },
 });

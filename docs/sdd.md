@@ -259,7 +259,7 @@ Reglas: al superar 30 elementos se eliminan el más antiguo y sus archivos. Escr
 | Fase | Requisitos que cierra |
 | --- | --- |
 | 0. Setup | RF-01, RNF-06, prueba de humo de Skia |
-| 1. Captura | RF-02, RF-03 (foto), RF-04 |
+| 1. Captura | RF-02 (vista y foto; modo clip en fase 6), RF-04 (abrir editor y descartar) |
 | 2. Spike de shaders | S1, contrato de uniforms (sección 6.1) |
 | 3. Superficie X/Y | RF-06, RF-07, RF-08, RNF-01, RNF-02 |
 | 4. Efectos 2 y 3 | RF-05 |
