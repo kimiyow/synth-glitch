@@ -1,8 +1,19 @@
-import { Canvas, Image as SkiaImage, useImage } from "@shopify/react-native-skia";
+import {
+    Canvas,
+    ImageShader,
+    Rect,
+    Shader,
+    Skia,
+    useImage,
+} from "@shopify/react-native-skia";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { chromaticShader } from "../effects/chromatic.sksl";
+
+const chromaticEffect = Skia.RuntimeEffect.Make(chromaticShader);
 
 export default function EditorRoute() {
   const { uri, width, height } = useLocalSearchParams<{
@@ -13,6 +24,18 @@ export default function EditorRoute() {
   const photoUri = typeof uri === "string" ? uri : "";
   const image = useImage(photoUri);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const amount = useSharedValue(0.015);
+  const angle = useSharedValue(Math.PI / 4);
+  const drawSize = image
+    ? getContainSize(image.width(), image.height(), canvasSize.width, canvasSize.height)
+    : { width: 0, height: 0 };
+  const imageX = (canvasSize.width - drawSize.width) / 2;
+  const imageY = (canvasSize.height - drawSize.height) / 2;
+  const uniforms = useDerivedValue(() => ({
+    resolution: [drawSize.width, drawSize.height],
+    amount: amount.value,
+    angle: angle.value,
+  }));
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -36,15 +59,26 @@ export default function EditorRoute() {
         style={styles.imageFrame}
       >
         <Canvas style={StyleSheet.absoluteFill}>
-          {image && canvasSize.width > 0 && canvasSize.height > 0 && (
-            <SkiaImage
-              fit="contain"
-              image={image}
-              x={0}
-              y={0}
-              width={canvasSize.width}
-              height={canvasSize.height}
-            />
+          {image && chromaticEffect && drawSize.width > 0 && drawSize.height > 0 && (
+            <Rect
+              x={imageX}
+              y={imageY}
+              width={drawSize.width}
+              height={drawSize.height}
+            >
+              <Shader source={chromaticEffect} uniforms={uniforms}>
+                <ImageShader
+                  image={image}
+                  fit="contain"
+                  rect={{
+                    x: imageX,
+                    y: imageY,
+                    width: drawSize.width,
+                    height: drawSize.height,
+                  }}
+                />
+              </Shader>
+            </Rect>
           )}
         </Canvas>
         {!image && (
@@ -114,3 +148,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+function getContainSize(
+  imageWidth: number,
+  imageHeight: number,
+  frameWidth: number,
+  frameHeight: number,
+) {
+  if (imageWidth <= 0 || imageHeight <= 0 || frameWidth <= 0 || frameHeight <= 0) {
+    return { width: 0, height: 0 };
+  }
+
+  const scale = Math.min(frameWidth / imageWidth, frameHeight / imageHeight);
+  return { width: imageWidth * scale, height: imageHeight * scale };
+}
