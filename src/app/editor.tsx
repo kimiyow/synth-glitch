@@ -9,11 +9,23 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
-import { useDerivedValue, useSharedValue } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+    useAnimatedStyle,
+    useDerivedValue,
+    useSharedValue,
+    withDelay,
+    withSequence,
+    withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { chromaticShader } from "../effects/chromatic.sksl";
 
 const chromaticEffect = Skia.RuntimeEffect.Make(chromaticShader);
+const DEFAULT_CONTROL_X = 0.5;
+const DEFAULT_CONTROL_Y = 0.125;
+const MAX_ABERRATION = 0.03;
+const RETICLE_SIZE = 30;
 
 export default function EditorRoute() {
   const { uri, width, height } = useLocalSearchParams<{
@@ -24,8 +36,9 @@ export default function EditorRoute() {
   const photoUri = typeof uri === "string" ? uri : "";
   const image = useImage(photoUri);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const amount = useSharedValue(0.015);
-  const angle = useSharedValue(Math.PI / 4);
+  const controlX = useSharedValue(DEFAULT_CONTROL_X);
+  const controlY = useSharedValue(DEFAULT_CONTROL_Y);
+  const reticleOpacity = useSharedValue(0);
   const drawSize = image
     ? getContainSize(image.width(), image.height(), canvasSize.width, canvasSize.height)
     : { width: 0, height: 0 };
@@ -33,9 +46,53 @@ export default function EditorRoute() {
   const imageY = (canvasSize.height - drawSize.height) / 2;
   const uniforms = useDerivedValue(() => ({
     resolution: [drawSize.width, drawSize.height],
-    amount: amount.value,
-    angle: angle.value,
+    amount: controlX.get() * MAX_ABERRATION,
+    angle: controlY.get() * Math.PI * 2,
   }));
+  const reticleStyle = useAnimatedStyle(() => ({
+    opacity: reticleOpacity.get(),
+    transform: [
+      { translateX: controlX.get() * drawSize.width - RETICLE_SIZE / 2 },
+      { translateY: controlY.get() * drawSize.height - RETICLE_SIZE / 2 },
+    ],
+  }));
+  const panGesture = Gesture.Pan()
+    .minDistance(4)
+    .minPointers(1)
+    .maxPointers(1)
+    .onStart(() => {
+      reticleOpacity.set(withTiming(1, { duration: 80 }));
+    })
+    .onUpdate((event) => {
+      if (event.numberOfPointers !== 1) {
+        return;
+      }
+      controlX.set(Math.min(Math.max(event.x / drawSize.width, 0), 1));
+      controlY.set(Math.min(Math.max(event.y / drawSize.height, 0), 1));
+    })
+    .onFinalize((_event, success) => {
+      if (success) {
+        reticleOpacity.set(withDelay(850, withTiming(0, { duration: 220 })));
+      }
+    });
+  const resetGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .minPointers(1)
+    .maxDistance(3)
+    .onEnd((_event, success) => {
+      if (!success) {
+        return;
+      }
+      controlX.set(DEFAULT_CONTROL_X);
+      controlY.set(DEFAULT_CONTROL_Y);
+      reticleOpacity.set(
+        withSequence(
+          withTiming(1, { duration: 80 }),
+          withDelay(850, withTiming(0, { duration: 220 })),
+        ),
+      );
+    });
+  const gesture = Gesture.Simultaneous(panGesture, resetGesture);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -81,6 +138,30 @@ export default function EditorRoute() {
             </Rect>
           )}
         </Canvas>
+        {image && chromaticEffect && drawSize.width > 0 && drawSize.height > 0 && (
+          <GestureDetector gesture={gesture}>
+            <Animated.View
+              style={[
+                styles.gestureSurface,
+                {
+                  left: imageX,
+                  top: imageY,
+                  width: drawSize.width,
+                  height: drawSize.height,
+                },
+              ]}
+            >
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.reticle, reticleStyle]}
+              >
+                <View style={styles.reticleRing} />
+                <View style={styles.reticleHorizontal} />
+                <View style={styles.reticleVertical} />
+              </Animated.View>
+            </Animated.View>
+          </GestureDetector>
+        )}
         {!image && (
           <Text style={styles.loading}>
             {photoUri ? "Cargando foto..." : "No se recibió la foto capturada."}
@@ -135,6 +216,42 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     overflow: "hidden",
     position: "relative",
+  },
+  gestureSurface: {
+    position: "absolute",
+  },
+  reticle: {
+    height: RETICLE_SIZE,
+    left: 0,
+    position: "absolute",
+    top: 0,
+    width: RETICLE_SIZE,
+  },
+  reticleRing: {
+    borderColor: "#c9f36a",
+    borderRadius: RETICLE_SIZE / 2,
+    borderWidth: 1,
+    height: 20,
+    left: (RETICLE_SIZE - 20) / 2,
+    position: "absolute",
+    top: (RETICLE_SIZE - 20) / 2,
+    width: 20,
+  },
+  reticleHorizontal: {
+    backgroundColor: "#c9f36a",
+    height: 1,
+    left: 1,
+    position: "absolute",
+    right: 1,
+    top: (RETICLE_SIZE - 1) / 2,
+  },
+  reticleVertical: {
+    backgroundColor: "#c9f36a",
+    bottom: 1,
+    left: (RETICLE_SIZE - 1) / 2,
+    position: "absolute",
+    top: 1,
+    width: 1,
   },
   loading: {
     color: "#b7c1ba",
