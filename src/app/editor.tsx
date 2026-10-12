@@ -4,11 +4,19 @@ import {
   Rect,
   Shader,
   Skia,
-  useImage,
 } from "@shopify/react-native-skia";
-import { router, useLocalSearchParams } from "expo-router";
+import * as MediaLibrary from "expo-media-library";
+import { File } from "expo-file-system";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
@@ -24,25 +32,67 @@ import {
   EFFECTS,
   type EffectId,
 } from "../effects/registry";
+import { exportEffectedPhoto } from "../editor/exportImage";
+import { useEditorStore } from "../state/editorStore";
 
 const RETICLE_SIZE = 30;
 
 export default function EditorRoute() {
-  const { uri, width, height } = useLocalSearchParams<{
-    uri?: string;
-    width?: string;
-    height?: string;
-  }>();
-  const photoUri = typeof uri === "string" ? uri : "";
-  const image = useImage(photoUri);
+  const activeMedia = useEditorStore((state) => state.activeMedia);
+  const clearActiveMedia = useEditorStore((state) => state.clearActiveMedia);
+  const photoUri = activeMedia?.uri ?? null;
+  const [loadedPhoto, setLoadedPhoto] = useState<{
+    uri: string;
+    image: NonNullable<ReturnType<typeof Skia.Image.MakeImageFromEncoded>> | null;
+    failed: boolean;
+  } | null>(null);
+  const currentPhoto = loadedPhoto?.uri === photoUri ? loadedPhoto : null;
+  const image = currentPhoto?.image ?? null;
+  const imageLoadError = currentPhoto?.failed ?? false;
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [activeEffectId, setActiveEffectId] = useState<EffectId>(DEFAULT_EFFECT_ID);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [needsSettings, setNeedsSettings] = useState(false);
   const activeEffect = EFFECTS.find((effect) => effect.id === activeEffectId) ?? EFFECTS[0];
   const effect = Skia.RuntimeEffect.Make(activeEffect.shader);
   const controlX = useSharedValue(activeEffect.defaultControl.x);
   const controlY = useSharedValue(activeEffect.defaultControl.y);
   const reticleOpacity = useSharedValue(0);
   const clock = useSharedValue(0);
+
+  useEffect(() => {
+    let isCurrentPhoto = true;
+
+    if (!photoUri) {
+      return () => {
+        isCurrentPhoto = false;
+      };
+    }
+
+    const loadPhoto = async () => {
+      try {
+        const data = await Skia.Data.fromURI(photoUri);
+        const decodedImage = Skia.Image.MakeImageFromEncoded(data);
+        if (!decodedImage) {
+          throw new Error("Skia no pudo decodificar la foto capturada.");
+        }
+        if (isCurrentPhoto) {
+          setLoadedPhoto({ uri: photoUri, image: decodedImage, failed: false });
+        }
+      } catch (error) {
+        console.error("No se pudo cargar la foto capturada en el editor.", error);
+        if (isCurrentPhoto) {
+          setLoadedPhoto({ uri: photoUri, image: null, failed: true });
+        }
+      }
+    };
+
+    void loadPhoto();
+    return () => {
+      isCurrentPhoto = false;
+    };
+  }, [photoUri]);
 
   useEffect(() => {
     controlX.set(activeEffect.defaultControl.x);
@@ -116,6 +166,65 @@ export default function EditorRoute() {
 
   const gesture = Gesture.Simultaneous(panGesture, resetGesture);
 
+  const handleDiscard = () => {
+    clearActiveMedia();
+    setSaveMessage(null);
+    setNeedsSettings(false);
+    router.navigate("/");
+  };
+
+  const handleSave = async () => {
+    if (!activeMedia || isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage(null);
+    setNeedsSettings(false);
+    let temporaryExportUri: string | null = null;
+
+    try {
+      let permission = await MediaLibrary.getPermissionsAsync(true);
+      if (!permission.granted) {
+        permission = await MediaLibrary.requestPermissionsAsync(true);
+      }
+
+      if (!permission.granted) {
+        setSaveMessage(
+          "No se concedió permiso para guardar en Fotos. Puedes habilitarlo en Ajustes y volver a intentarlo.",
+        );
+        setNeedsSettings(true);
+        return;
+      }
+
+      const exported = await exportEffectedPhoto({
+        sourceUri: activeMedia.uri,
+        effectId: activeEffectId,
+        controlX: controlX.get(),
+        controlY: controlY.get(),
+      });
+      temporaryExportUri = exported.uri;
+
+      await MediaLibrary.Asset.create(exported.uri);
+      setSaveMessage("Foto guardada en Fotos.");
+    } catch (error) {
+      console.error("No se pudo exportar o guardar la foto.", error);
+      setSaveMessage("No se pudo guardar la foto. El editor conserva la imagen para reintentar.");
+    } finally {
+      if (temporaryExportUri) {
+        try {
+          const temporaryFile = new File(temporaryExportUri);
+          if (temporaryFile.exists) {
+            temporaryFile.delete();
+          }
+        } catch (error) {
+          console.error("No se pudo limpiar el archivo temporal exportado.", error);
+        }
+      }
+      setIsSaving(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" />
@@ -123,13 +232,15 @@ export default function EditorRoute() {
         <Pressable
           accessibilityLabel="Descartar foto y volver a la cámara"
           accessibilityRole="button"
-          onPress={() => router.back()}
+          onPress={handleDiscard}
           style={styles.backButton}
         >
           <Text style={styles.backButtonText}>Volver</Text>
         </Pressable>
 
-        <Text style={styles.title}>Foto capturada</Text>
+        <Text style={styles.title}>
+          {activeMedia ? "Foto capturada" : "Editor"}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -211,17 +322,62 @@ export default function EditorRoute() {
           </GestureDetector>
         )}
 
-        {!image && (
+        {!image && activeMedia && (
           <Text style={styles.loading}>
-            {photoUri ? "Cargando foto..." : "No se recibió la foto capturada."}
+            {imageLoadError
+              ? "No se pudo cargar la foto. Vuelve a capturarla e inténtalo de nuevo."
+              : "Cargando foto..."}
           </Text>
         )}
       </View>
 
-      {width && height ? (
-        <Text style={styles.dimensions}>{width} × {height} px</Text>
+      {activeMedia ? (
+        <Text style={styles.dimensions}>
+          {activeMedia.width} × {activeMedia.height} px
+        </Text>
       ) : (
         <View style={styles.headerSpacer} />
+      )}
+
+      {activeMedia ? (
+        <View style={styles.saveActions}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSaving}
+            onPress={() => void handleSave()}
+            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          >
+            <Text style={styles.saveButtonText}>
+              {isSaving ? "Guardando..." : "Guardar en Fotos"}
+            </Text>
+          </Pressable>
+          {saveMessage ? (
+            <Text style={styles.saveMessage}>{saveMessage}</Text>
+          ) : null}
+          {needsSettings ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void Linking.openSettings()}
+              style={styles.settingsButton}
+            >
+              <Text style={styles.settingsButtonText}>Abrir Ajustes</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>No hay una foto para editar</Text>
+          <Text style={styles.emptyMessage}>
+            Ve a Cámara y captura una foto para empezar.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.navigate("/")}
+            style={styles.cameraButton}
+          >
+            <Text style={styles.cameraButtonText}>Ir a Cámara</Text>
+          </Pressable>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -341,6 +497,75 @@ const styles = StyleSheet.create({
     color: "#b7c1ba",
     fontSize: 13,
     textAlign: "center",
+  },
+  saveActions: {
+    gap: 10,
+    paddingTop: 12,
+  },
+  saveButton: {
+    alignItems: "center",
+    backgroundColor: "#c9f36a",
+    borderRadius: 12,
+    justifyContent: "center",
+    minHeight: 52,
+    paddingHorizontal: 18,
+  },
+  saveButtonDisabled: {
+    opacity: 0.55,
+  },
+  saveButtonText: {
+    color: "#101512",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  saveMessage: {
+    color: "#f1f5ee",
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+  },
+  settingsButton: {
+    alignItems: "center",
+    borderColor: "#67726b",
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  settingsButtonText: {
+    color: "#f1f5ee",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  emptyState: {
+    alignItems: "center",
+    gap: 10,
+    paddingBottom: 12,
+    paddingTop: 16,
+  },
+  emptyTitle: {
+    color: "#f1f5ee",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  emptyMessage: {
+    color: "#b7c1ba",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  cameraButton: {
+    alignItems: "center",
+    backgroundColor: "#c9f36a",
+    borderRadius: 10,
+    justifyContent: "center",
+    marginTop: 4,
+    minHeight: 44,
+    paddingHorizontal: 20,
+  },
+  cameraButtonText: {
+    color: "#101512",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
 

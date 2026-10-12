@@ -1,7 +1,6 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
-import * as MediaLibrary from "expo-media-library";
 import { router, useIsFocused } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
     Linking,
     Pressable,
@@ -11,35 +10,32 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useEditorStore } from "../state/editorStore";
 
 export default function HomeScreen() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [photosPermission, requestPhotosPermission] = MediaLibrary.usePermissions({
-    writeOnly: true,
-  });
   const cameraRef = useRef<CameraView | null>(null);
+  const setActiveMedia = useEditorStore((state) => state.setActiveMedia);
   const isFocused = useIsFocused();
-  const [isCameraReady, setIsCameraReady] = useState(false);
+  const cameraInstance = useMemo(
+    () => (isFocused ? Symbol("camera-instance") : null),
+    [isFocused],
+  );
+  const [readyCameraInstance, setReadyCameraInstance] = useState<symbol | null>(
+    null,
+  );
+  const isCameraReady =
+    cameraInstance !== null && readyCameraInstance === cameraInstance;
   const [isCapturing, setIsCapturing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
     if (cameraPermission?.status === "undetermined") {
       void requestCameraPermission();
-      return;
     }
+  }, [cameraPermission?.status, requestCameraPermission]);
 
-    if (photosPermission?.status === "undetermined") {
-      void requestPhotosPermission();
-    }
-  }, [
-    cameraPermission?.status,
-    photosPermission?.status,
-    requestCameraPermission,
-    requestPhotosPermission,
-  ]);
-
-  if (!cameraPermission || !photosPermission) {
+  if (!cameraPermission) {
     return (
       <SafeAreaView style={styles.screen}>
         <StatusBar barStyle="light-content" />
@@ -50,20 +46,14 @@ export default function HomeScreen() {
 
   const missingPermissions = [
     cameraPermission.granted ? null : "la cámara",
-    photosPermission.granted ? null : "guardar imágenes en Fotos",
   ].filter((permission): permission is string => permission !== null);
 
   if (missingPermissions.length > 0) {
-    const canAskAgain =
-      (!cameraPermission.granted && cameraPermission.canAskAgain) ||
-      (!photosPermission.granted && photosPermission.canAskAgain);
+    const canAskAgain = !cameraPermission.granted && cameraPermission.canAskAgain;
 
     const retryPermissions = async () => {
       if (!cameraPermission.granted && cameraPermission.canAskAgain) {
         await requestCameraPermission();
-      }
-      if (!photosPermission.granted && photosPermission.canAskAgain) {
-        await requestPhotosPermission();
       }
     };
 
@@ -108,14 +98,13 @@ export default function HomeScreen() {
     setCameraError(null);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
-      router.push({
-        pathname: "/editor",
-        params: {
-          uri: photo.uri,
-          width: String(photo.width),
-          height: String(photo.height),
-        },
+      setActiveMedia({
+        uri: photo.uri,
+        type: "photo",
+        width: photo.width,
+        height: photo.height,
       });
+      router.navigate("/editor");
     } catch {
       setCameraError("No se pudo capturar la foto. Inténtalo de nuevo.");
     } finally {
@@ -126,21 +115,27 @@ export default function HomeScreen() {
   return (
     <View style={styles.cameraScreen}>
       <StatusBar barStyle="light-content" />
-      <CameraView
-        ref={cameraRef}
-        active={isFocused}
-        facing="back"
-        mode="picture"
-        onCameraReady={() => setIsCameraReady(true)}
-        onMountError={(event) =>
-          setCameraError(`No se pudo iniciar la cámara: ${event.message}`)
-        }
-        style={styles.camera}
-      />
+      {isFocused && (
+        <CameraView
+          ref={cameraRef}
+          active
+          facing="back"
+          mode="picture"
+          onCameraReady={() => {
+            if (cameraInstance) {
+              setReadyCameraInstance(cameraInstance);
+            }
+          }}
+          onMountError={(event) =>
+            setCameraError(`No se pudo iniciar la cámara: ${event.message}`)
+          }
+          style={styles.camera}
+        />
+      )}
       <SafeAreaView pointerEvents="box-none" style={styles.overlay}>
         <View style={styles.topBar}>
           <Text style={styles.eyebrow}>SYNTHVJ</Text>
-          <Text style={styles.modeLabel}>FOTO</Text>
+          <Text style={styles.modeLabel}>CÁMARA</Text>
         </View>
         <View style={styles.bottomBar}>
           {cameraError && <Text style={styles.errorMessage}>{cameraError}</Text>}

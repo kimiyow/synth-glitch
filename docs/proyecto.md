@@ -1,6 +1,6 @@
 # SynthVJ: instrumento de síntesis visual móvil
 
-**Documento de proyecto (versión 2, con extensiones del Nivel 3)**
+**Documento de proyecto (versión 3: pestañas y sin historial)**
 
 ## 1. Descripción del proyecto
 
@@ -32,14 +32,13 @@ El paradigma de interacción: en lugar de editar con controles que desconectan a
 | --- | --- |
 | Framework | Expo **SDK 57** (React Native 0.86, `expo@^57.0.17` como mínimo) + TypeScript |
 | Ejecución en iPhone | Expo Go durante todo el proyecto (sin Development Build, sin Mac ni cuenta de desarrollador) |
-| Navegación | `expo-router` |
+| Navegación | `expo-router` con pestañas (`Tabs`): Cámara y Editor |
 | Cámara | `expo-camera` |
 | Render de efectos | `@shopify/react-native-skia` (SkSL) |
 | Gestos y animación | `react-native-gesture-handler` + `react-native-reanimated` |
 | Estado de UI | Zustand (solo efecto seleccionado y modo) |
 | Galería | `expo-media-library` |
-| Historial | `expo-file-system` (`documentDirectory/creations`) + `index.json` de metadatos |
-| Reproducción de video | `useVideo` de Skia para el clip con shader; `expo-video` solo para ver el clip original en el historial |
+| Reproducción de video | `useVideo` de Skia para el clip con shader (`expo-video` no se usa) |
 | Sensor de movimiento | `useAnimatedSensor` de Reanimated (principal); `expo-sensors` como plan B |
 | Importar | `expo-image-picker` |
 | Compartir | `expo-sharing` |
@@ -56,7 +55,7 @@ El paradigma de interacción: en lugar de editar con controles que desconectan a
 2. **Selector de efecto.** Seis efectos, cada uno seleccionable con un tap para el slot activo (A o B).
 3. **Superficie de control X/Y (un dedo).** Sobre la imagen o clip capturado, arrastrar el dedo modifica dos parámetros del efecto activo en tiempo real.
 4. **Guardado y exportación.** Guardar el resultado en la galería como imagen (foto con efecto o frame congelado del clip).
-5. **Historial.** Pantalla con las últimas creaciones guardadas dentro de la app.
+5. **Navegación por pestañas.** Dos pestañas, Cámara y Editor; el editor muestra un aviso si aún no hay imagen.
 6. **Encadenado A/B.** Dos slots de efecto; la salida de A entra en B. Un selector A/B decide cuál controla el dedo.
 7. **Modulación LFO.** Oscilación automática por eje (seno, triángulo, cuadrada, aleatoria) con velocidad y profundidad.
 8. **Grabar y repetir el gesto.** Graba hasta 10 s de movimiento y lo reproduce en bucle.
@@ -98,14 +97,14 @@ Al activarlo se toma la orientación actual como neutral. Inclinar el teléfono 
 
 ### 5.5 Exportar GIF
 
-Solo desde fotos con animación (pista grabada o algún LFO activo). Duración: la de la pista (máx. 4 s) o 3 s si solo hay LFO. Muestra progreso y se puede cancelar. Se guarda en la galería y en el historial.
+Solo desde fotos con animación (pista grabada o algún LFO activo). Duración: la de la pista (máx. 4 s) o 3 s si solo hay LFO. Muestra progreso y se puede cancelar. Se guarda en la galería.
 
 ## 6. Niveles de entrega
 
 | Nivel | Estado | Contenido |
 | --- | --- | --- |
-| 1 | Obligatorio | Foto → efecto en tiempo real con el dedo → guardar PNG/JPG en galería → historial |
-| 2 | Obligatorio | Clip de 3-5 s reproducido en bucle con efecto en vivo controlado con el dedo. Se guarda un **frame congelado** como imagen; el clip original sin procesar queda en el historial |
+| 1 | Obligatorio | Foto → efecto en tiempo real con el dedo → guardar JPG en galería |
+| 2 | Obligatorio | Clip de 3-5 s reproducido en bucle con efecto en vivo controlado con el dedo. Se guarda un **frame congelado** como imagen; se guarda en la galería. El clip original no se conserva |
 
 | 3 | Obligatorio (decisión del equipo) | Extensiones: seis efectos, encadenado A/B, LFO, grabar/repetir gesto, giroscopio, importar, presets, compartir, exportar GIF y pulido visual |
 
@@ -119,21 +118,22 @@ No se exporta video con efecto aplicado; el GIF se genera solo desde fotos.
 - Audio-reactividad con FFT, sampler tipo MPC, secuenciador por pasos y salida OSC / modo escenario para VJing.
 - Modo performance (interfaz oculta para grabar la pantalla), respuesta háptica y reactividad al micrófono.
 - Exportar GIF desde clips de video.
+- Historial interno de creaciones: lo guardado vive solo en la galería del iPhone.
 
 ## 8. Trabajo futuro
 
 - Efectos sobre la **cámara en vivo**, incluido un efecto de retroalimentación (feedback loop). Requiere `react-native-vision-camera` con frame processors + Skia, es decir, Development Build y código nativo, que no están disponibles en este proyecto. No forma parte del semestre.
 - Exportación de video con efecto y las ideas de audio y VJing de la sección 7.
 
-## 9. Plan por fases (12 semanas)
+## 9. Plan por fases (12 semanas restantes)
 
-Las fases 0 a 4 están cerradas y la fase 5 está en curso. El calendario conserva las **12 semanas** planificadas desde la fase 3; la semana actual del plan es la 3.
+Las fases 0 a 2 están cerradas y la fase 3 está en curso. El calendario se re-planificó a **12 semanas** a partir de la semana actual (Semana 1).
 
 | Fase | Semana | Entregable verificable en iPhone |
 | --- | --- | --- |
 | 3. Superficie X/Y | 1 | Pan gesture ligado a uniforms; efecto fluido a 60 FPS; doble tap = reset |
 | 4. Efectos 2 y 3 | 2 | Scanlines y Datamosh con selector por tap |
-| 5. Guardado e historial | 3 | Exportar foto con efecto (offscreen → archivo → galería) y pantalla de historial |
+| 5. Guardado en galería y navegación por pestañas | 3 | Exportar foto con efecto (offscreen → JPG → galería) y refactor de la navegación a pestañas |
 | 6. Video Nivel 2 | 4-5 | Grabar clip, reproducir en bucle con efecto y guardar frame |
 | 7. Efectos adicionales, importar y compartir | 6 | VHS, Pixelado y Ondulación; importar de galería; compartir imagen |
 | 8. Encadenado A/B y presets | 7 | Slots A y B con selector; guardar y aplicar presets; spike S3 |
@@ -153,7 +153,7 @@ Las fases 0 a 4 están cerradas y la fase 5 está en curso. El calendario conser
 5. **Calendario ajustado.** Las fases 7-12 suman unas 7 semanas sobre un plan que ya ocupa unas 5. Se vigila con los puntos de control. *Contingencia propuesta (por aprobar):* si en el control de la semana 9 el spike del GIF no está resuelto, el GIF es lo primero que se recorta.
 6. **Rendimiento del encadenado.** Dos shaders anidados multiplican las muestras por píxel. Spike S3 en la fase 8; plan B: limitar el slot B a efectos de una sola muestra.
 7. **Giroscopio.** Spike S4 en la fase 10; plan B con `expo-sensors`.
-8. **GIF.** Codificación en el hilo de JS y reproducción animada en Fotos de iOS no confirmada. Spike S5 en la fase 11; plan B: conservar el GIF en el historial y entregarlo por la hoja de compartir.
+8. **GIF.** Codificación en el hilo de JS y reproducción animada en Fotos de iOS no confirmada. Spike S5 en la fase 11; plan B: entregar el GIF solo por la hoja de compartir.
 9. **Ícono y splash no visibles en Expo Go.** Se configuran en `app.json`, se entregan como assets y se añade una pantalla de bienvenida interna.
 10. **Actualización de Expo Go.** La documentación del SDK 58 ya existe; se desactivan las actualizaciones automáticas y se migra solo entre fases.
 
@@ -161,12 +161,12 @@ Las fases 0 a 4 están cerradas y la fase 5 está en curso. El calendario conser
 
 - Efecto activo a ≥ 55 FPS en el iPhone de prueba durante el arrastre.
 - Los tres efectos seleccionables y controlables con un dedo.
-- Foto con efecto guardada en galería y visible en el historial.
+- Foto con efecto guardada en la galería.
 - Clip reproducido en bucle con efecto y frame guardable.
 - Seis efectos disponibles; encadenado A/B funcional a ≥ 55 FPS.
 - LFO, grabar/repetir gesto y giroscopio operativos.
 - Importar, presets y compartir funcionando.
-- GIF generado desde una foto con animación, guardado en galería e historial.
+- GIF generado desde una foto con animación, guardado en la galería.
 
 ## 12. Restricciones confirmadas
 
