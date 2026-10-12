@@ -125,9 +125,9 @@ No se exporta video con efecto aplicado; el GIF se genera solo desde fotos.
 - Efectos sobre la **cámara en vivo**, incluido un efecto de retroalimentación (feedback loop). Requiere `react-native-vision-camera` con frame processors + Skia, es decir, Development Build y código nativo, que no están disponibles en este proyecto. No forma parte del semestre.
 - Exportación de video con efecto y las ideas de audio y VJing de la sección 7.
 
-## 9. Plan por fases (12 semanas restantes)
+## 9. Plan por fases (12 semanas)
 
-Las fases 0 a 2 están cerradas y la fase 3 está en curso. El calendario se re-planificó a **12 semanas** a partir de la semana actual (Semana 1).
+Las fases 0 a 4 están cerradas y la fase 5 está en curso. El calendario conserva las **12 semanas** planificadas desde la fase 3; la semana actual del plan es la 3.
 
 | Fase | Semana | Entregable verificable en iPhone |
 | --- | --- | --- |

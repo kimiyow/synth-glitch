@@ -1,30 +1,30 @@
 import {
-    Canvas,
-    ImageShader,
-    Rect,
-    Shader,
-    Skia,
-    useImage,
+  Canvas,
+  ImageShader,
+  Rect,
+  Shader,
+  Skia,
+  useImage,
 } from "@shopify/react-native-skia";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-    useAnimatedStyle,
-    useDerivedValue,
-    useSharedValue,
-    withDelay,
-    withSequence,
-    withTiming,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { chromaticShader } from "../effects/chromatic.sksl";
+import {
+  DEFAULT_EFFECT_ID,
+  EFFECTS,
+  type EffectId,
+} from "../effects/registry";
 
-const chromaticEffect = Skia.RuntimeEffect.Make(chromaticShader);
-const DEFAULT_CONTROL_X = 0.5;
-const DEFAULT_CONTROL_Y = 0.125;
-const MAX_ABERRATION = 0.03;
 const RETICLE_SIZE = 30;
 
 export default function EditorRoute() {
@@ -36,9 +36,28 @@ export default function EditorRoute() {
   const photoUri = typeof uri === "string" ? uri : "";
   const image = useImage(photoUri);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-  const controlX = useSharedValue(DEFAULT_CONTROL_X);
-  const controlY = useSharedValue(DEFAULT_CONTROL_Y);
+  const [activeEffectId, setActiveEffectId] = useState<EffectId>(DEFAULT_EFFECT_ID);
+  const activeEffect = EFFECTS.find((effect) => effect.id === activeEffectId) ?? EFFECTS[0];
+  const effect = Skia.RuntimeEffect.Make(activeEffect.shader);
+  const controlX = useSharedValue(activeEffect.defaultControl.x);
+  const controlY = useSharedValue(activeEffect.defaultControl.y);
   const reticleOpacity = useSharedValue(0);
+  const clock = useSharedValue(0);
+
+  useEffect(() => {
+    controlX.set(activeEffect.defaultControl.x);
+    controlY.set(activeEffect.defaultControl.y);
+    reticleOpacity.set(withTiming(1, { duration: 80 }));
+  }, [activeEffect.defaultControl.x, activeEffect.defaultControl.y, controlX, controlY, reticleOpacity]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      clock.set(clock.get() + 0.016);
+    }, 16);
+
+    return () => clearInterval(intervalId);
+  }, [clock]);
+
   const drawSize = image
     ? getContainSize(image.width(), image.height(), canvasSize.width, canvasSize.height)
     : { width: 0, height: 0 };
@@ -46,8 +65,8 @@ export default function EditorRoute() {
   const imageY = (canvasSize.height - drawSize.height) / 2;
   const uniforms = useDerivedValue(() => ({
     resolution: [drawSize.width, drawSize.height],
-    amount: controlX.get() * MAX_ABERRATION,
-    angle: controlY.get() * Math.PI * 2,
+    param: [controlX.get(), controlY.get()],
+    time: clock.get(),
   }));
   const reticleStyle = useAnimatedStyle(() => ({
     opacity: reticleOpacity.get(),
@@ -56,6 +75,7 @@ export default function EditorRoute() {
       { translateY: controlY.get() * drawSize.height - RETICLE_SIZE / 2 },
     ],
   }));
+
   const panGesture = Gesture.Pan()
     .minDistance(4)
     .minPointers(1)
@@ -75,6 +95,7 @@ export default function EditorRoute() {
         reticleOpacity.set(withDelay(850, withTiming(0, { duration: 220 })));
       }
     });
+
   const resetGesture = Gesture.Tap()
     .numberOfTaps(2)
     .minPointers(1)
@@ -83,8 +104,8 @@ export default function EditorRoute() {
       if (!success) {
         return;
       }
-      controlX.set(DEFAULT_CONTROL_X);
-      controlY.set(DEFAULT_CONTROL_Y);
+      controlX.set(activeEffect.defaultControl.x);
+      controlY.set(activeEffect.defaultControl.y);
       reticleOpacity.set(
         withSequence(
           withTiming(1, { duration: 80 }),
@@ -92,6 +113,7 @@ export default function EditorRoute() {
         ),
       );
     });
+
   const gesture = Gesture.Simultaneous(panGesture, resetGesture);
 
   return (
@@ -106,9 +128,34 @@ export default function EditorRoute() {
         >
           <Text style={styles.backButtonText}>Volver</Text>
         </Pressable>
+
         <Text style={styles.title}>Foto capturada</Text>
         <View style={styles.headerSpacer} />
       </View>
+
+      <View style={styles.effectSelector}>
+        {EFFECTS.map((effectEntry) => (
+          <Pressable
+            accessibilityRole="button"
+            key={effectEntry.id}
+            onPress={() => setActiveEffectId(effectEntry.id)}
+            style={[
+              styles.effectButton,
+              activeEffectId === effectEntry.id && styles.effectButtonActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.effectButtonText,
+                activeEffectId === effectEntry.id && styles.effectButtonTextActive,
+              ]}
+            >
+              {effectEntry.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       <View
         onLayout={({ nativeEvent: { layout } }) =>
           setCanvasSize({ width: layout.width, height: layout.height })
@@ -116,14 +163,14 @@ export default function EditorRoute() {
         style={styles.imageFrame}
       >
         <Canvas style={StyleSheet.absoluteFill}>
-          {image && chromaticEffect && drawSize.width > 0 && drawSize.height > 0 && (
+          {image && effect && drawSize.width > 0 && drawSize.height > 0 && (
             <Rect
               x={imageX}
               y={imageY}
               width={drawSize.width}
               height={drawSize.height}
             >
-              <Shader source={chromaticEffect} uniforms={uniforms}>
+              <Shader source={effect} uniforms={uniforms}>
                 <ImageShader
                   image={image}
                   fit="contain"
@@ -138,7 +185,8 @@ export default function EditorRoute() {
             </Rect>
           )}
         </Canvas>
-        {image && chromaticEffect && drawSize.width > 0 && drawSize.height > 0 && (
+
+        {image && effect && drawSize.width > 0 && drawSize.height > 0 && (
           <GestureDetector gesture={gesture}>
             <Animated.View
               style={[
@@ -162,12 +210,14 @@ export default function EditorRoute() {
             </Animated.View>
           </GestureDetector>
         )}
+
         {!image && (
           <Text style={styles.loading}>
             {photoUri ? "Cargando foto..." : "No se recibió la foto capturada."}
           </Text>
         )}
       </View>
+
       {width && height ? (
         <Text style={styles.dimensions}>{width} × {height} px</Text>
       ) : (
@@ -207,6 +257,34 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     minWidth: 72,
+  },
+  effectSelector: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  effectButton: {
+    backgroundColor: "#1b251f",
+    borderColor: "#2d3a32",
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  effectButtonActive: {
+    backgroundColor: "#c9f36a",
+    borderColor: "#c9f36a",
+  },
+  effectButtonText: {
+    color: "#f1f5ee",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  effectButtonTextActive: {
+    color: "#101512",
   },
   imageFrame: {
     alignItems: "center",

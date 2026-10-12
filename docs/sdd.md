@@ -433,7 +433,7 @@ Reglas:
 
 ## 11. Trazabilidad con las fases
 
-Calendario re-planificado a **12 semanas** a partir de la semana actual (Semana 1 = Fase 3 en curso). Las fases 0-2 ya están cerradas.
+Calendario de **12 semanas** planificado desde la fase 3. Las fases 0-4 están cerradas y la fase 5 (semana 3) está en curso.
 
 | Fase | Semana | Requisitos que cierra |
 | --- | --- | --- |
