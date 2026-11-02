@@ -39,6 +39,19 @@ describe("estimateLayerCost", () => {
     ).toBe(1);
   });
 
+  it("uses the shader sample count for all six effects", () => {
+    expect(
+      estimateLayerCost([
+        createLayer("chromatic"),
+        createLayer("scanlines"),
+        createLayer("datamosh"),
+        createLayer("vhs"),
+        createLayer("pixelate"),
+        createLayer("wave"),
+      ]),
+    ).toBe(12);
+  });
+
   it("keeps the technical layer limit at twelve", () => {
     expect(MAX_LAYER_COUNT).toBe(12);
   });

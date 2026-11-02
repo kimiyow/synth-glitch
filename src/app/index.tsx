@@ -11,13 +11,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { activateMedia } from "../media/activateMedia";
+import { pickMediaFromLibrary } from "../media/pickMedia";
 import { CornerMarks } from "../ui/CornerMarks";
 import { colors, geometry, type } from "../ui/tokens";
 import { useLayout } from "../ui/useLayout";
-import {
-  type ActiveMedia,
-  useEditorStore,
-} from "../state/editorStore";
 
 const MIN_CLIP_DURATION_SECONDS = 1;
 const MAX_CLIP_DURATION_SECONDS = 5;
@@ -25,7 +23,6 @@ const MAX_CLIP_DURATION_SECONDS = 5;
 export default function HomeScreen() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
-  const setActiveMedia = useEditorStore((state) => state.setActiveMedia);
   const isFocused = useIsFocused();
   const { margin, regular, scale } = useLayout();
   const cameraInstance = useMemo(
@@ -38,6 +35,7 @@ export default function HomeScreen() {
   const isCameraReady =
     cameraInstance !== null && readyCameraInstance === cameraInstance;
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [captureMode, setCaptureMode] = useState<"photo" | "clip">("photo");
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -46,20 +44,6 @@ export default function HomeScreen() {
   const recordingInProgress = useRef(false);
   const recordingDurationRef = useRef(0);
   const isFocusedRef = useRef(isFocused);
-  const activateMedia = (media: ActiveMedia) => {
-    const previousMedia = useEditorStore.getState().activeMedia;
-    setActiveMedia(media);
-    if (previousMedia?.type === "clip" && previousMedia.uri !== media.uri) {
-      try {
-        const previousClip = new File(previousMedia.uri);
-        if (previousClip.exists) {
-          previousClip.delete();
-        }
-      } catch (error) {
-        console.error("No se pudo limpiar el clip reemplazado.", error);
-      }
-    }
-  };
 
   useEffect(() => {
     if (cameraPermission?.status === "undetermined") {
@@ -74,6 +58,33 @@ export default function HomeScreen() {
     }
   }, [isFocused]);
 
+  const importMedia = async () => {
+    if (isImporting || isCapturing || isRecording) {
+      return;
+    }
+
+    setIsImporting(true);
+    setCameraError(null);
+    try {
+      const result = await pickMediaFromLibrary();
+      if (result.kind === "cancelled") {
+        return;
+      }
+      if (result.kind === "rejected") {
+        setCameraError(result.message);
+        return;
+      }
+
+      activateMedia(result.media);
+      router.navigate("/editor");
+    } catch (error) {
+      console.error("No se pudo importar contenido desde Fotos.", error);
+      setCameraError("ERROR · NO SE PUDO IMPORTAR. REINTENTA.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   if (!cameraPermission) {
     return (
       <SafeAreaView style={styles.permissionScreen}>
@@ -83,12 +94,36 @@ export default function HomeScreen() {
         <Text style={styles.permissionCopy}>
           Necesitamos usar la cámara para capturar imágenes y crear efectos.
         </Text>
+        {cameraError ? (
+          <Text accessibilityRole="alert" style={styles.permissionError}>
+            {cameraError}
+          </Text>
+        ) : null}
+        {cameraError?.startsWith("PERMISO DENEGADO") ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void Linking.openSettings()}
+            style={styles.paperOutlineButton}
+          >
+            <Text style={styles.paperOutlineButtonText}>ABRIR AJUSTES</Text>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           onPress={() => void requestCameraPermission()}
           style={styles.paperButton}
         >
           <Text style={styles.paperButtonText}>PERMITIR</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          disabled={isImporting}
+          onPress={() => void importMedia()}
+          style={styles.paperOutlineButton}
+        >
+          <Text style={styles.paperOutlineButtonText}>
+            {isImporting ? "ABRIENDO FOTOS…" : "IMPORTAR DESDE FOTOS"}
+          </Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -103,6 +138,11 @@ export default function HomeScreen() {
         <Text style={styles.permissionCopy}>
           Activa el acceso a la cámara para capturar imágenes.
         </Text>
+        {cameraError ? (
+          <Text accessibilityRole="alert" style={styles.permissionError}>
+            {cameraError}
+          </Text>
+        ) : null}
         {cameraPermission.canAskAgain && (
           <Pressable
             accessibilityRole="button"
@@ -118,6 +158,16 @@ export default function HomeScreen() {
           style={styles.paperOutlineButton}
         >
           <Text style={styles.paperOutlineButtonText}>ABRIR AJUSTES</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          disabled={isImporting}
+          onPress={() => void importMedia()}
+          style={styles.paperOutlineButton}
+        >
+          <Text style={styles.paperOutlineButtonText}>
+            {isImporting ? "ABRIENDO FOTOS…" : "IMPORTAR DESDE FOTOS"}
+          </Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -324,9 +374,9 @@ export default function HomeScreen() {
                 accessibilityRole="tab"
                 accessibilityState={{
                   selected: captureMode === mode,
-                  disabled: isRecording || isCapturing,
+                  disabled: isRecording || isCapturing || isImporting,
                 }}
-                disabled={isRecording || isCapturing}
+                disabled={isRecording || isCapturing || isImporting}
                 key={mode}
                 onPress={() => setCaptureMode(mode)}
                 style={styles.modeItem}
@@ -350,6 +400,15 @@ export default function HomeScreen() {
           {cameraError ? (
             <View style={styles.errorBlock}>
               <Text style={styles.errorText}>{cameraError}</Text>
+              {cameraError.startsWith("PERMISO DENEGADO") ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void Linking.openSettings()}
+                  style={styles.retryButton}
+                >
+                  <Text style={styles.retryText}>ABRIR AJUSTES</Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setCameraError(null)}
@@ -370,6 +429,7 @@ export default function HomeScreen() {
             }
             accessibilityRole="button"
             disabled={
+              isImporting ||
               !isCameraReady ||
               (isCapturing &&
                 (!isRecording ||
@@ -404,6 +464,16 @@ export default function HomeScreen() {
                   : "TOCA PARA DETENER"
                 : "TOCA PARA GRABAR · MÁX. 5 S"}
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isImporting || isCapturing || isRecording}
+            onPress={() => void importMedia()}
+            style={styles.galleryButton}
+          >
+            <Text style={styles.galleryButtonText}>
+              {isImporting ? "ABRIENDO FOTOS…" : "IMPORTAR FOTO O VIDEO"}
+            </Text>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
@@ -442,6 +512,14 @@ const styles = StyleSheet.create({
     fontSize: type.body,
     lineHeight: 22,
     marginBottom: 24,
+  },
+  permissionError: {
+    color: colors.paperText,
+    fontFamily: type.family,
+    fontSize: type.label,
+    letterSpacing: 0.6,
+    marginBottom: 16,
+    textAlign: "center",
   },
   paperButton: {
     alignItems: "center",
@@ -610,6 +688,21 @@ const styles = StyleSheet.create({
     fontSize: type.micro,
     letterSpacing: 1.5,
     minHeight: 12,
+  },
+  galleryButton: {
+    alignItems: "center",
+    borderColor: colors.inkLineStrong,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: geometry.target,
+    minWidth: 192,
+    paddingHorizontal: 16,
+  },
+  galleryButtonText: {
+    color: colors.inkText,
+    fontFamily: type.family,
+    fontSize: type.micro,
+    letterSpacing: 1.2,
   },
   errorBlock: {
     alignItems: "center",

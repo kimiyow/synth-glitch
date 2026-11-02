@@ -7,6 +7,7 @@ import {
   type SkImage,
 } from "@shopify/react-native-skia";
 import * as MediaLibrary from "expo-media-library";
+import * as Sharing from "expo-sharing";
 import { File } from "expo-file-system";
 import { router, useIsFocused } from "expo-router";
 import {
@@ -54,6 +55,8 @@ import {
   createLayer,
   useEditorStore,
 } from "../state/editorStore";
+import { activateMedia } from "../media/activateMedia";
+import { pickMediaFromLibrary } from "../media/pickMedia";
 import {
   estimateLayerCost,
   LAYER_COST_WARNING_THRESHOLD,
@@ -123,9 +126,12 @@ export default function EditorRoute() {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{
     text: string;
     failed: boolean;
+    retryAction?: "save" | "share";
   } | null>(null);
   const [needsSettings, setNeedsSettings] = useState(false);
   const [layerNotice, setLayerNotice] = useState<string | null>(null);
@@ -522,8 +528,67 @@ export default function EditorRoute() {
     });
   };
 
+  const importMedia = async () => {
+    if (isImporting || isSaving || isSharing) {
+      return;
+    }
+
+    setIsImporting(true);
+    setSaveMessage(null);
+    setNeedsSettings(false);
+    try {
+      const result = await pickMediaFromLibrary();
+      if (result.kind === "cancelled") {
+        return;
+      }
+      if (result.kind === "rejected") {
+        setSaveMessage({ text: result.message, failed: true });
+        setNeedsSettings(result.message.startsWith("PERMISO DENEGADO"));
+        return;
+      }
+
+      activateMedia(result.media);
+      setClipLoadFailedUri(null);
+      setOpenMenu(null);
+    } catch (error) {
+      console.error("No se pudo importar contenido desde Fotos.", error);
+      setSaveMessage({
+        text: "ERROR · NO SE PUDO IMPORTAR. REINTENTA.",
+        failed: true,
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const renderActiveMedia = async () => {
+    if (!activeMedia) {
+      throw new Error("No hay contenido para exportar.");
+    }
+
+    const currentParams = layerParams.get();
+    const exportLayers = scene.layers.map((layer, index) => ({
+      ...layer,
+      params: {
+        x: currentParams[index * 2] ?? layer.params.x,
+        y: currentParams[index * 2 + 1] ?? layer.params.y,
+      },
+    }));
+
+    return activeMedia.type === "clip"
+      ? exportEffectedFrame({
+          sourceImage: currentClip?.currentFrame.get() ?? null,
+          layers: exportLayers,
+          rotation: currentClip?.rotation ?? 0,
+        })
+      : exportEffectedPhoto({
+          sourceUri: activeMedia.uri,
+          layers: exportLayers,
+        });
+  };
+
   const handleSave = async () => {
-    if (!activeMedia || isSaving) {
+    if (!activeMedia || isSaving || isSharing || isImporting) {
       return;
     }
 
@@ -546,27 +611,7 @@ export default function EditorRoute() {
         return;
       }
 
-      const exportLayers = scene.layers.map((layer, index) => {
-        const currentParams = layerParams.get();
-        return {
-          ...layer,
-          params: {
-            x: currentParams[index * 2] ?? layer.params.x,
-            y: currentParams[index * 2 + 1] ?? layer.params.y,
-          },
-        };
-      });
-      const exported =
-        activeMedia.type === "clip"
-          ? await exportEffectedFrame({
-              sourceImage: currentClip?.currentFrame.get() ?? null,
-              layers: exportLayers,
-              rotation: currentClip?.rotation ?? 0,
-            })
-          : await exportEffectedPhoto({
-              sourceUri: activeMedia.uri,
-              layers: exportLayers,
-            });
+      const exported = await renderActiveMedia();
       temporaryExportUri = exported.uri;
       await MediaLibrary.Asset.create(exported.uri);
       setSaveMessage({
@@ -585,6 +630,7 @@ export default function EditorRoute() {
             ? "ERROR · NO SE PUDO GUARDAR EL FOTOGRAMA"
             : "ERROR · NO SE PUDO GUARDAR LA FOTO",
         failed: true,
+        retryAction: "save",
       });
     } finally {
       if (temporaryExportUri) {
@@ -598,6 +644,56 @@ export default function EditorRoute() {
         }
       }
       setIsSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!activeMedia || isSaving || isSharing || isImporting) {
+      return;
+    }
+
+    setIsSharing(true);
+    setSaveMessage(null);
+    let temporaryExportUri: string | null = null;
+    let sharingAvailable = false;
+
+    try {
+      sharingAvailable = await Sharing.isAvailableAsync();
+      if (!sharingAvailable) {
+        throw new Error("La hoja del sistema para compartir no está disponible.");
+      }
+
+      const exported = await renderActiveMedia();
+      temporaryExportUri = exported.uri;
+      await Sharing.shareAsync(exported.uri, {
+        mimeType: "image/jpeg",
+        UTI: "public.jpeg",
+        dialogTitle: "Compartir imagen SynthVJ",
+      });
+      setSaveMessage({
+        text: "IMAGEN LISTA PARA COMPARTIR",
+        failed: false,
+      });
+      setOpenMenu(null);
+    } catch (error) {
+      console.error("No se pudo compartir la imagen procesada.", error);
+      setSaveMessage({
+        text: "ERROR · NO SE PUDO COMPARTIR LA IMAGEN",
+        failed: true,
+        retryAction: sharingAvailable ? "share" : undefined,
+      });
+    } finally {
+      if (temporaryExportUri) {
+        try {
+          const temporaryFile = new File(temporaryExportUri);
+          if (temporaryFile.exists) {
+            temporaryFile.delete();
+          }
+        } catch (error) {
+          console.error("No se pudo limpiar el archivo temporal compartido.", error);
+        }
+      }
+      setIsSharing(false);
     }
   };
 
@@ -724,6 +820,16 @@ export default function EditorRoute() {
             <Text style={styles.emptyCopy}>TOMA O IMPORTA UNA IMAGEN</Text>
             <Pressable
               accessibilityRole="button"
+              disabled={isImporting}
+              onPress={() => void importMedia()}
+              style={styles.outlineButton}
+            >
+              <Text style={styles.outlineButtonText}>
+                {isImporting ? "ABRIENDO FOTOS…" : "IMPORTAR DESDE FOTOS"}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
               onPress={() => router.navigate("/")}
               style={styles.outlineButton}
             >
@@ -799,7 +905,7 @@ export default function EditorRoute() {
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              disabled={!activeMedia}
+              disabled={!activeMedia || isSaving || isSharing || isImporting}
               onPress={() => toggleMenu("save")}
               style={styles.saveTrigger}
             >
@@ -966,16 +1072,31 @@ export default function EditorRoute() {
                 <View style={styles.saveMenuContent}>
                   <Pressable
                     accessibilityRole="button"
-                    disabled={!activeMedia || isSaving}
+                    disabled={!activeMedia || isSaving || isSharing || isImporting}
                     onPress={() => void handleSave()}
                     style={styles.saveMenuAction}
                   >
                     <Text style={styles.saveMenuActionText}>
                       {isSaving
                         ? "GUARDANDO…"
-                        : activeMedia?.type === "clip"
-                          ? "FOTOGRAMA · JPG"
-                          : "IMAGEN · JPG"}
+                        : isSharing
+                          ? "COMPARTIENDO…"
+                          : activeMedia?.type === "clip"
+                            ? "FOTOGRAMA · JPG"
+                            : "IMAGEN · JPG"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={!activeMedia || isSaving || isSharing || isImporting}
+                    onPress={() => void handleShare()}
+                    style={[
+                      styles.saveMenuAction,
+                      styles.shareMenuAction,
+                    ]}
+                  >
+                    <Text style={styles.saveMenuActionText}>
+                      {isSharing ? "COMPARTIENDO…" : "COMPARTIR IMAGEN"}
                     </Text>
                   </Pressable>
                   <View style={styles.disabledSaveItem}>
@@ -1015,14 +1136,20 @@ export default function EditorRoute() {
               <Text style={styles.statusActionText}>ABRIR AJUSTES</Text>
             </Pressable>
           ) : null}
-          {saveMessage.failed && !needsSettings ? (
+          {saveMessage.failed && saveMessage.retryAction ? (
             <Pressable
               accessibilityRole="button"
-              disabled={isSaving}
-              onPress={() => void handleSave()}
+              disabled={isSaving || isSharing}
+              onPress={() =>
+                saveMessage.retryAction === "share"
+                  ? void handleShare()
+                  : void handleSave()
+              }
               style={styles.statusAction}
             >
-              <Text style={styles.statusActionText}>REINTENTAR</Text>
+              <Text style={styles.statusActionText}>
+                REINTENTAR
+              </Text>
             </Pressable>
           ) : null}
         </View>
@@ -1044,7 +1171,7 @@ export default function EditorRoute() {
         </View>
       ) : null}
 
-      {isSaving ? <View style={styles.progressLine} /> : null}
+      {isSaving || isSharing ? <View style={styles.progressLine} /> : null}
     </SafeAreaView>
   );
 }
@@ -1547,6 +1674,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "center",
     minHeight: geometry.target,
+  },
+  shareMenuAction: {
+    marginTop: 8,
   },
   saveMenuActionText: {
     color: colors.inkText,
