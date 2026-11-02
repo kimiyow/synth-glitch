@@ -3,6 +3,7 @@ import React from "react";
 import {
   ImageFormat,
   ImageShader,
+  Group,
   Rect,
   Shader,
   Skia,
@@ -72,7 +73,7 @@ async function renderEffectedImage(
   const width = Math.max(1, Math.round(sourceWidth * scale));
   const height = Math.max(1, Math.round(sourceHeight * scale));
   const rect = { x: 0, y: 0, width, height };
-  const imageRect = isQuarterTurn
+  const renderRect = isQuarterTurn
     ? {
         x: (width - height) / 2,
         y: (height - width) / 2,
@@ -80,10 +81,10 @@ async function renderEffectedImage(
         height: width,
       }
     : rect;
-  const imageShaderTransform =
+  const videoTransform =
     rotation === 0 ? undefined : [{ rotateZ: (rotation * Math.PI) / 180 }];
-  const imageShaderOrigin =
-    rotation === 0 ? undefined : { x: width / 2, y: height / 2 };
+  const videoTransformOrigin =
+    videoTransform ? { x: width / 2, y: height / 2 } : undefined;
 
   const visibleLayers = layers.filter((layer) => layer.visible);
   const shaderTree = visibleLayers.reduce<React.ReactElement>(
@@ -109,16 +110,21 @@ async function renderEffectedImage(
     React.createElement(ImageShader, {
       image: sourceImage,
       fit: "contain",
-      origin: imageShaderOrigin,
-      rect: imageRect,
-      transform: imageShaderTransform,
+      rect: renderRect,
     }),
   );
-  const element = React.createElement(
+  const output = React.createElement(
     Rect,
-    rect,
+    renderRect,
     shaderTree,
   );
+  const element = videoTransform
+    ? React.createElement(
+        Group,
+        { origin: videoTransformOrigin, transform: videoTransform },
+        output,
+      )
+    : output;
 
   const renderedImage = await drawAsImage(element, { width, height });
   if (!renderedImage) {

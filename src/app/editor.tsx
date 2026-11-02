@@ -1,5 +1,6 @@
 import {
   Canvas,
+  Group,
   ImageShader,
   Rect,
   Skia,
@@ -253,8 +254,10 @@ export default function EditorRoute() {
   const imageX = (canvasSize.width - drawSize.width) / 2;
   const imageY = (canvasSize.height - drawSize.height) / 2;
   const videoRotation = currentClip?.rotation ?? 0;
-  const imageShaderRect =
-    videoRotation === 90 || videoRotation === 270
+  const isQuarterTurn =
+    videoRotation === 90 || videoRotation === 270;
+  const renderRect =
+    currentClip && isQuarterTurn
       ? {
           x: (canvasSize.width - drawSize.height) / 2,
           y: (canvasSize.height - drawSize.width) / 2,
@@ -267,14 +270,14 @@ export default function EditorRoute() {
           width: drawSize.width,
           height: drawSize.height,
         };
-  const imageShaderTransform =
-    videoRotation === 0
-      ? undefined
-      : [{ rotateZ: (videoRotation * Math.PI) / 180 }];
-  const imageShaderOrigin =
-    videoRotation === 0
-      ? undefined
-      : { x: canvasSize.width / 2, y: canvasSize.height / 2 };
+  const videoTransform =
+    currentClip && videoRotation !== 0
+      ? [{ rotateZ: (videoRotation * Math.PI) / 180 }]
+      : undefined;
+  const videoTransformOrigin =
+    videoTransform
+      ? { x: canvasSize.width / 2, y: canvasSize.height / 2 }
+      : undefined;
   const shaderResolution: [number, number] = [drawSize.width, drawSize.height];
   const shaderTree = hasImage && imageSource
     ? scene.layers.reduce<ReactNode>((children, layer, index) => {
@@ -297,9 +300,7 @@ export default function EditorRoute() {
         <ImageShader
           image={imageSource}
           fit="contain"
-          origin={imageShaderOrigin}
-          rect={imageShaderRect}
-          transform={imageShaderTransform}
+          rect={renderRect}
         />
       ))
     : null;
@@ -620,14 +621,30 @@ export default function EditorRoute() {
         >
           {hasImage && shaderTree && drawSize.width > 0 && drawSize.height > 0 && (
             <Canvas style={StyleSheet.absoluteFill}>
-              <Rect
-                x={imageX}
-                y={imageY}
-                width={drawSize.width}
-                height={drawSize.height}
-              >
-                {shaderTree}
-              </Rect>
+              {videoTransform ? (
+                <Group
+                  origin={videoTransformOrigin}
+                  transform={videoTransform}
+                >
+                  <Rect
+                    x={renderRect.x}
+                    y={renderRect.y}
+                    width={renderRect.width}
+                    height={renderRect.height}
+                  >
+                    {shaderTree}
+                  </Rect>
+                </Group>
+              ) : (
+                <Rect
+                  x={renderRect.x}
+                  y={renderRect.y}
+                  width={renderRect.width}
+                  height={renderRect.height}
+                >
+                  {shaderTree}
+                </Rect>
+              )}
             </Canvas>
           )}
         </View>
