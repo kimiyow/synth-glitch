@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { colors, type } from "../ui/tokens";
 
 export default function RootLayout() {
   return (
@@ -7,16 +8,28 @@ export default function RootLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: "#c9f36a",
-          tabBarInactiveTintColor: "#9ba69e",
+          tabBarActiveTintColor: colors.inkText,
+          tabBarInactiveTintColor: colors.inkMute,
+          tabBarShowLabel: true,
           tabBarStyle: {
-            backgroundColor: "#101512",
-            borderTopColor: "#2d3a32",
+            backgroundColor: colors.ink,
+            borderTopColor: colors.inkLine,
+            height: 48,
+            paddingBottom: 0,
+            paddingTop: 0,
+          },
+          tabBarLabelStyle: {
+            fontFamily: type.family,
+            fontSize: type.label,
+            fontWeight: "500",
+            letterSpacing: 1.2,
+            marginTop: 0,
+            textTransform: "uppercase",
           },
         }}
       >
-        <Tabs.Screen name="index" options={{ title: "Cámara" }} />
-        <Tabs.Screen name="editor" options={{ title: "Editor" }} />
+        <Tabs.Screen name="index" options={{ title: "CÁMARA" }} />
+        <Tabs.Screen name="editor" options={{ title: "EDITOR" }} />
       </Tabs>
     </GestureHandlerRootView>
   );

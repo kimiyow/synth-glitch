@@ -10,7 +10,8 @@ import {
 } from "@shopify/react-native-skia";
 import { File, Paths } from "expo-file-system";
 
-import { EFFECT_BY_ID, type EffectId } from "../effects/registry";
+import { getRuntimeEffect } from "../effects/registry";
+import type { Layer } from "../state/types";
 
 const MAX_EXPORT_SIDE = 4096;
 
@@ -22,20 +23,13 @@ export type ExportedPhoto = {
 
 export async function exportEffectedPhoto(args: {
   sourceUri: string;
-  effectId: EffectId;
-  controlX: number;
-  controlY: number;
+  layers: Layer[];
 }): Promise<ExportedPhoto> {
   const sourceData = await Skia.Data.fromURI(args.sourceUri);
   const sourceImage = Skia.Image.MakeImageFromEncoded(sourceData);
 
   if (!sourceImage) {
     throw new Error("Skia no pudo decodificar la foto de origen.");
-  }
-
-  const effect = Skia.RuntimeEffect.Make(EFFECT_BY_ID[args.effectId].shader);
-  if (!effect) {
-    throw new Error(`No se pudo compilar el efecto "${args.effectId}" para exportarlo.`);
   }
 
   const scale = Math.min(
@@ -46,25 +40,37 @@ export async function exportEffectedPhoto(args: {
   const height = Math.max(1, Math.round(sourceImage.height() * scale));
   const rect = { x: 0, y: 0, width, height };
 
+  const visibleLayers = args.layers.filter((layer) => layer.visible);
+  const shaderTree = visibleLayers.reduce<React.ReactElement>(
+    (child, layer) => {
+      const effect = getRuntimeEffect(layer.effect);
+      if (!effect) {
+        throw new Error(`No se pudo compilar el efecto "${layer.effect}" para exportarlo.`);
+      }
+
+      return React.createElement(
+        Shader,
+        {
+          source: effect,
+          uniforms: {
+            resolution: [width, height],
+            param: [layer.params.x, layer.params.y],
+            time: 0,
+          },
+        },
+        child,
+      );
+    },
+    React.createElement(ImageShader, {
+      image: sourceImage,
+      fit: "contain",
+      rect,
+    }),
+  );
   const element = React.createElement(
     Rect,
     rect,
-    React.createElement(
-      Shader,
-      {
-        source: effect,
-        uniforms: {
-          resolution: [width, height],
-          param: [args.controlX, args.controlY],
-          time: 0,
-        },
-      },
-      React.createElement(ImageShader, {
-        image: sourceImage,
-        fit: "contain",
-        rect,
-      }),
-    ),
+    shaderTree,
   );
 
   const renderedImage = await drawAsImage(element, { width, height });

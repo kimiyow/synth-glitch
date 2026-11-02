@@ -1,3 +1,5 @@
+import { Skia, type SkRuntimeEffect } from "@shopify/react-native-skia";
+
 export type EffectId = "chromatic" | "scanlines" | "datamosh";
 
 export type EffectConfig = {
@@ -84,5 +86,22 @@ export const EFFECTS: EffectConfig[] = [
 export const EFFECT_BY_ID = Object.fromEntries(
   EFFECTS.map((effect) => [effect.id, effect]),
 ) as Record<EffectId, EffectConfig>;
+
+const runtimeEffects = Object.fromEntries(
+  EFFECTS.map((effect) => [
+    effect.id,
+    Skia.RuntimeEffect.Make(effect.shader),
+  ]),
+) as Record<EffectId, SkRuntimeEffect | null>;
+
+for (const effect of EFFECTS) {
+  if (!runtimeEffects[effect.id]) {
+    console.error(`No se pudo compilar el shader "${effect.id}".`);
+  }
+}
+
+export function getRuntimeEffect(effectId: EffectId) {
+  return runtimeEffects[effectId];
+}
 
 export const DEFAULT_EFFECT_ID: EffectId = "chromatic";

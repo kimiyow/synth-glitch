@@ -4,7 +4,7 @@ Aplicación móvil hecha con Expo y React Native para capturar fotos y manipular
 
 ## Estado del proyecto
 
-Las fases 0 a 4 están cerradas. La fase 5, guardado en la galería y navegación por pestañas, está en curso. El editor permite controlar con un gesto de un dedo aberración cromática, scanlines CRT y datamosh; el plan contempla seis efectos en total. No se conserva historial dentro de la app.
+Las fases 0 a 5 están cerradas. La fase 5.1, capas apilables y deshacer/rehacer, está en curso. El editor permite combinar capas de aberración cromática, scanlines CRT y datamosh; la pila admite hasta 12 capas por seguridad técnica y mantiene 50 cambios para deshacer o rehacer. No se conserva historial de creaciones dentro de la app.
 
 ## Desarrollo
 
@@ -21,8 +21,3 @@ Para revisar el código:
 npm run lint
 npx tsc --noEmit
 ```
-
-## Documentación
-
-- [Documento del proyecto](./docs/proyecto.md): alcance, funciones y plan por fases.
-- [Documento de diseño de software](./docs/sdd.md): arquitectura, requisitos y criterios de aceptación.
