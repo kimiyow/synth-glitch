@@ -11,6 +11,7 @@ import { router, useIsFocused } from "expo-router";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
   type ComponentType,
   type ReactNode,
@@ -69,6 +70,7 @@ const RETICLE_SIZE = 24;
 const CLIP_LOAD_TIMEOUT_MS = 8000;
 type LoadedClip = {
   uri: string;
+  instanceId: symbol;
   currentFrame: SharedValue<SkImage | null>;
   width: number;
   height: number;
@@ -97,6 +99,10 @@ export default function EditorRoute() {
   const isFocused = useIsFocused();
   const photoUri = activeMedia?.type === "photo" ? activeMedia.uri : null;
   const clipUri = activeMedia?.type === "clip" ? activeMedia.uri : null;
+  const clipInstanceId = useMemo(
+    () => (clipUri && isFocused ? Symbol(clipUri) : null),
+    [clipUri, isFocused],
+  );
   const [loadedPhoto, setLoadedPhoto] = useState<{
     uri: string;
     image: NonNullable<ReturnType<typeof Skia.Image.MakeImageFromEncoded>> | null;
@@ -105,7 +111,11 @@ export default function EditorRoute() {
   const [loadedClip, setLoadedClip] = useState<LoadedClip | null>(null);
   const [clipLoadFailedUri, setClipLoadFailedUri] = useState<string | null>(null);
   const currentPhoto = loadedPhoto?.uri === photoUri ? loadedPhoto : null;
-  const currentClip = loadedClip?.uri === clipUri ? loadedClip : null;
+  const currentClip =
+    loadedClip?.uri === clipUri &&
+    loadedClip.instanceId === clipInstanceId
+      ? loadedClip
+      : null;
   const image = currentPhoto?.image ?? null;
   const imageLoadError = currentPhoto?.failed ?? false;
   const clipLoadError = clipLoadFailedUri === clipUri;
@@ -593,11 +603,11 @@ export default function EditorRoute() {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" />
-      {clipUri && !clipLoadError ? (
+      {clipUri && isFocused && clipInstanceId && !clipLoadError ? (
         <ClipVideoSource
-          key={clipUri}
+          key={String(clipInstanceId)}
+          instanceId={clipInstanceId}
           onLoaded={handleClipLoaded}
-          paused={!isFocused}
           uri={clipUri}
         />
       ) : null}
@@ -1051,33 +1061,32 @@ function DockItem({ label, active = false, disabled = false, onPress }: DockItem
 
 type ClipVideoSourceProps = {
   uri: string;
-  paused: boolean;
+  instanceId: symbol;
   onLoaded: (clip: LoadedClip) => void;
 };
 
-function ClipVideoSource({ uri, paused, onLoaded }: ClipVideoSourceProps) {
-  const pausedValue = useSharedValue(paused);
+function ClipVideoSource({
+  uri,
+  instanceId,
+  onLoaded,
+}: ClipVideoSourceProps) {
   const { currentFrame, rotation, size } = useVideo(uri, {
     looping: true,
-    paused: pausedValue,
     volume: 0,
   });
-
-  useEffect(() => {
-    pausedValue.set(paused);
-  }, [paused, pausedValue]);
 
   useEffect(() => {
     if (size.width > 0 && size.height > 0) {
       onLoaded({
         uri,
+        instanceId,
         currentFrame,
         width: size.width,
         height: size.height,
         rotation,
       });
     }
-  }, [currentFrame, onLoaded, rotation, size.height, size.width, uri]);
+  }, [currentFrame, instanceId, onLoaded, rotation, size.height, size.width, uri]);
 
   return null;
 }
