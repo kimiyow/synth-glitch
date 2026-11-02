@@ -15,7 +15,7 @@ import type { SceneConfig, UndoState } from "./types";
 
 export type ActiveMedia = {
   uri: string;
-  type: "photo";
+  type: "photo" | "clip";
   width: number;
   height: number;
 };

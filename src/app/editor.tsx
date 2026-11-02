@@ -3,11 +3,18 @@ import {
   ImageShader,
   Rect,
   Skia,
+  type SkImage,
 } from "@shopify/react-native-skia";
 import * as MediaLibrary from "expo-media-library";
 import { File } from "expo-file-system";
-import { router } from "expo-router";
-import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { router, useIsFocused } from "expo-router";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import {
   Linking,
   Pressable,
@@ -29,13 +36,18 @@ import Animated, {
   withDelay,
   withSequence,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
+import { useVideo } from "@shopify/react-native-skia";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   EFFECTS,
   type EffectId,
 } from "../effects/registry";
-import { exportEffectedPhoto } from "../editor/exportImage";
+import {
+  exportEffectedFrame,
+  exportEffectedPhoto,
+} from "../editor/exportImage";
 import {
   createLayer,
   useEditorStore,
@@ -54,6 +66,15 @@ import { colors, geometry, type } from "../ui/tokens";
 import { useLayout } from "../ui/useLayout";
 
 const RETICLE_SIZE = 24;
+const CLIP_LOAD_TIMEOUT_MS = 8000;
+type LoadedClip = {
+  uri: string;
+  currentFrame: SharedValue<SkImage | null>;
+  width: number;
+  height: number;
+  rotation: 0 | 90 | 180 | 270;
+};
+
 const AnimatedTextInput = Animated.createAnimatedComponent(
   TextInput as ComponentType<AnimatedTextInputProps>,
 );
@@ -73,15 +94,21 @@ export default function EditorRoute() {
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const clearChangeLabel = useEditorStore((state) => state.clearChangeLabel);
-  const photoUri = activeMedia?.uri ?? null;
+  const isFocused = useIsFocused();
+  const photoUri = activeMedia?.type === "photo" ? activeMedia.uri : null;
+  const clipUri = activeMedia?.type === "clip" ? activeMedia.uri : null;
   const [loadedPhoto, setLoadedPhoto] = useState<{
     uri: string;
     image: NonNullable<ReturnType<typeof Skia.Image.MakeImageFromEncoded>> | null;
     failed: boolean;
   } | null>(null);
+  const [loadedClip, setLoadedClip] = useState<LoadedClip | null>(null);
+  const [clipLoadFailedUri, setClipLoadFailedUri] = useState<string | null>(null);
   const currentPhoto = loadedPhoto?.uri === photoUri ? loadedPhoto : null;
+  const currentClip = loadedClip?.uri === clipUri ? loadedClip : null;
   const image = currentPhoto?.image ?? null;
   const imageLoadError = currentPhoto?.failed ?? false;
+  const clipLoadError = clipLoadFailedUri === clipUri;
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -158,6 +185,23 @@ export default function EditorRoute() {
     };
   }, [photoUri]);
 
+  const handleClipLoaded = useCallback((clip: LoadedClip) => {
+    setLoadedClip(clip);
+    setClipLoadFailedUri(null);
+  }, []);
+
+  useEffect(() => {
+    if (!clipUri || !isFocused || currentClip) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      console.error("Skia no pudo cargar el clip para reproducirlo.");
+      setClipLoadFailedUri(clipUri);
+    }, CLIP_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timeoutId);
+  }, [clipUri, currentClip, isFocused]);
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       clock.set(clock.get() + 0.016);
@@ -181,13 +225,48 @@ export default function EditorRoute() {
     return () => clearTimeout(timeoutId);
   }, [layerNotice]);
 
-  const drawSize = image
-    ? getContainSize(image.width(), image.height(), canvasSize.width, canvasSize.height)
+  const clipRotatedSideways =
+    currentClip?.rotation === 90 || currentClip?.rotation === 270;
+  const mediaWidth =
+    image?.width() ??
+    (clipRotatedSideways ? currentClip?.height : currentClip?.width) ??
+    0;
+  const mediaHeight =
+    image?.height() ??
+    (clipRotatedSideways ? currentClip?.width : currentClip?.height) ??
+    0;
+  const hasImage = mediaWidth > 0 && mediaHeight > 0;
+  const imageSource = image ?? currentClip?.currentFrame ?? null;
+  const drawSize = hasImage
+    ? getContainSize(mediaWidth, mediaHeight, canvasSize.width, canvasSize.height)
     : { width: 0, height: 0 };
   const imageX = (canvasSize.width - drawSize.width) / 2;
   const imageY = (canvasSize.height - drawSize.height) / 2;
+  const videoRotation = currentClip?.rotation ?? 0;
+  const imageShaderRect =
+    videoRotation === 90 || videoRotation === 270
+      ? {
+          x: (canvasSize.width - drawSize.height) / 2,
+          y: (canvasSize.height - drawSize.width) / 2,
+          width: drawSize.height,
+          height: drawSize.width,
+        }
+      : {
+          x: imageX,
+          y: imageY,
+          width: drawSize.width,
+          height: drawSize.height,
+        };
+  const imageShaderTransform =
+    videoRotation === 0
+      ? undefined
+      : [{ rotateZ: (videoRotation * Math.PI) / 180 }];
+  const imageShaderOrigin =
+    videoRotation === 0
+      ? undefined
+      : { x: canvasSize.width / 2, y: canvasSize.height / 2 };
   const shaderResolution: [number, number] = [drawSize.width, drawSize.height];
-  const shaderTree = image
+  const shaderTree = hasImage && imageSource
     ? scene.layers.reduce<ReactNode>((children, layer, index) => {
         if (!layer.visible) {
           return children;
@@ -206,14 +285,11 @@ export default function EditorRoute() {
         );
       }, (
         <ImageShader
-          image={image}
+          image={imageSource}
           fit="contain"
-          rect={{
-            x: imageX,
-            y: imageY,
-            width: drawSize.width,
-            height: drawSize.height,
-          }}
+          origin={imageShaderOrigin}
+          rect={imageShaderRect}
+          transform={imageShaderTransform}
         />
       ))
     : null;
@@ -330,11 +406,23 @@ export default function EditorRoute() {
   const gesture = Gesture.Simultaneous(panGesture, resetGesture);
 
   const handleDiscard = () => {
+    const discardedMedia = useEditorStore.getState().activeMedia;
     clearActiveMedia();
     setSaveMessage(null);
     setNeedsSettings(false);
     setOpenMenu(null);
+    setClipLoadFailedUri(null);
     router.navigate("/");
+    if (discardedMedia?.type === "clip") {
+      try {
+        const clipFile = new File(discardedMedia.uri);
+        if (clipFile.exists) {
+          clipFile.delete();
+        }
+      } catch (error) {
+        console.error("No se pudo limpiar el clip descartado.", error);
+      }
+    }
   };
 
   const toggleMenu = (menu: Exclude<OpenMenu, null>) => {
@@ -447,26 +535,46 @@ export default function EditorRoute() {
         return;
       }
 
-      const exported = await exportEffectedPhoto({
-        sourceUri: activeMedia.uri,
-        layers: scene.layers.map((layer, index) => {
-          const currentParams = layerParams.get();
-          return {
-            ...layer,
-            params: {
-              x: currentParams[index * 2] ?? layer.params.x,
-              y: currentParams[index * 2 + 1] ?? layer.params.y,
-            },
-          };
-        }),
+      const exportLayers = scene.layers.map((layer, index) => {
+        const currentParams = layerParams.get();
+        return {
+          ...layer,
+          params: {
+            x: currentParams[index * 2] ?? layer.params.x,
+            y: currentParams[index * 2 + 1] ?? layer.params.y,
+          },
+        };
       });
+      const exported =
+        activeMedia.type === "clip"
+          ? await exportEffectedFrame({
+              sourceImage: currentClip?.currentFrame.get() ?? null,
+              layers: exportLayers,
+              rotation: currentClip?.rotation ?? 0,
+            })
+          : await exportEffectedPhoto({
+              sourceUri: activeMedia.uri,
+              layers: exportLayers,
+            });
       temporaryExportUri = exported.uri;
       await MediaLibrary.Asset.create(exported.uri);
-      setSaveMessage({ text: "GUARDADO EN FOTOS", failed: false });
+      setSaveMessage({
+        text:
+          activeMedia.type === "clip"
+            ? "FOTOGRAMA GUARDADO EN FOTOS"
+            : "GUARDADO EN FOTOS",
+        failed: false,
+      });
       setOpenMenu(null);
     } catch (error) {
-      console.error("No se pudo exportar o guardar la foto.", error);
-      setSaveMessage({ text: "ERROR · NO SE PUDO GUARDAR LA FOTO", failed: true });
+      console.error("No se pudo exportar o guardar el resultado.", error);
+      setSaveMessage({
+        text:
+          activeMedia.type === "clip"
+            ? "ERROR · NO SE PUDO GUARDAR EL FOTOGRAMA"
+            : "ERROR · NO SE PUDO GUARDAR LA FOTO",
+        failed: true,
+      });
     } finally {
       if (temporaryExportUri) {
         try {
@@ -485,6 +593,14 @@ export default function EditorRoute() {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" />
+      {clipUri && !clipLoadError ? (
+        <ClipVideoSource
+          key={clipUri}
+          onLoaded={handleClipLoaded}
+          paused={!isFocused}
+          uri={clipUri}
+        />
+      ) : null}
       <View style={styles.canvasFrame}>
         <View
           onLayout={({ nativeEvent: { layout } }) =>
@@ -492,7 +608,7 @@ export default function EditorRoute() {
           }
           style={StyleSheet.absoluteFill}
         >
-          {image && shaderTree && drawSize.width > 0 && drawSize.height > 0 && (
+          {hasImage && shaderTree && drawSize.width > 0 && drawSize.height > 0 && (
             <Canvas style={StyleSheet.absoluteFill}>
               <Rect
                 x={imageX}
@@ -506,7 +622,7 @@ export default function EditorRoute() {
           )}
         </View>
 
-        {image && drawSize.width > 0 && drawSize.height > 0 ? (
+        {hasImage && drawSize.width > 0 && drawSize.height > 0 ? (
           <>
             <CornerMarks
               style={{
@@ -546,13 +662,28 @@ export default function EditorRoute() {
           </>
         ) : null}
 
-        {!image && activeMedia ? (
+        {!hasImage && activeMedia ? (
           <View style={styles.loadStatus}>
             <Text style={styles.emptyTitle}>
-              {imageLoadError ? "ERROR · FOTO NO DISPONIBLE" : "CARGANDO FOTO"}
+              {imageLoadError
+                ? "ERROR · FOTO NO DISPONIBLE"
+                : clipLoadError
+                  ? "ERROR · CLIP NO DISPONIBLE"
+                  : activeMedia.type === "clip"
+                  ? "CARGANDO CLIP"
+                  : "CARGANDO FOTO"}
             </Text>
             {imageLoadError ? (
               <Text style={styles.emptyCopy}>VUELVE A CAPTURAR LA IMAGEN</Text>
+            ) : null}
+            {clipLoadError ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleDiscard}
+                style={styles.outlineButton}
+              >
+                <Text style={styles.outlineButtonText}>VOLVER A CÁMARA</Text>
+              </Pressable>
             ) : null}
           </View>
         ) : null}
@@ -584,7 +715,9 @@ export default function EditorRoute() {
         >
           <View style={styles.topBar}>
             <Pressable
-              accessibilityLabel="Descartar foto"
+              accessibilityLabel={
+                activeMedia?.type === "clip" ? "Descartar clip" : "Descartar foto"
+              }
               accessibilityRole="button"
               onPress={handleDiscard}
               style={styles.headerButton}
@@ -811,7 +944,11 @@ export default function EditorRoute() {
                     style={styles.saveMenuAction}
                   >
                     <Text style={styles.saveMenuActionText}>
-                      {isSaving ? "GUARDANDO…" : "IMAGEN · JPG"}
+                      {isSaving
+                        ? "GUARDANDO…"
+                        : activeMedia?.type === "clip"
+                          ? "FOTOGRAMA · JPG"
+                          : "IMAGEN · JPG"}
                     </Text>
                   </Pressable>
                   <View style={styles.disabledSaveItem}>
@@ -910,6 +1047,39 @@ function DockItem({ label, active = false, disabled = false, onPress }: DockItem
       </Text>
     </Pressable>
   );
+}
+
+type ClipVideoSourceProps = {
+  uri: string;
+  paused: boolean;
+  onLoaded: (clip: LoadedClip) => void;
+};
+
+function ClipVideoSource({ uri, paused, onLoaded }: ClipVideoSourceProps) {
+  const pausedValue = useSharedValue(paused);
+  const { currentFrame, rotation, size } = useVideo(uri, {
+    looping: true,
+    paused: pausedValue,
+    volume: 0,
+  });
+
+  useEffect(() => {
+    pausedValue.set(paused);
+  }, [paused, pausedValue]);
+
+  useEffect(() => {
+    if (size.width > 0 && size.height > 0) {
+      onLoaded({
+        uri,
+        currentFrame,
+        width: size.width,
+        height: size.height,
+        rotation,
+      });
+    }
+  }, [currentFrame, onLoaded, rotation, size.height, size.width, uri]);
+
+  return null;
 }
 
 type LayerActionProps = {
