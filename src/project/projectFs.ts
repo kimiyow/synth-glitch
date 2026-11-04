@@ -12,6 +12,8 @@ export interface ProjectFs {
   readText(id: string, name: string): string;
   writeText(id: string, name: string, text: string): void;
   writeBytes(id: string, name: string, bytes: Uint8Array): void;
+  /** Copia un archivo externo (p. ej. la captura de la cámara) dentro del proyecto. */
+  copyFileIn(id: string, name: string, sourceUri: string): void;
   /** Mueve sobrescribiendo el destino si existe (no se asume que sea atómico). */
   move(id: string, from: string, to: string): void;
   remove(id: string, name: string): void;

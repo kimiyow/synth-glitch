@@ -79,7 +79,7 @@ export function listProjects(fs: ProjectFs): ProjectSummary[] {
 }
 
 export type FilesToWrite = {
-  media?: { name: string; bytes: Uint8Array };
+  media?: { name: string; bytes: Uint8Array } | { name: string; sourceUri: string };
   preview?: Uint8Array;
   thumb?: Uint8Array;
 };
@@ -88,7 +88,9 @@ export type FilesToWrite = {
 export function createProjectFiles(fs: ProjectFs, project: Project, files: FilesToWrite): void {
   fs.createDir(project.id);
   try {
-    if (files.media) fs.writeBytes(project.id, files.media.name, files.media.bytes);
+    const { media } = files;
+    if (media && "bytes" in media) fs.writeBytes(project.id, media.name, media.bytes);
+    if (media && "sourceUri" in media) fs.copyFileIn(project.id, media.name, media.sourceUri);
     writeImages(fs, project.id, files);
     saveProject(fs, project);
   } catch (error) {

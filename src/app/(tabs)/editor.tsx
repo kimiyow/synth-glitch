@@ -7,6 +7,7 @@ import { croppedSize } from "../../engine/crop";
 import { SceneRenderer } from "../../editor/SceneRenderer";
 import { EFFECTS } from "../../engine/registry";
 import type { SaveStatus } from "../../project/autosave";
+import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import type { Project, Scene } from "../../state/types";
 import { ScreenPlaceholder } from "../../ui/ScreenPlaceholder";
@@ -29,7 +30,10 @@ function ProjectView({ project }: { project: Project }) {
   const readOnly = useScene((s) => s.readOnly);
   const saveStatus = useScene((s) => s.saveStatus);
   const { media } = project.scene;
-  const image = useImage(media.file ? projectFs.uri(project.id, media.file) : null);
+  // Los clips muestran su primer cuadro (preview.jpg, ya recortado) hasta M10 (SP-05).
+  const isClip = media.kind === "clip";
+  const imageFile = isClip ? PREVIEW_FILE : media.file;
+  const image = useImage(imageFile ? projectFs.uri(project.id, imageFile) : null);
   const cropped = croppedSize(media.width, media.height, project.scene.crop.rect);
   const height = Math.round((width * cropped.height) / cropped.width);
 
@@ -50,10 +54,10 @@ function ProjectView({ project }: { project: Project }) {
               image={image}
               width={width}
               height={height}
-              layers={project.scene.layers}
+              layers={isClip ? [] : project.scene.layers}
               seed={project.scene.seed}
               frame={{ time: 0, params: [] }}
-              crop={project.scene.crop.rect}
+              crop={isClip ? undefined : project.scene.crop.rect}
             />
           </Canvas>
         ) : (
@@ -63,6 +67,7 @@ function ProjectView({ project }: { project: Project }) {
         )}
         <View style={styles.footer}>
           <Text style={styles.label}>
+            {isClip ? "CLIP · VISTA DEL PRIMER CUADRO · " : ""}
             {project.scene.layers.length} CAPAS · SEMILLA {project.scene.seed} · PENDIENTE M4
           </Text>
           {DEV_TOOLS_ENABLED && !readOnly && (

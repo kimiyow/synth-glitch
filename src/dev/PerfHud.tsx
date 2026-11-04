@@ -30,7 +30,8 @@ export function PerfHud() {
       accessibilityLabel="Monitor de rendimiento"
       onPress={() => setCollapsed((c) => !c)}
       onLongPress={() => router.push("/test-lab")}
-      style={[styles.root, { top: insets.top + 4 }]}
+      // Abajo a la derecha, sobre las pestañas: arriba tapaba los botones de las cabeceras.
+      style={[styles.root, { bottom: insets.bottom + 56 }]}
       hitSlop={8}
     >
       {collapsed ? (

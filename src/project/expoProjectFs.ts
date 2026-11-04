@@ -30,6 +30,7 @@ export function createExpoProjectFs(rootName = "projects"): ProjectFs {
     readText: (id, name) => file(id, name).textSync(),
     writeText: (id, name, text) => writeFile(file(id, name), text),
     writeBytes: (id, name, bytes) => writeFile(file(id, name), bytes),
+    copyFileIn: (id, name, sourceUri) => new File(sourceUri).copySync(file(id, name), { overwrite: true }),
     move: (id, from, to) => file(id, from).moveSync(file(id, to), { overwrite: true }),
     remove: (id, name) => {
       const f = file(id, name);

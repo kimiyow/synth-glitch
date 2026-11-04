@@ -50,6 +50,7 @@ class MemoryFs implements ProjectFs {
     this.dir(id).set(name, text);
   };
   writeBytes = (id: string, name: string, bytes: Uint8Array) => void this.dir(id).set(name, bytes);
+  copyFileIn = (id: string, name: string, sourceUri: string) => void this.dir(id).set(name, `copia de ${sourceUri}`);
   move = (id: string, from: string, to: string) => {
     const d = this.dir(id);
     const content = d.get(from);
@@ -168,6 +169,12 @@ describe("operaciones (PRJ-03)", () => {
       preview: new Uint8Array([4]),
     });
     expect([...fs.dirs.get("p1")!.keys()].sort()).toEqual(["media.jpg", "preview.jpg", "project.json", "thumb.jpg"]);
+  });
+
+  it("copia el medio desde un archivo externo", () => {
+    const fs = new MemoryFs();
+    createProjectFiles(fs, project(), { media: { name: "media.mp4", sourceUri: "file:///tmp/clip.mov" } });
+    expect(fs.dirs.get("p1")!.get("media.mp4")).toBe("copia de file:///tmp/clip.mov");
   });
 
   it("si la creación falla no deja una carpeta a medias", () => {
