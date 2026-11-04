@@ -339,6 +339,7 @@ function ProjectView({ project }: { project: Project }) {
           <EditorCanvas
             image={isClip ? video.currentFrame : image}
             rotation={isClip ? video.rotation : 0}
+            sourceSize={isClip ? video.size : undefined}
             contentWidth={content.width}
             contentHeight={content.height}
             layers={project.scene.layers}

@@ -47,8 +47,9 @@ export function brushScreenSize(size: number, displayedWidth: number) {
 type Props = {
   /** Foto o base generativa; en clips, el cuadro actual del video (SP-05). */
   image: SkImage | SharedValue<SkImage | null>;
-  /** Giro de los cuadros del video. */
+  /** Giro de los cuadros del video y su tamaño sin rotar. */
   rotation?: 0 | 90 | 180 | 270;
+  sourceSize?: { width: number; height: number };
   /** Tamaño de la región visible (recortada) en px de la imagen original. */
   contentWidth: number;
   contentHeight: number;
@@ -309,6 +310,7 @@ export function EditorCanvas(props: Props) {
                   frame={frame}
                   crop={crop}
                   rotation={rotation}
+                  sourceSize={props.sourceSize}
                 />
               </Group>
             </Group>

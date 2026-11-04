@@ -52,6 +52,7 @@ export function Sp05Video() {
               seed={0}
               frame={frame}
               rotation={rot}
+              sourceSize={size}
             />
           </Canvas>
           <Text style={labStyles.data}>

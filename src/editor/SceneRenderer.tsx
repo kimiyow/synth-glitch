@@ -1,4 +1,4 @@
-import { Group, ImageShader, Rect, Shader, type SkImage } from "@shopify/react-native-skia";
+import { Group, ImageShader, Rect, Shader, Skia, type SkImage } from "@shopify/react-native-skia";
 import type { ReactElement } from "react";
 import { isSharedValue, useDerivedValue, type DerivedValue } from "react-native-reanimated";
 
@@ -23,33 +23,28 @@ type Props = {
   crop?: CropRect;
   /** Giro del medio (clips: los cuadros del video llegan sin rotar, SP-05). */
   rotation?: 0 | 90 | 180 | 270;
+  /** Tamaño del cuadro sin rotar; necesario cuando hay giro (el cuadro es un valor compartido). */
+  sourceSize?: { width: number; height: number };
 };
 
 /**
  * Árbol de Skia de la escena: medio → capas de efecto y generador apiladas → recorte (3.3). Va dentro de un
  * Canvas o de drawAsImage. `width × height` es el tamaño de salida (la región recortada).
  */
-export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP, rotation = 0 }: Props) {
+export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP, rotation = 0, sourceSize }: Props) {
   const chain = buildLayerChain(layers);
   // Los efectos se evalúan sobre la imagen completa, así el recorte no cambia su aspecto.
   const { fullW, fullH, tx, ty } = cropViewport(width, height, crop);
   const resolution: [number, number] = [fullW, fullH];
 
-  // Con 90/270 el cuadro se coloca con los lados intercambiados y se gira sobre el centro.
-  const sideways = rotation === 90 || rotation === 270;
-  const rect = sideways
-    ? { x: (fullW - fullH) / 2, y: (fullH - fullW) / 2, width: fullH, height: fullW }
-    : { x: 0, y: 0, width: fullW, height: fullH };
-  let node: ReactElement = (
-    <ImageShader
-      image={image}
-      fit="cover"
-      rect={rect}
-      tx="clamp"
-      ty="clamp"
-      transform={rotation ? [{ rotate: (rotation * Math.PI) / 180 }] : undefined}
-      origin={rotation ? { x: fullW / 2, y: fullH / 2 } : undefined}
-    />
+  // Con giro no sirve `fit` + `transform`: Skia gira en coordenadas del cuadro antes de
+  // ajustarlo, el cuadro queda desplazado y el borde estirado (clamp) parece un efecto.
+  // La matriz completa: centrar el cuadro, escalar (cover), girar y llevarlo al centro.
+  const rotated = rotation !== 0 && sourceSize && sourceSize.width > 0 && sourceSize.height > 0;
+  let node: ReactElement = rotated ? (
+    <ImageShader image={image} fit="none" tx="clamp" ty="clamp" matrix={coverMatrix(sourceSize, rotation, fullW, fullH)} />
+  ) : (
+    <ImageShader image={image} fit="cover" rect={{ x: 0, y: 0, width: fullW, height: fullH }} tx="clamp" ty="clamp" />
   );
   chain.forEach((chainNode, index) => {
     const source = runtimeFor(chainNode);
@@ -76,6 +71,19 @@ export function SceneRenderer({ image, width, height, layers, seed, frame, crop 
       </Group>
     </Group>
   );
+}
+
+function coverMatrix(src: { width: number; height: number }, rotation: number, w: number, h: number) {
+  const sideways = rotation === 90 || rotation === 270;
+  const rw = sideways ? src.height : src.width;
+  const rh = sideways ? src.width : src.height;
+  const s = Math.max(w / rw, h / rh);
+  const m = Skia.Matrix();
+  m.translate(w / 2, h / 2);
+  m.rotate((rotation * Math.PI) / 180);
+  m.scale(s, s);
+  m.translate(-src.width / 2, -src.height / 2);
+  return m;
 }
 
 function runtimeFor(node: ChainNode) {
