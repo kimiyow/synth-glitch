@@ -1,4 +1,5 @@
 import { Tabs } from "expo-router";
+import { Text } from "react-native";
 
 import { colors, type } from "../../ui/tokens";
 
@@ -9,7 +10,6 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.inkText,
         tabBarInactiveTintColor: colors.inkMute,
-        tabBarIconStyle: { display: "none" },
         tabBarStyle: {
           backgroundColor: colors.ink,
           borderTopColor: colors.inkLine,
@@ -18,9 +18,10 @@ export default function TabsLayout() {
           fontFamily: type.family,
           fontSize: type.label,
           fontWeight: "500",
-          letterSpacing: 1.2,
           textTransform: "uppercase",
         },
+        // Figma: triángulo ▼ sobre cada etiqueta, blanco en la pestaña activa.
+        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 12 }}>▼</Text>,
       }}
     >
       <Tabs.Screen name="index" options={{ title: "CÁMARA" }} />

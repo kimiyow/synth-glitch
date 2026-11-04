@@ -6,8 +6,7 @@ import { cropRectFor } from "../engine/crop";
 import { createProject } from "../project/schema";
 import { createProjectFiles, newProjectId } from "../project/storage";
 import { projectFs, sceneStore } from "./activeScene";
-import type { CameraAspect } from "./settings";
-import type { Project } from "./types";
+import type { CropAspect, Project } from "./types";
 
 type Result = { ok: true; project: Project } | { ok: false; error: string };
 
@@ -33,7 +32,7 @@ async function createFromMedia(args: {
   fileName: string;
   /** Imagen con la que se generan preview y miniatura (la foto o el primer cuadro del clip). */
   poster: SkImage;
-  aspect: CameraAspect;
+  aspect: CropAspect;
 }): Promise<Result> {
   const now = new Date();
   const width = args.poster.width();
@@ -67,7 +66,7 @@ async function guard(fn: () => Promise<Result>): Promise<Result> {
   }
 }
 
-export function createProjectFromPhoto(uri: string, aspect: CameraAspect): Promise<Result> {
+export function createProjectFromPhoto(uri: string, aspect: CropAspect): Promise<Result> {
   return guard(async () => {
     const poster = await decode(uri);
     try {
@@ -78,7 +77,7 @@ export function createProjectFromPhoto(uri: string, aspect: CameraAspect): Promi
   });
 }
 
-export function createProjectFromClip(uri: string, aspect: CameraAspect): Promise<Result> {
+export function createProjectFromClip(uri: string, aspect: CropAspect): Promise<Result> {
   return guard(async () => {
     const frame = await getThumbnailAsync(uri, { time: 0, quality: 1 });
     const poster = await decode(frame.uri);

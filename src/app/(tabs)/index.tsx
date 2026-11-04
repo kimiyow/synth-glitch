@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useSettings, settingsStore } from "../../state/appSettings";
 import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
+import { AppHeader } from "../../ui/AppHeader";
 import { AspectMask } from "../../ui/camera/AspectMask";
 import { CameraMenu } from "../../ui/camera/CameraMenu";
 import { Shutter } from "../../ui/camera/Shutter";
@@ -14,6 +15,7 @@ import { PermissionScreen } from "../../ui/PermissionScreen";
 import { colors, geometry, type } from "../../ui/tokens";
 
 const MAX_CLIP_S = 5;
+const VIEWFINDER_MARGIN = 18;
 const MIN_CLIP_MS = 1000;
 const DOUBLE_TAP_MS = 300;
 /** Si la cámara no avisa que está lista tras cambiar a modo video, se graba igual. */
@@ -40,8 +42,9 @@ export default function CameraScreen() {
 
 function CameraCapture() {
   const { width } = useWindowDimensions();
-  const viewW = width;
-  const viewH = Math.round((width * 4) / 3);
+  // Figma: visor con márgenes de 18 pt y esquinas redondeadas; se mantiene 3:4 (sensor).
+  const viewW = width - VIEWFINDER_MARGIN * 2;
+  const viewH = Math.round((viewW * 4) / 3);
 
   const cameraRef = useRef<CameraView>(null);
   const [facing, setFacing] = useState<CameraType>("back");
@@ -150,23 +153,24 @@ function CameraCapture() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>SYNTH VJ</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Más opciones"
-          onPress={() => setMenuOpen((o) => !o)}
-          style={styles.headerButton}
-          hitSlop={8}
-        >
-          <Text style={styles.title}>⋯</Text>
-        </Pressable>
-      </View>
+      <AppHeader
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Más opciones"
+            onPress={() => setMenuOpen((o) => !o)}
+            style={styles.headerButton}
+            hitSlop={8}
+          >
+            <Text style={styles.title}>⋯</Text>
+          </Pressable>
+        }
+      />
 
       <Pressable
         accessibilityLabel="Visor. Doble toque para cambiar de cámara"
         onPress={onViewfinderPress}
-        style={{ width: viewW, height: viewH }}
+        style={[styles.viewfinder, { width: viewW, height: viewH }]}
       >
         <CameraView
           ref={cameraRef}
@@ -218,15 +222,9 @@ function CameraCapture() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
-  header: {
-    minHeight: geometry.target,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: geometry.compactMargin,
-  },
   headerButton: { minWidth: geometry.target, minHeight: geometry.target, alignItems: "flex-end", justifyContent: "center" },
-  title: { color: colors.inkText, fontFamily: type.family, fontSize: type.title, letterSpacing: 1.2 },
+  title: { color: colors.inkText, fontFamily: type.family, fontSize: type.title },
+  viewfinder: { alignSelf: "center", borderRadius: 12, overflow: "hidden", backgroundColor: colors.inkSurface },
   aspectLabel: {
     position: "absolute",
     bottom: 8,

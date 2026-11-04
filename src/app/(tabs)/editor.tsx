@@ -1,4 +1,6 @@
 import { Canvas, useImage } from "@shopify/react-native-skia";
+import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -10,7 +12,9 @@ import type { SaveStatus } from "../../project/autosave";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import type { Project, Scene } from "../../state/types";
-import { ScreenPlaceholder } from "../../ui/ScreenPlaceholder";
+import { pickMediaFromLibrary } from "../../platform/pickMedia";
+import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
+import { EditorEmpty } from "../../ui/editor/EditorEmpty";
 import { colors, geometry, type } from "../../ui/tokens";
 
 /**
@@ -19,10 +23,42 @@ import { colors, geometry, type } from "../../ui/tokens";
  */
 export default function EditorScreen() {
   const project = useScene((s) => s.project);
-  if (!project) {
-    return <ScreenPlaceholder title="EDITOR" milestone="M4" note="ABRE UN PROYECTO DESDE LA GALERÍA" />;
-  }
+  if (!project) return <EmptyEditor />;
   return <ProjectView project={project} />;
+}
+
+/** CAM-05: importar foto o video; las importaciones no se recortan (aspecto libre). */
+function EmptyEditor() {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const importMedia = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const picked = await pickMediaFromLibrary();
+      if (picked.kind === "rejected") setMessage(picked.message);
+      if (picked.kind === "selected") {
+        const { uri, type: kind } = picked.media;
+        const result = kind === "clip" ? await createProjectFromClip(uri, "free") : await createProjectFromPhoto(uri, "free");
+        if (!result.ok) setMessage(`ERROR · ${result.error}`);
+      }
+    } catch (error) {
+      setMessage(`ERROR · ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <EditorEmpty
+      busy={busy}
+      message={message}
+      onImport={importMedia}
+      onCamera={() => router.navigate("/")}
+      onDismissMessage={() => setMessage(null)}
+    />
+  );
 }
 
 function ProjectView({ project }: { project: Project }) {
@@ -41,6 +77,14 @@ function ProjectView({ project }: { project: Project }) {
     <SafeAreaView style={styles.root} edges={["top"]}>
       <ScrollView>
         <View style={styles.header}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar proyecto"
+            onPress={() => sceneStore.getState().close()}
+            hitSlop={10}
+          >
+            <Text style={styles.title}>‹</Text>
+          </Pressable>
           <Text style={styles.title} numberOfLines={1}>
             {project.name}
           </Text>
