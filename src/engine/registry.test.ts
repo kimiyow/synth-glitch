@@ -2,7 +2,8 @@ import { describe, expect, it } from "@jest/globals";
 
 import type { EffectId } from "../state/types";
 import { UNIFORM_NAMES } from "./effects/contract";
-import { EFFECTS, EFFECT_BY_ID } from "./registry";
+import { GENERATOR_UNIFORM_NAMES } from "./generators/contract";
+import { EFFECTS, EFFECT_BY_ID, GENERATORS } from "./registry";
 
 const ALL_IDS: EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt"];
 
@@ -30,6 +31,19 @@ describe("registro de efectos", () => {
     const sksl = EFFECT_BY_ID[id].sksl;
     expect(sksl).toMatch(/uniform shader image;/);
     for (const name of UNIFORM_NAMES) {
+      expect(sksl).toMatch(new RegExp(`uniform float\\d? ${name};`));
+    }
+    expect(sksl.match(/half4 main\(float2 xy\)/g)).toHaveLength(1);
+  });
+});
+
+describe("registro de generadores", () => {
+  it("tiene los 3 generadores de GEN-01 en orden", () => {
+    expect(GENERATORS.map((g) => g.id)).toEqual(["noise", "bars", "voronoi"]);
+  });
+
+  it.each(GENERATORS.map((g) => [g.id, g.sksl]))("%s declara el contrato con blend y una sola main", (_id, sksl) => {
+    for (const name of GENERATOR_UNIFORM_NAMES) {
       expect(sksl).toMatch(new RegExp(`uniform float\\d? ${name};`));
     }
     expect(sksl.match(/half4 main\(float2 xy\)/g)).toHaveLength(1);

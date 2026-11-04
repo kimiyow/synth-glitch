@@ -6,7 +6,7 @@
 const { beforeAll, describe, expect, it } = require("@jest/globals");
 const path = require("path");
 
-const { EFFECTS } = require("./registry");
+const { EFFECTS, GENERATORS } = require("./registry");
 
 const CK_DIR = path.join(path.dirname(require.resolve("canvaskit-wasm/package.json")), "bin/full");
 let CK;
@@ -24,6 +24,17 @@ describe("SkSL de los efectos", () => {
     expect(effect).not.toBeNull();
     const names = Array.from({ length: effect.getUniformCount() }, (_, i) => effect.getUniformName(i));
     expect(names).toEqual(["resolution", "param", "time", "seed"]);
+  });
+});
+
+describe("SkSL de los generadores", () => {
+  it.each(GENERATORS.map((g) => [g.id, g.sksl]))("%s compila con el contrato y blend", (_id, sksl) => {
+    let error = "";
+    const effect = CK.RuntimeEffect.Make(sksl, (m) => (error += m));
+    expect(error).toBe("");
+    expect(effect).not.toBeNull();
+    const names = Array.from({ length: effect.getUniformCount() }, (_, i) => effect.getUniformName(i));
+    expect(names).toEqual(["resolution", "param", "time", "seed", "blend"]);
   });
 });
 

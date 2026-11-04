@@ -1,4 +1,4 @@
-import type { EffectId } from "../state/types";
+import type { BlendMode, EffectId, GeneratorId } from "../state/types";
 import { CHROMATIC_SKSL } from "./effects/chromatic.sksl";
 import { CRT_SKSL } from "./effects/crt.sksl";
 import { DATAMOSH_SKSL } from "./effects/datamosh.sksl";
@@ -6,6 +6,9 @@ import { PIXELATE_SKSL } from "./effects/pixelate.sksl";
 import { SCANLINES_SKSL } from "./effects/scanlines.sksl";
 import { VHS_SKSL } from "./effects/vhs.sksl";
 import { WAVE_SKSL } from "./effects/wave.sksl";
+import { BARS_SKSL } from "./generators/bars.sksl";
+import { NOISE_SKSL } from "./generators/noise.sksl";
+import { VORONOI_SKSL } from "./generators/voronoi.sksl";
 
 export type EffectDef = {
   id: EffectId;
@@ -32,3 +35,25 @@ export const EFFECTS: readonly EffectDef[] = [
 export const EFFECT_BY_ID: Readonly<Record<EffectId, EffectDef>> = Object.fromEntries(
   EFFECTS.map((e) => [e.id, e]),
 ) as Record<EffectId, EffectDef>;
+
+export type GeneratorDef = {
+  id: GeneratorId;
+  label: string;
+  /** El SDD no fija valores por defecto para los generadores (6.4); estos se eligieron en M8. */
+  defaults: { x: number; y: number };
+  sksl: string;
+};
+
+/** Orden de GEN-01. */
+export const GENERATORS: readonly GeneratorDef[] = [
+  { id: "noise", label: "NOISE", defaults: { x: 0.3, y: 0.3 }, sksl: NOISE_SKSL },
+  { id: "bars", label: "BARRAS", defaults: { x: 0.3, y: 0.2 }, sksl: BARS_SKSL },
+  { id: "voronoi", label: "VORONOI", defaults: { x: 0.3, y: 0.3 }, sksl: VORONOI_SKSL },
+];
+
+export const GENERATOR_BY_ID: Readonly<Record<GeneratorId, GeneratorDef>> = Object.fromEntries(
+  GENERATORS.map((g) => [g.id, g]),
+) as Record<GeneratorId, GeneratorDef>;
+
+/** Valor del uniform `blend` de los generadores (ver generators/contract.ts). */
+export const BLEND_INDEX: Readonly<Record<BlendMode, number>> = { replace: 0, screen: 1, multiply: 2, difference: 3 };
