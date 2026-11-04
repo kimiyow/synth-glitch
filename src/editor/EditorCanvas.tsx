@@ -18,6 +18,8 @@ type Props = {
   layers: readonly Layer[];
   seed: number;
   crop?: CropRect;
+  /** Toque de 1 dedo sobre el lienzo (cierra la superposición abierta, 3.9). */
+  onTap?: () => void;
 };
 
 /**
@@ -25,7 +27,7 @@ type Props = {
  * con dos dedos (EDT-02). Todo el gesto vive en el hilo de UI (principio 2).
  * Un dedo queda libre para la herramienta (M5, M6).
  */
-export function EditorCanvas({ image, contentWidth, contentHeight, layers, seed, crop }: Props) {
+export function EditorCanvas({ image, contentWidth, contentHeight, layers, seed, crop, onTap }: Props) {
   const [view, setView] = useState({ width: 0, height: 0 });
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -54,6 +56,15 @@ export function EditorCanvas({ image, contentWidth, contentHeight, layers, seed,
       ty.set(clampAxis(ny, s, base.y, base.height, view.height));
     });
 
+  // En el hilo de JS (runOnJS): así no se llama a JS desde un worklet (ver PerfHud).
+  const tap = Gesture.Tap()
+    .maxDuration(250)
+    .runOnJS(true)
+    .onEnd((_e, success) => {
+      if (success) onTap?.();
+    });
+  const gestures = Gesture.Simultaneous(pinch, tap);
+
   const transform = useDerivedValue(() => [
     { translateX: tx.get() },
     { translateY: ty.get() },
@@ -70,7 +81,7 @@ export function EditorCanvas({ image, contentWidth, contentHeight, layers, seed,
   return (
     <View style={styles.root} onLayout={onLayout}>
       {view.width > 0 && (
-        <GestureDetector gesture={pinch}>
+        <GestureDetector gesture={gestures}>
           <Canvas style={StyleSheet.absoluteFill}>
             <Group transform={transform}>
               <Group transform={[{ translateX: base.x }, { translateY: base.y }]}>
