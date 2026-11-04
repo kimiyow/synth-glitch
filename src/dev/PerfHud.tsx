@@ -3,43 +3,27 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { useFrameCallback, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { scheduleOnRN } from "react-native-worklets";
 
 import { colors, type } from "../ui/tokens";
 import {
   addFrame,
   emptyFrameWindow,
+  FRAME_WINDOW_MS,
   summarizeIfDue,
   type FrameSummary,
 } from "./frameWindow";
 
 /**
- * HUD de rendimiento (desarrollo o EXPO_PUBLIC_DEV_TOOLS=1). Mide el hilo de UI con useFrameCallback y
- * el de JS con requestAnimationFrame; solo hay un setState cada 500 ms.
+ * HUD de rendimiento (desarrollo o EXPO_PUBLIC_DEV_TOOLS=1).
+ * Hilo de UI: useFrameCallback solo suma números en valores compartidos (sin objetos,
+ * sin llamadas a otros módulos ni a JS). Hilo de JS: los lee cada 500 ms.
  * Toque: plegar o desplegar. Mantener: abrir testLab.
  */
 export function PerfHud() {
   const insets = useSafeAreaInsets();
-  const [ui, setUi] = useState<FrameSummary | null>(null);
+  const ui = useUiFrameSummary();
   const js = useJsFrameSummary();
   const [collapsed, setCollapsed] = useState(false);
-
-  const uiWindow = useSharedValue(emptyFrameWindow(0));
-  useFrameCallback((info) => {
-    const frameMs = info.timeSincePreviousFrame;
-    if (frameMs == null) {
-      uiWindow.value = emptyFrameWindow(info.timestamp);
-      return;
-    }
-    const next = addFrame(uiWindow.value, frameMs);
-    const summary = summarizeIfDue(next, info.timestamp);
-    if (summary) {
-      uiWindow.value = emptyFrameWindow(info.timestamp);
-      scheduleOnRN(setUi, summary);
-    } else {
-      uiWindow.value = next;
-    }
-  });
 
   return (
     <Pressable
@@ -59,6 +43,48 @@ export function PerfHud() {
       )}
     </Pressable>
   );
+}
+
+function useUiFrameSummary() {
+  const [summary, setSummary] = useState<FrameSummary | null>(null);
+  // Contadores que solo crecen; JS calcula la diferencia entre lecturas.
+  const totalFrames = useSharedValue(0);
+  const totalMs = useSharedValue(0);
+  const maxMs = useSharedValue(0);
+
+  useFrameCallback((info) => {
+    const frameMs = info.timeSincePreviousFrame;
+    if (frameMs == null) return;
+    totalFrames.set(totalFrames.get() + 1);
+    totalMs.set(totalMs.get() + frameMs);
+    if (frameMs > maxMs.get()) maxMs.set(frameMs);
+  });
+
+  useEffect(() => {
+    let lastFrames = totalFrames.get();
+    let lastMs = totalMs.get();
+    let lastAt = performance.now();
+    const id = setInterval(() => {
+      const frames = totalFrames.get();
+      const ms = totalMs.get();
+      const now = performance.now();
+      const df = frames - lastFrames;
+      if (df > 0) {
+        setSummary({
+          fps: (df * 1000) / (now - lastAt),
+          avgMs: (ms - lastMs) / df,
+          maxMs: maxMs.get(),
+        });
+      }
+      maxMs.set(0);
+      lastFrames = frames;
+      lastMs = ms;
+      lastAt = now;
+    }, FRAME_WINDOW_MS);
+    return () => clearInterval(id);
+  }, [totalFrames, totalMs, maxMs]);
+
+  return summary;
 }
 
 function useJsFrameSummary() {

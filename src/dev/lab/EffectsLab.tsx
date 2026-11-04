@@ -1,9 +1,8 @@
 import { Canvas, type SkImage } from "@shopify/react-native-skia";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
 
 import { SceneRenderer } from "../../editor/SceneRenderer";
 import { EFFECTS, EFFECT_BY_ID } from "../../engine/registry";
@@ -63,6 +62,16 @@ function EffectDetail({ image, effect, onBack }: { image: SkImage; effect: Effec
   const py = useSharedValue(defaults.y);
   const frame = useDerivedValue<FrameInputs>(() => ({ time: time.get(), params: [px.get(), py.get()] }));
 
+  // El texto X/Y se lee desde JS cada 250 ms; el hilo de UI no llama a JS (ver PerfHud).
+  useEffect(() => {
+    const id = setInterval(() => {
+      const x = px.get();
+      const y = py.get();
+      setShown((prev) => (prev.x === x && prev.y === y ? prev : { x, y }));
+    }, 250);
+    return () => clearInterval(id);
+  }, [px, py]);
+
   // FX-04: 1 dedo ajusta X/Y (posición absoluta en el lienzo); doble toque reinicia.
   const pan = Gesture.Pan()
     .maxPointers(1)
@@ -73,16 +82,12 @@ function EffectDetail({ image, effect, onBack }: { image: SkImage; effect: Effec
     .onUpdate((e) => {
       px.set(Math.min(1, Math.max(0, e.x / width)));
       py.set(Math.min(1, Math.max(0, 1 - e.y / canvasH)));
-    })
-    .onFinalize(() => {
-      scheduleOnRN(setShown, { x: px.get(), y: py.get() });
     });
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .onEnd(() => {
       px.set(defaults.x);
       py.set(defaults.y);
-      scheduleOnRN(setShown, defaults);
     });
 
   return (
