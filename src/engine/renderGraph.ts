@@ -44,7 +44,19 @@ export function buildLayerChain(layers: readonly Layer[]): ChainNode[] {
   return chain;
 }
 
-// Declarada antes de usarse: el plugin de worklets no eleva las funciones.
+/**
+ * La semilla del proyecto llega a 2^31, pero la GPU usa float de 32 bits: con números así
+ * de grandes los hash de los generadores dan siempre el mismo valor (imagen negra). Se
+ * reduce aquí, en JS (exacto), a 0-999; sigue siendo determinista por proyecto.
+ */
+export const SHADER_SEED_RANGE = 1000;
+
+// Declaradas antes de usarse: el plugin de worklets no eleva las funciones.
+function shaderSeed(seed: number): number {
+  "worklet";
+  return ((seed % SHADER_SEED_RANGE) + SHADER_SEED_RANGE) % SHADER_SEED_RANGE;
+}
+
 function clamp01(v: number): number {
   "worklet";
   return Math.min(1, Math.max(0, v));
@@ -66,7 +78,7 @@ export function nodeUniforms(
     resolution,
     param: [clamp01(x), clamp01(y)],
     time: frame.time,
-    seed,
+    seed: shaderSeed(seed),
   };
   if (node.kind === "generator") uniforms.blend = node.blend;
   return uniforms;

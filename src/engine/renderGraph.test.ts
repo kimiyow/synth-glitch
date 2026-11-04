@@ -66,4 +66,9 @@ describe("nodeUniforms", () => {
     expect(nodeUniforms(chain, 0, frame, [1, 1], 0).param).toEqual([0.5, 0.6]);
     expect(nodeUniforms(chain, 1, frame, [1, 1], 0).param).toEqual([1, 0]);
   });
+
+  it("reduce la semilla del proyecto a un rango que la GPU puede usar", () => {
+    expect(nodeUniforms(chain, 0, { time: 0, params: [] }, [1, 1], 2_000_000_123).seed).toBe(123);
+    expect(nodeUniforms(chain, 0, { time: 0, params: [] }, [1, 1], 7).seed).toBe(7);
+  });
 });
