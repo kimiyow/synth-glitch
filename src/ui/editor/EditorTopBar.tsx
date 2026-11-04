@@ -6,7 +6,8 @@ import { space } from "../tokens";
 type Props = {
   canUndo: boolean;
   canRedo: boolean;
-  saving: boolean;
+  /** Hay cambios sin guardar (punto sobre Exportar). */
+  unsaved: boolean;
   exportOpen: boolean;
   onBack: () => void;
   onUndo: () => void;
@@ -14,8 +15,8 @@ type Props = {
   onExport: () => void;
 };
 
-/** Barra superior: volver · deshacer/rehacer (50 % si no aplican, EDT-04) · exportar con punto de autoguardado. */
-export function EditorTopBar({ canUndo, canRedo, saving, exportOpen, onBack, onUndo, onRedo, onExport }: Props) {
+/** Barra superior: volver · deshacer/rehacer (50 % si no aplican, EDT-04) · exportar con punto de cambios sin guardar. */
+export function EditorTopBar({ canUndo, canRedo, unsaved, exportOpen, onBack, onUndo, onRedo, onExport }: Props) {
   return (
     <View style={styles.root}>
       <IconButton icon="chevron.left" label="Volver" onPress={onBack} />
@@ -23,7 +24,7 @@ export function EditorTopBar({ canUndo, canRedo, saving, exportOpen, onBack, onU
         <IconButton icon="arrow.uturn.backward" label="Deshacer" disabled={!canUndo} onPress={onUndo} />
         <IconButton icon="arrow.uturn.forward" label="Rehacer" disabled={!canRedo} onPress={onRedo} />
       </View>
-      <IconButton icon="square.and.arrow.up" label="Exportar" active={exportOpen} dot={saving} onPress={onExport} />
+      <IconButton icon="square.and.arrow.up" label="Exportar" active={exportOpen} dot={unsaved} onPress={onExport} />
     </View>
   );
 }

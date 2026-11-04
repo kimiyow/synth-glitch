@@ -4,7 +4,8 @@ import { FlatList, StyleSheet, Text, View, useWindowDimensions } from "react-nat
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { ProjectSummary } from "../../project/storage";
-import { useScene } from "../../state/activeScene";
+import { sceneStore, useScene } from "../../state/activeScene";
+import { confirmLeave } from "../../state/leaveGuard";
 import {
   deleteProjectById,
   duplicateProjectById,
@@ -40,11 +41,16 @@ export default function GalleryScreen() {
 
   useFocusEffect(refresh);
 
-  const open = (project: ProjectSummary) => {
+  const open = async (project: ProjectSummary) => {
     if (project.error) {
       setMessage(project.error);
       return;
     }
+    if (project.id === sceneStore.getState().project?.id) {
+      router.navigate("/editor");
+      return;
+    }
+    if (!(await confirmLeave())) return;
     const result = openProjectById(project.id);
     if (result.ok) {
       setMessage(null);

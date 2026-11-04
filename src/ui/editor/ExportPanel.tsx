@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { tapFeedback } from "../../platform/haptics";
-import type { SaveStatus } from "../../project/autosave";
+import type { SaveStatus } from "../../state/sceneStore";
 import { Icon } from "../kit/Icon";
 import { colors, radius, space, type } from "../tokens";
 
@@ -12,6 +12,8 @@ type Props = {
   readOnly: boolean;
   status: SaveStatus;
   onRename: (name: string) => boolean;
+  /** Proyecto recién creado que aún no se guarda. */
+  draft: boolean;
   onSaveProject: () => void;
 };
 
@@ -22,19 +24,18 @@ const ROWS: { icon: SFSymbol; label: string; milestone: string | null }[] = [
   { icon: "hand.draw", label: "Guardar preset gestual", milestone: "M7" },
 ];
 
-/** Panel Exportar (3.11): nombre editable, estado de autoguardado y salidas en módulos. */
-export function ExportPanel({ name, readOnly, status, onRename, onSaveProject }: Props) {
+/** Panel Exportar (3.11): nombre editable, estado del guardado manual y salidas en módulos. */
+export function ExportPanel({ name, readOnly, status, draft: isDraft, onRename, onSaveProject }: Props) {
   const [draft, setDraft] = useState(name);
-  const [savedNote, setSavedNote] = useState(false);
   const statusText = readOnly
     ? "Solo lectura"
     : status.state === "error"
       ? `Error al guardar · ${status.error}`
-      : status.state === "saved"
-        ? savedNote
-          ? "Proyecto guardado"
-          : "Cambios guardados"
-        : "Guardando cambios…";
+      : isDraft
+        ? "Proyecto nuevo · sin guardar"
+        : status.state === "unsaved"
+          ? "Cambios sin guardar"
+          : "Todo guardado";
 
   return (
     <View style={styles.root}>
@@ -66,7 +67,6 @@ export function ExportPanel({ name, readOnly, status, onRename, onSaveProject }:
               onPress={() => {
                 tapFeedback();
                 onSaveProject();
-                setSavedNote(true);
               }}
               style={({ pressed }) => [styles.module, off && styles.off, pressed && styles.pressed]}
             >

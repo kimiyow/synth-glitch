@@ -20,6 +20,7 @@ import { pickMediaFromLibrary } from "../../platform/pickMedia";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import { createGenerativeProject, createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
+import { confirmLeave, saveActiveProject } from "../../state/leaveGuard";
 import type { GeneratorId, Layer, Project, SourceId } from "../../state/types";
 import { EditorEmpty, GEN_THUMB, type GenerativeAspect } from "../../ui/editor/EditorEmpty";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
@@ -98,6 +99,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
 function ProjectView({ project }: { project: Project }) {
   const readOnly = useScene((s) => s.readOnly);
   const saveStatus = useScene((s) => s.saveStatus);
+  const isDraft = useScene((s) => s.draft);
   const canUndo = useScene((s) => s.history.past.length > 0);
   const canRedo = useScene((s) => s.history.future.length > 0);
   const { media } = project.scene;
@@ -231,9 +233,13 @@ function ProjectView({ project }: { project: Project }) {
       <EditorTopBar
         canUndo={canUndo && !readOnly}
         canRedo={canRedo && !readOnly}
-        saving={saveStatus.state === "pending" || saveStatus.state === "saving"}
+        unsaved={!readOnly && (isDraft || saveStatus.state !== "saved")}
         exportOpen={openPanel === "export"}
-        onBack={() => sceneStore.getState().close()}
+        onBack={() => {
+          void confirmLeave().then((leave) => {
+            if (leave) sceneStore.getState().close();
+          });
+        }}
         onUndo={() => sceneStore.getState().undo()}
         onRedo={() => sceneStore.getState().redo()}
         onExport={() => setOverlays((stack) => toggleOverlay(stack, "export"))}
@@ -386,8 +392,11 @@ function ProjectView({ project }: { project: Project }) {
               name={project.name}
               readOnly={readOnly}
               status={saveStatus}
+              draft={isDraft}
               onRename={(name) => sceneStore.getState().rename(name)}
-              onSaveProject={() => sceneStore.getState().flush()}
+              onSaveProject={() => {
+                void saveActiveProject().then((r) => setNotice(r.ok ? "PROYECTO GUARDADO" : `ERROR · ${r.error}`));
+              }}
             />
           ) : (
             <PendingPanel title={PANEL_TITLES[openPanel]} showTestChange={openPanel === "presets" && !readOnly} />

@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useSettings, settingsStore } from "../../state/appSettings";
 import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
+import { confirmLeave } from "../../state/leaveGuard";
 import { AppHeader } from "../../ui/AppHeader";
 import { IconButton } from "../../ui/kit/IconButton";
 import { AspectMask } from "../../ui/camera/AspectMask";
@@ -89,6 +90,7 @@ function CameraCapture() {
     if (busy || recording) return;
     const camera = cameraRef.current;
     if (!camera) return;
+    if (!(await confirmLeave())) return;
     setBusy(true);
     try {
       const photo = await camera.takePictureAsync({ quality: 1 });
@@ -132,6 +134,8 @@ function CameraCapture() {
       return;
     }
     if (!holdHintSeen) settingsStore.getState().update({ holdHintSeen: true });
+    // El clip ya se grabó; si el usuario cancela para no perder su proyecto, se descarta.
+    if (!(await confirmLeave())) return;
     setBusy(true);
     finish(await createProjectFromClip(uri, aspect));
   };

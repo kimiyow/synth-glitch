@@ -56,9 +56,21 @@ export type ProjectSummary = {
   error: string | null;
 };
 
-/** Galería: se lee cada carpeta; no hay un índice aparte (3.7). Más reciente primero. */
+/** Un borrador es una carpeta con medio pero sin `project.json`: aún no se ha guardado. */
+export function isDraft(fs: ProjectFs, id: string): boolean {
+  return !fs.exists(id, PROJECT_FILE) && !fs.exists(id, TEMP_FILE);
+}
+
+/** Borra los borradores que quedaron de una sesión anterior (la app se cerró sin guardar). */
+export function removeDrafts(fs: ProjectFs): void {
+  for (const id of fs.listIds()) {
+    if (isDraft(fs, id)) fs.removeDir(id);
+  }
+}
+
+/** Galería: se lee cada carpeta; no hay un índice aparte (3.7). Más reciente primero. Sin borradores. */
 export function listProjects(fs: ProjectFs): ProjectSummary[] {
-  const summaries = fs.listIds().map((id): ProjectSummary => {
+  const summaries = fs.listIds().filter((id) => !isDraft(fs, id)).map((id): ProjectSummary => {
     const thumbUri = fs.exists(id, THUMB_FILE) ? fs.uri(id, THUMB_FILE) : null;
     const result = readProject(fs, id);
     if (!result.ok) {
@@ -84,15 +96,18 @@ export type FilesToWrite = {
   thumb?: Uint8Array;
 };
 
-/** Crea la carpeta de un proyecto nuevo con su medio, imágenes y `project.json`. */
-export function createProjectFiles(fs: ProjectFs, project: Project, files: FilesToWrite): void {
+/**
+ * Crea la carpeta de un proyecto nuevo con su medio e imágenes. Con `draft`, no escribe
+ * `project.json`: el proyecto solo existe cuando se guarda (guardado manual).
+ */
+export function createProjectFiles(fs: ProjectFs, project: Project, files: FilesToWrite, opts?: { draft?: boolean }): void {
   fs.createDir(project.id);
   try {
     const { media } = files;
     if (media && "bytes" in media) fs.writeBytes(project.id, media.name, media.bytes);
     if (media && "sourceUri" in media) fs.copyFileIn(project.id, media.name, media.sourceUri);
     writeImages(fs, project.id, files);
-    saveProject(fs, project);
+    if (!opts?.draft) saveProject(fs, project);
   } catch (error) {
     fs.removeDir(project.id);
     throw error;

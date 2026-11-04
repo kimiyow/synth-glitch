@@ -51,12 +51,9 @@ async function createFromMedia(args: {
   };
   const preview = await renderSceneJpeg(args.poster, project.scene, PREVIEW_LONG_SIDE);
   const thumb = await renderSceneJpeg(args.poster, project.scene, THUMB_LONG_SIDE, 80);
-  createProjectFiles(projectFs, project, {
-    media: { name: args.fileName, ...args.source },
-    preview,
-    thumb,
-  });
-  sceneStore.getState().open(project, false);
+  // Borrador: no sale en la Galería hasta que se toca "Guardar proyecto".
+  createProjectFiles(projectFs, project, { media: { name: args.fileName, ...args.source }, preview, thumb }, { draft: true });
+  sceneStore.getState().open(project, false, { draft: true });
   return { ok: true, project };
 }
 

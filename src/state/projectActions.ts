@@ -14,8 +14,6 @@ import { projectFs, sceneStore } from "./activeScene";
 type Result = { ok: true } | { ok: false; error: string };
 
 export function listAllProjects(): ProjectSummary[] {
-  // Lo pendiente del proyecto abierto se escribe antes, para listar lo último.
-  sceneStore.getState().flush();
   return listProjects(projectFs);
 }
 
@@ -29,16 +27,14 @@ export function openProjectById(id: string): Result {
 export function renameProjectById(id: string, name: string): Result {
   const store = sceneStore.getState();
   if (store.project?.id === id) {
+    // El nombre se guarda en disco sin guardar los demás cambios sin confirmar.
     if (!store.rename(name)) return { ok: false, error: "NO SE PUDO RENOMBRAR" };
-    store.flush();
-    return { ok: true };
   }
   const result = renameProject(projectFs, id, name, new Date());
   return result.ok ? { ok: true } : result;
 }
 
 export function duplicateProjectById(id: string): Result {
-  if (sceneStore.getState().project?.id === id) sceneStore.getState().flush();
   const now = new Date();
   try {
     const result = duplicateProject(projectFs, id, newProjectId(now), now);
