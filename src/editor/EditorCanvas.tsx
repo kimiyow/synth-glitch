@@ -14,6 +14,7 @@ import Animated, {
 
 import { FULL_CROP, type CropRect } from "../engine/crop";
 import { buildEffectChain, type FrameInputs } from "../engine/renderGraph";
+import { evaluate } from "../modulation/evaluate";
 import {
   advanceStroke,
   MAX_SIZE,
@@ -24,7 +25,7 @@ import {
   type BrushTool,
   type StrokeCursor,
 } from "../paint/strokeInterpolate";
-import type { Layer, Stamp, Stroke } from "../state/types";
+import type { Layer, Route, SourceConfig, Stamp, Stroke } from "../state/types";
 import { colors, type } from "../ui/tokens";
 import { SceneRenderer } from "./SceneRenderer";
 import { usePaintBuffer } from "./usePaintBuffer";
@@ -48,6 +49,9 @@ type Props = {
   contentWidth: number;
   contentHeight: number;
   layers: readonly Layer[];
+  /** Modulación (3.5): se evalúa en cada cuadro en el hilo de UI (MOD-04). */
+  routes: readonly Route[];
+  sources: SourceConfig;
   seed: number;
   crop?: CropRect;
   /** Id de la capa que ajusta el gesto X/Y de 1 dedo (FX-04); null = desactivado. */
@@ -72,6 +76,7 @@ const NO_STROKES: readonly Stroke[] = [];
  * Un dedo queda libre para la herramienta (M5, M6).
  */
 export function EditorCanvas(props: Props) {
+  const { routes, sources } = props;
   const { image, contentWidth, contentHeight, layers, seed, crop, xyLayerId = null, onCommitXY, onResetXY } = props;
   const { paintable = false, brush = null, strokes = NO_STROKES, showSizePreview = false } = props;
   const mediaWidth = props.mediaWidth ?? contentWidth;
@@ -125,7 +130,37 @@ export function EditorCanvas(props: Props) {
   useFrameCallback((info) => {
     time.set(info.timeSinceFirstFrame / 1000);
   });
-  const frame = useDerivedValue<FrameInputs>(() => ({ time: time.get(), params: liveParams.get() }));
+  // ADSR: se dispara al apoyar cualquier dedo sobre la imagen y se suelta al levantarlo.
+  const gateOn = useSharedValue<number | null>(null);
+  const gateOff = useSharedValue<number | null>(null);
+  const chainLayers = chain.map((n) => ({ id: n.layerId, params: n.base }));
+  const frame = useDerivedValue<FrameInputs>(() => {
+    const t = time.get();
+    const lp = liveParams.get();
+    const touch: Record<string, { x: number; y: number }> = {};
+    for (let i = 0; i < chainLayers.length; i++) {
+      touch[chainLayers[i].id] = { x: lp[i * 2] ?? chainLayers[i].params.x, y: lp[i * 2 + 1] ?? chainLayers[i].params.y };
+    }
+    const inputs = {
+      touch,
+      gateOnAt: gateOn.get(),
+      gateOffAt: gateOff.get(),
+      orientation: { x: 0, y: 0 },
+      mic: 0,
+      track: null,
+    };
+    return { time: t, params: evaluate(chainLayers, routes, sources, t, inputs, seed) };
+  });
+  const gate = Gesture.Pan()
+    .minDistance(0)
+    .maxPointers(1)
+    .onBegin(() => {
+      gateOn.set(time.get());
+      gateOff.set(null);
+    })
+    .onFinalize(() => {
+      gateOff.set(time.get());
+    });
 
   // FX-04: arrastre relativo de 1 dedo (derecha = +X, arriba = +Y), un ancho de lienzo = rango completo.
   const idx = xyLayerId ? chain.findIndex((n) => n.layerId === xyLayerId) : -1;
@@ -235,7 +270,7 @@ export function EditorCanvas(props: Props) {
       props.onCommitStroke?.(stamps);
     });
 
-  const gestures = Gesture.Simultaneous(pinch, xyPan, xyCommit, brushPan, brushCommit, doubleTap);
+  const gestures = Gesture.Simultaneous(pinch, gate, xyPan, xyCommit, brushPan, brushCommit, doubleTap);
   const sceneImage: SkImage | DerivedValue<SkImage | null> = paintable && paint.ready ? paint.shown : image;
 
   const transform = useDerivedValue(() => [

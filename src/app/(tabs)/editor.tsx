@@ -13,11 +13,12 @@ import { croppedSize } from "../../engine/crop";
 import { canAddLayer, isCostHigh, MAX_LAYERS } from "../../engine/layerCost";
 import { EFFECT_BY_ID, EFFECTS } from "../../engine/registry";
 import { useSlowFrames } from "../../editor/useSlowFrames";
+import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
-import type { EffectId, Project } from "../../state/types";
+import type { EffectId, Project, SourceId } from "../../state/types";
 import { EditorEmpty } from "../../ui/editor/EditorEmpty";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
 import { EffectsPanel } from "../../ui/editor/EffectsPanel";
@@ -119,6 +120,24 @@ function ProjectView({ project }: { project: Project }) {
     setOverlays((stack) => toggleOverlay(stack, id));
   };
 
+  // MOD-03: una ruta por eje desde el panel; DEDO quita la ruta.
+  const setRouteSource = (layerId: string, axis: "x" | "y", source: SourceId) =>
+    sceneStore.getState().commit("ruta de modulación", (scene) => {
+      const prev = scene.routes.find((r) => r.target.layerId === layerId && r.target.param === axis);
+      scene.routes = scene.routes.filter((r) => r !== prev);
+      if (source === "touch") return;
+      scene.routes.push({
+        id: `${layerId}-${axis}`,
+        source,
+        sourceIndex: 0,
+        target: { layerId, param: axis },
+        amount: prev?.amount ?? 0.5,
+        curve: "lin",
+        // El secuenciador fija el valor de cada paso; el resto se suma al gesto.
+        mode: source === "seq" ? "replace" : "add",
+      });
+    });
+
   // Fichas (4.2): apagada → enciende y selecciona; encendida → selecciona; seleccionada → apaga.
   const onTile = (effect: EffectId) => {
     if (readOnly) return;
@@ -135,6 +154,7 @@ function ProjectView({ project }: { project: Project }) {
     } else {
       sceneStore.getState().commit(`apagar ${effect}`, (scene) => {
         scene.layers = scene.layers.filter((l) => l.id !== layer.id);
+        scene.routes = scene.routes.filter((r) => r.target.layerId !== layer.id);
       });
       setSelectedId(layers.filter((l) => l.kind === "effect" && l.id !== layer.id).at(-1)?.id ?? null);
     }
@@ -159,6 +179,8 @@ function ProjectView({ project }: { project: Project }) {
             contentWidth={content.width}
             contentHeight={content.height}
             layers={isClip ? [] : project.scene.layers}
+            routes={project.scene.routes}
+            sources={project.scene.sources}
             seed={project.scene.seed}
             crop={isClip ? undefined : project.scene.crop.rect}
             paintable={!isClip}
@@ -221,7 +243,35 @@ function ProjectView({ project }: { project: Project }) {
               onPreview={setSizePreview}
             />
           ) : openPanel === "effects" ? (
-            <EffectsPanel layers={layers} selectedLayerId={selected?.id ?? null} onTile={onTile} />
+            <EffectsPanel
+              layers={layers}
+              routes={project.scene.routes}
+              sources={project.scene.sources}
+              selectedLayerId={selected?.id ?? null}
+              warning={
+                hasFastLuminanceRoute(layers, project.scene.routes, project.scene.sources)
+                  ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA"
+                  : null
+              }
+              onTile={onTile}
+              onRouteSource={setRouteSource}
+              onRouteAmount={(layerId, axis, amount) =>
+                sceneStore.getState().commit("cantidad de modulación", (scene) => {
+                  const r = scene.routes.find((x) => x.target.layerId === layerId && x.target.param === axis);
+                  if (r) r.amount = amount;
+                })
+              }
+              onSources={(next) =>
+                sceneStore.getState().commit("ajustar fuente", (scene) => {
+                  scene.sources = next;
+                })
+              }
+              onTempo={(bpm) =>
+                sceneStore.getState().adjust((scene) => {
+                  scene.sources.tempo.bpm = bpm;
+                })
+              }
+            />
           ) : openPanel === "export" ? (
             <ExportPanel
               name={project.name}

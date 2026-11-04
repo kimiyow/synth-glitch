@@ -1,4 +1,4 @@
-import type { Draft } from "immer";
+import { produce, type Draft } from "immer";
 import { createStore } from "zustand/vanilla";
 
 import { createAutosave, type SaveStatus } from "../project/autosave";
@@ -18,6 +18,8 @@ export type SceneState = {
   close(): void;
   /** Un cambio confirmado de la escena (3.8): entra al historial y se autoguarda. */
   commit(label: string, recipe: (draft: Draft<Scene>) => void): void;
+  /** Cambio que no entra al historial (p. ej. el tempo, 3.8) pero sí se autoguarda. */
+  adjust(recipe: (draft: Draft<Scene>) => void): void;
   undo(): void;
   redo(): void;
   /** Devuelve false si el nombre queda vacío o el proyecto es de solo lectura. */
@@ -69,6 +71,11 @@ export function createSceneStore(deps: SceneStoreDeps) {
         if (result.history === history) return;
         set({ history: result.history });
         save({ ...project, scene: result.value, updatedAt: now().toISOString() });
+      },
+      adjust(recipe) {
+        const { project, readOnly } = get();
+        if (!project || readOnly) return;
+        save({ ...project, scene: produce(project.scene, recipe), updatedAt: now().toISOString() });
       },
       undo() {
         const { project, readOnly, history } = get();
