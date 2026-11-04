@@ -62,7 +62,7 @@ export default function GalleryScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={[styles.header, { paddingHorizontal: margin }]}>
-        <Text style={styles.title}>GALERÍA</Text>
+        <Text style={styles.bigTitle}>Galería</Text>
         <Text style={styles.count}>{projects.length} PROYECTOS</Text>
       </View>
       {message && (
@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   title: { color: colors.inkText, fontFamily: type.family, fontSize: type.title, letterSpacing: 1.2 },
+  bigTitle: { color: colors.inkText, fontFamily: type.family, fontSize: 30, fontWeight: "700" },
   count: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   message: {
     color: colors.paperText,

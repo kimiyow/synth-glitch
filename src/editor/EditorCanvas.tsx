@@ -323,7 +323,7 @@ export function EditorCanvas(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, overflow: "hidden", borderRadius: 12, backgroundColor: colors.ink },
+  root: { flex: 1, overflow: "hidden", borderRadius: 22, backgroundColor: colors.inkSurface },
   reset: {
     position: "absolute",
     top: 8,

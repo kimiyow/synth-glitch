@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings, settingsStore } from "../../state/appSettings";
 import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
 import { AppHeader } from "../../ui/AppHeader";
+import { IconButton } from "../../ui/kit/IconButton";
 import { AspectMask } from "../../ui/camera/AspectMask";
 import { CameraMenu } from "../../ui/camera/CameraMenu";
 import { Shutter } from "../../ui/camera/Shutter";
@@ -155,15 +156,7 @@ function CameraCapture() {
     <SafeAreaView style={styles.root} edges={["top"]}>
       <AppHeader
         right={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Más opciones"
-            onPress={() => setMenuOpen((o) => !o)}
-            style={styles.headerButton}
-            hitSlop={8}
-          >
-            <Text style={styles.title}>⋯</Text>
-          </Pressable>
+          <IconButton icon="ellipsis" label="Más opciones" active={menuOpen} onPress={() => setMenuOpen((o) => !o)} />
         }
       />
 
@@ -224,7 +217,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
   headerButton: { minWidth: geometry.target, minHeight: geometry.target, alignItems: "flex-end", justifyContent: "center" },
   title: { color: colors.inkText, fontFamily: type.family, fontSize: type.title },
-  viewfinder: { alignSelf: "center", borderRadius: 12, overflow: "hidden", backgroundColor: colors.inkSurface },
+  viewfinder: { alignSelf: "center", borderRadius: 22, overflow: "hidden", backgroundColor: colors.inkSurface },
   aspectLabel: {
     position: "absolute",
     bottom: 8,

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ProjectSummary } from "../../project/storage";
 import { MEDIA_KIND_LABEL, shortDate } from "../format";
-import { colors, geometry, type } from "../tokens";
+import { colors, radius, type } from "../tokens";
 
 type Props = {
   project: ProjectSummary;
@@ -52,9 +52,8 @@ const styles = StyleSheet.create({
   thumb: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.inkSurface,
-    borderColor: colors.inkLine,
-    borderWidth: geometry.hairline,
+    backgroundColor: colors.inkRaised,
+    borderRadius: radius.md,
     overflow: "hidden",
   },
   noThumb: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1.2 },
@@ -62,13 +61,16 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 6,
     left: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    overflow: "hidden",
     backgroundColor: colors.paper,
     color: colors.paperText,
     fontFamily: type.family,
     fontSize: type.micro,
     letterSpacing: 1.2,
   },
-  name: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, marginTop: 6 },
+  name: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600", marginTop: 8 },
   meta: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2, marginTop: 2 },
 });

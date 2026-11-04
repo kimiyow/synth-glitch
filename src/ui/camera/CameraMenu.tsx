@@ -2,7 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CAMERA_ASPECTS, type CameraAspect } from "../../state/settings";
-import { colors, geometry, type } from "../tokens";
+import { colors, geometry, radius, type } from "../tokens";
 
 type Props = {
   visible: boolean;
@@ -45,10 +45,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: geometry.compactMargin,
     width: 180,
-    backgroundColor: colors.ink,
-    borderColor: colors.inkLineStrong,
-    borderWidth: geometry.hairline,
-    paddingVertical: 4,
+    backgroundColor: colors.inkRaised,
+    borderRadius: radius.md,
+    overflow: "hidden",
+    paddingVertical: 6,
   },
   heading: {
     color: colors.inkMute,

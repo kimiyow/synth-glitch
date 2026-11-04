@@ -1,8 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppHeader } from "../AppHeader";
-import { colors, geometry, type } from "../tokens";
+import { Button } from "../kit/Button";
+import { Icon } from "../kit/Icon";
+import { colors, radius, space, type } from "../tokens";
 
 type Props = {
   busy: boolean;
@@ -12,17 +14,20 @@ type Props = {
   onDismissMessage: () => void;
 };
 
-/** Editor sin proyecto (Figma "Editor Seccion"): importar desde Fotos o ir a la cámara. */
+/** Editor sin proyecto: importar desde Fotos o ir a la cámara. */
 export function EditorEmpty({ busy, message, onImport, onCamera, onDismissMessage }: Props) {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <AppHeader />
       <View style={styles.center}>
-        <Text style={styles.title}>SIN IMAGEN</Text>
-        <Text style={styles.subtitle}>TOMA O IMPORTA UNA IMAGEN</Text>
+        <View style={styles.badge}>
+          <Icon name="photo.on.rectangle.angled" size={34} />
+        </View>
+        <Text style={styles.title}>Sin imagen</Text>
+        <Text style={styles.subtitle}>Toma o importa una imagen para empezar a editar</Text>
         <View style={styles.buttons}>
-          <OutlineButton label={busy ? "IMPORTANDO…" : "IMPORTAR DESDE FOTOS"} disabled={busy} onPress={onImport} />
-          <OutlineButton label="IR A CÁMARA" disabled={busy} onPress={onCamera} />
+          <Button label={busy ? "Importando…" : "Importar desde Fotos"} icon="photo.badge.plus" disabled={busy} onPress={onImport} />
+          <Button label="Ir a cámara" icon="camera" variant="secondary" disabled={busy} onPress={onCamera} />
         </View>
         {message && (
           <Text style={styles.message} onPress={onDismissMessage}>
@@ -34,45 +39,30 @@ export function EditorEmpty({ busy, message, onImport, onCamera, onDismissMessag
   );
 }
 
-function OutlineButton({ label, disabled, onPress }: { label: string; disabled: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      disabled={disabled}
-      onPress={onPress}
-      hitSlop={{ top: 10, bottom: 10 }}
-      style={({ pressed }) => [styles.button, (pressed || disabled) && styles.dim]}
-    >
-      <Text style={styles.buttonText}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: 80 },
-  title: { color: colors.inkText, fontFamily: type.family, fontSize: type.body },
-  subtitle: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, marginTop: 6 },
-  buttons: { marginTop: 48, gap: 10 },
-  button: {
-    width: 190,
-    minHeight: 32,
+  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: space.xl, paddingBottom: 60 },
+  badge: {
+    width: 76,
+    height: 76,
+    borderRadius: radius.lg,
+    backgroundColor: colors.inkRaised,
     alignItems: "center",
     justifyContent: "center",
-    borderColor: colors.inkLineStrong,
-    borderWidth: 1,
-    borderRadius: 2,
+    marginBottom: space.lg,
   },
-  dim: { opacity: 0.5 },
-  buttonText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro + 1 },
+  title: { color: colors.inkText, fontFamily: type.family, fontSize: type.title, fontWeight: "600" },
+  subtitle: { color: colors.inkMute, fontFamily: type.family, fontSize: type.body - 2, marginTop: space.xs, textAlign: "center" },
+  buttons: { alignSelf: "stretch", marginTop: space.xl, gap: space.sm },
   message: {
-    marginTop: 24,
-    marginHorizontal: geometry.compactMargin,
+    marginTop: space.lg,
     color: colors.paperText,
     backgroundColor: colors.paper,
     fontFamily: type.family,
     fontSize: type.label,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.sm,
+    overflow: "hidden",
   },
 });

@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { EFFECT_BY_ID, EFFECTS } from "../../engine/registry";
 import type { EffectId, Layer, Route, SourceConfig, SourceId } from "../../state/types";
-import { colors, type } from "../tokens";
+import { Pill } from "../kit/Pill";
+import { colors, radius, type } from "../tokens";
 import { RouteRow } from "./RouteRow";
 import { SourceEditor, type ModSourceId } from "./SourceEditor";
 
@@ -55,19 +56,13 @@ export function EffectsPanel(props: Props) {
     <View style={styles.root}>
       <View style={styles.categories}>
         {CATEGORIES.map((c) => (
-          <Pressable
+          <Pill
             key={c.id}
-            accessibilityRole="button"
-            accessibilityState={{ selected: c.id === category, disabled: c.milestone !== null }}
+            label={c.milestone ? `${c.label} · ${c.milestone}` : c.label}
+            selected={c.id === category}
             disabled={c.milestone !== null}
             onPress={() => setCategory(c.id)}
-            style={c.milestone !== null && styles.disabled}
-          >
-            <Text style={[styles.category, c.id === category && styles.categoryOn]}>
-              {c.label}
-              {c.milestone ? ` · ${c.milestone}` : ""}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
 
@@ -154,17 +149,17 @@ function Tile(p: { label: string; on: boolean; selected: boolean; badge: string 
 
 const styles = StyleSheet.create({
   root: { gap: 10 },
-  categories: { flexDirection: "row", gap: 18 },
+  categories: { flexDirection: "row", gap: 6 },
   disabled: { opacity: 0.4 },
   category: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   categoryOn: { color: colors.inkText },
   tiles: { gap: 14, paddingRight: 16 },
   tileWrap: { alignItems: "center", gap: 4 },
-  tile: { width: TILE, height: TILE, borderRadius: 6, backgroundColor: "#3A3A3A", alignItems: "center", justifyContent: "center" },
-  tileOn: { borderWidth: 1, borderColor: colors.inkLineStrong },
-  tileSelected: { borderWidth: 2, borderColor: colors.inkText, backgroundColor: "#5A5A5A" },
+  tile: { width: TILE, height: TILE, borderRadius: radius.md, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center" },
+  tileOn: { borderWidth: 1.5, borderColor: colors.inkText },
+  tileSelected: { borderWidth: 0, backgroundColor: colors.paper },
   order: { color: colors.inkMute, fontFamily: type.family, fontSize: type.title },
-  orderSelected: { color: colors.inkText },
+  orderSelected: { color: colors.paperText, fontWeight: "700" },
   tileLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label },
   tileLabelOn: { color: colors.inkText },
   routes: { gap: 8 },

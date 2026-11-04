@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import type { BrushTool } from "../../paint/strokeInterpolate";
+import { Pill } from "../kit/Pill";
 import { Slider } from "../Slider";
 import { colors, type } from "../tokens";
 
@@ -51,15 +52,7 @@ export function BrushPanel(props: Props) {
       </View>
       <View style={styles.chips}>
         {CHIPS.map((chip) => (
-          <Pressable
-            key={chip.id}
-            accessibilityRole="button"
-            accessibilityState={{ selected: chip.id === tool }}
-            onPress={() => onTool(chip.id)}
-            style={[styles.chip, chip.id === tool && styles.chipOn]}
-          >
-            <Text style={[styles.chipText, chip.id === tool && styles.chipTextOn]}>{chip.label}</Text>
-          </Pressable>
+          <Pill key={chip.id} label={chip.label} selected={chip.id === tool} onPress={() => onTool(chip.id)} />
         ))}
       </View>
       <Text style={styles.count}>
@@ -73,9 +66,5 @@ const styles = StyleSheet.create({
   root: { gap: 10 },
   sliders: { flexDirection: "row", gap: 24 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderColor: colors.inkLineStrong, borderWidth: 1, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 4 },
-  chipOn: { backgroundColor: colors.paper, borderColor: colors.paper },
-  chipText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro + 1 },
-  chipTextOn: { color: colors.paperText },
   count: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro },
 });

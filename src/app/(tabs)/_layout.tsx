@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Text } from "react-native";
+import { Icon } from "../../ui/kit/Icon";
 
 import { useScene } from "../../state/activeScene";
 import { colors, type } from "../../ui/tokens";
@@ -20,18 +20,27 @@ export default function TabsLayout() {
           fontFamily: type.family,
           fontSize: type.label,
           fontWeight: "500",
+          letterSpacing: 0.6,
           textTransform: "uppercase",
         },
-        // Figma: triángulo ▼ sobre cada etiqueta, blanco en la pestaña activa.
-        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 12 }}>▼</Text>,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "CÁMARA" }} />
+      <Tabs.Screen
+        name="index"
+        options={{ title: "CÁMARA", tabBarIcon: ({ color }) => <Icon name="camera" size={22} color={color} /> }}
+      />
       <Tabs.Screen
         name="editor"
-        options={{ title: "EDITOR", tabBarStyle: projectOpen ? { display: "none" } : TAB_BAR_STYLE }}
+        options={{
+          title: "EDITOR",
+          tabBarIcon: ({ color }) => <Icon name="slider.horizontal.3" size={22} color={color} />,
+          tabBarStyle: projectOpen ? { display: "none" } : TAB_BAR_STYLE,
+        }}
       />
-      <Tabs.Screen name="gallery" options={{ title: "GALERÍA" }} />
+      <Tabs.Screen
+        name="gallery"
+        options={{ title: "GALERÍA", tabBarIcon: ({ color }) => <Icon name="square.grid.2x2" size={22} color={color} /> }}
+      />
     </Tabs>
   );
 }

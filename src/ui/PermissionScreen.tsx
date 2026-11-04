@@ -1,7 +1,8 @@
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { colors, geometry, type } from "./tokens";
+import { Button } from "./kit/Button";
+import { colors, space, type } from "./tokens";
 
 type Props = {
   title: string;
@@ -20,29 +21,17 @@ export function PermissionScreen({ title, reason, canAskAgain, onAllow }: Props)
         <Text style={styles.reason}>{reason}</Text>
       </View>
       {canAskAgain ? (
-        <Pressable accessibilityRole="button" onPress={onAllow} style={styles.button}>
-          <Text style={styles.buttonText}>PERMITIR</Text>
-        </Pressable>
+        <Button label="Permitir" surface="paper" onPress={onAllow} />
       ) : (
-        <Pressable accessibilityRole="button" onPress={() => Linking.openSettings()} style={styles.button}>
-          <Text style={styles.buttonText}>ABRIR AJUSTES</Text>
-        </Pressable>
+        <Button label="Abrir Ajustes" icon="gearshape" surface="paper" onPress={() => Linking.openSettings()} />
       )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, padding: geometry.compactMargin, justifyContent: "space-between" },
-  body: { gap: 12, paddingTop: 48 },
-  title: { color: colors.paperText, fontFamily: type.family, fontSize: type.display },
+  root: { flex: 1, backgroundColor: colors.paper, padding: space.xl, justifyContent: "space-between" },
+  body: { gap: space.md, paddingTop: 48 },
+  title: { color: colors.paperText, fontFamily: type.family, fontSize: type.display, fontWeight: "600" },
   reason: { color: colors.paperMute, fontFamily: type.family, fontSize: type.body, lineHeight: 22 },
-  button: {
-    minHeight: geometry.target,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.paperText,
-    marginBottom: geometry.compactMargin,
-  },
-  buttonText: { color: colors.paper, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
 });

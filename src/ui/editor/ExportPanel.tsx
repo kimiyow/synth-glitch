@@ -1,8 +1,11 @@
+import type { SFSymbol } from "expo-symbols";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { tapFeedback } from "../../platform/haptics";
 import type { SaveStatus } from "../../project/autosave";
-import { colors, geometry, type } from "../tokens";
+import { Icon } from "../kit/Icon";
+import { colors, radius, space, type } from "../tokens";
 
 type Props = {
   name: string;
@@ -12,25 +15,29 @@ type Props = {
   onSaveProject: () => void;
 };
 
-const ROWS = [
-  { icon: "⤓", label: "Guardar como jpg", milestone: "M10" },
-  { icon: "GIF", label: "Guardar como GIF", milestone: "M10" },
-  { icon: "▭", label: "Guardar proyecto", milestone: null },
-  { icon: "▭", label: "Guardar preset gestual", milestone: "M7" },
-] as const;
+const ROWS: { icon: SFSymbol; label: string; milestone: string | null }[] = [
+  { icon: "photo", label: "Guardar como JPG", milestone: "M10" },
+  { icon: "sparkles.rectangle.stack", label: "Guardar como GIF", milestone: "M10" },
+  { icon: "folder", label: "Guardar proyecto", milestone: null },
+  { icon: "hand.draw", label: "Guardar preset gestual", milestone: "M7" },
+];
 
-/** Panel Exportar del Figma (3.11): nombre editable, estado de autoguardado y salidas. */
+/** Panel Exportar (3.11): nombre editable, estado de autoguardado y salidas en módulos. */
 export function ExportPanel({ name, readOnly, status, onRename, onSaveProject }: Props) {
   const [draft, setDraft] = useState(name);
   const [savedNote, setSavedNote] = useState(false);
-  const statusText =
-    readOnly ? "Solo lectura"
-    : status.state === "error" ? `Error al guardar · ${status.error}`
-    : status.state === "saved" ? (savedNote ? "Proyecto guardado" : "Cambios guardados")
-    : "Guardando cambios…";
+  const statusText = readOnly
+    ? "Solo lectura"
+    : status.state === "error"
+      ? `Error al guardar · ${status.error}`
+      : status.state === "saved"
+        ? savedNote
+          ? "Proyecto guardado"
+          : "Cambios guardados"
+        : "Guardando cambios…";
 
   return (
-    <View>
+    <View style={styles.root}>
       <View style={styles.nameRow}>
         <TextInput
           value={draft}
@@ -44,26 +51,28 @@ export function ExportPanel({ name, readOnly, status, onRename, onSaveProject }:
           accessibilityLabel="Nombre del proyecto"
           style={styles.name}
         />
-        <Text style={styles.pencil}>✎</Text>
+        <Icon name="pencil" size={16} color={colors.inkMute} />
       </View>
       <Text style={styles.status}>{statusText}</Text>
-      <View style={styles.rows}>
+      <View style={styles.grid}>
         {ROWS.map((row) => {
-          const pending = row.milestone !== null;
+          const off = row.milestone !== null || readOnly;
           return (
             <Pressable
               key={row.label}
               accessibilityRole="button"
-              disabled={pending || readOnly}
+              accessibilityState={{ disabled: off }}
+              disabled={off}
               onPress={() => {
+                tapFeedback();
                 onSaveProject();
                 setSavedNote(true);
               }}
-              style={[styles.row, (pending || readOnly) && styles.disabled]}
+              style={({ pressed }) => [styles.module, off && styles.off, pressed && styles.pressed]}
             >
-              <Text style={styles.rowIcon}>{row.icon}</Text>
-              <Text style={styles.rowLabel}>{row.label}</Text>
-              {pending && <Text style={styles.pending}>{row.milestone}</Text>}
+              <Icon name={row.icon} size={22} />
+              <Text style={styles.moduleLabel}>{row.label}</Text>
+              {row.milestone && <Text style={styles.pending}>{row.milestone}</Text>}
             </Pressable>
           );
         })}
@@ -73,21 +82,21 @@ export function ExportPanel({ name, readOnly, status, onRename, onSaveProject }:
 }
 
 const styles = StyleSheet.create({
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  name: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.title, paddingVertical: 4 },
-  pencil: { color: colors.inkText, fontSize: 18 },
-  status: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, marginBottom: 16 },
-  rows: { marginBottom: 8 },
-  row: {
-    minHeight: geometry.target,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    borderBottomColor: colors.inkLineStrong,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  root: { gap: space.xs },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  name: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.title, fontWeight: "600", paddingVertical: 2 },
+  status: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, marginBottom: space.sm },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  module: {
+    width: "48.5%",
+    minHeight: 76,
+    padding: space.md,
+    gap: 6,
+    borderRadius: radius.md,
+    backgroundColor: colors.inkRaised,
   },
-  disabled: { opacity: 0.5 },
-  rowIcon: { width: 28, color: colors.inkText, fontFamily: type.family, fontSize: type.label, textAlign: "center" },
-  rowLabel: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.body },
-  pending: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro },
+  off: { opacity: 0.45 },
+  pressed: { opacity: 0.75 },
+  moduleLabel: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1 },
+  pending: { position: "absolute", top: space.sm, right: space.sm, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro },
 });

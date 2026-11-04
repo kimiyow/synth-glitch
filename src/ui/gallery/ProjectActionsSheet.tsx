@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, geometry, type } from "../tokens";
+import { colors, geometry, radius, type } from "../tokens";
 
 type Result = { ok: true } | { ok: false; error: string };
 type Mode = "actions" | "rename" | "delete";
@@ -135,9 +135,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1, justifyContent: "flex-end" },
   backdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: {
-    backgroundColor: colors.ink,
-    borderTopColor: colors.inkLineStrong,
-    borderTopWidth: geometry.hairline,
+    backgroundColor: colors.inkSurface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
     paddingHorizontal: geometry.compactMargin,
     paddingTop: geometry.compactMargin,
   },
@@ -153,20 +153,22 @@ const styles = StyleSheet.create({
     color: colors.inkText,
     fontFamily: type.family,
     fontSize: type.body,
-    borderColor: colors.inkLineStrong,
-    borderWidth: geometry.hairline,
+    backgroundColor: colors.inkRaised,
+    borderRadius: radius.md,
     paddingHorizontal: 12,
     marginBottom: 8,
   },
   button: {
-    minHeight: geometry.target,
+    minHeight: 48,
     justifyContent: "center",
-    borderTopColor: colors.inkLine,
-    borderTopWidth: geometry.hairline,
+    paddingHorizontal: 14,
+    marginBottom: 6,
+    borderRadius: radius.md,
+    backgroundColor: colors.inkRaised,
   },
   pressed: { opacity: 0.6 },
   disabled: { opacity: 0.5 },
-  buttonText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
+  buttonText: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600" },
   muted: { color: colors.inkMute },
   error: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, marginTop: 8 },
 });

@@ -1,6 +1,5 @@
 import { SymbolView, type SFSymbol } from "expo-symbols";
-import { Text } from "react-native";
-
+import { Text, type ColorValue } from "react-native";
 import { colors } from "../tokens";
 
 /** Icono SF Symbols (iOS). Si no existe, muestra el texto de respaldo. */
@@ -12,7 +11,7 @@ export function Icon({
 }: {
   name: SFSymbol;
   size?: number;
-  color?: string;
+  color?: ColorValue;
   fallback?: string;
 }) {
   return (
