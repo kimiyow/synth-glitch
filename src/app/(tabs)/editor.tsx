@@ -17,6 +17,8 @@ import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine
 import { useSlowFrames } from "../../editor/useSlowFrames";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
+import { pickSynthFxFile, shareSynthFxFile } from "../../platform/synthfxFile";
+import { applySynthFx, createSynthFx, parseSynthFx, serializeSynthFx, synthFxFileName } from "../../project/synthfx";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import { createGenerativeProject, createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
@@ -29,6 +31,7 @@ import { ModPanel } from "../../ui/editor/ModPanel";
 import { EditorTopBar } from "../../ui/editor/EditorTopBar";
 import { ExportPanel } from "../../ui/editor/ExportPanel";
 import { PanelSheet } from "../../ui/editor/PanelSheet";
+import { PresetsPanel } from "../../ui/editor/PresetsPanel";
 import { colors, geometry, type } from "../../ui/tokens";
 
 export default function EditorScreen() {
@@ -91,7 +94,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
   brush: "Pincel · M6",
   effects: "Efectos · M5",
   mod: "Mod",
-  presets: "Presets · M7",
+  presets: "Presets",
   gesture: "Gesto · M7",
   export: "Exportar",
 };
@@ -189,6 +192,36 @@ function ProjectView({ project }: { project: Project }) {
       setSelectedId(id);
     } else {
       setSelectedId(layer.id);
+    }
+  };
+
+  // SEN-05: receta .synthfx por la hoja de compartir y el selector de documentos.
+  const [fxBusy, setFxBusy] = useState(false);
+  const importRecipe = async () => {
+    setFxBusy(true);
+    try {
+      const picked = await pickSynthFxFile();
+      if (picked.kind === "rejected") setNotice(picked.message);
+      if (picked.kind !== "picked") return;
+      const parsed = parseSynthFx(picked.text);
+      if (!parsed.ok) return setNotice(parsed.error);
+      sceneStore.getState().commit("importar receta", (scene) => applySynthFx(scene, parsed.value));
+      setSelectedId(parsed.value.layers.at(-1)?.id ?? null);
+      setNotice(`RECETA IMPORTADA · ${parsed.value.name.toUpperCase()}`);
+    } catch (error) {
+      setNotice(`ERROR · ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setFxBusy(false);
+    }
+  };
+  const shareRecipe = async () => {
+    setFxBusy(true);
+    try {
+      await shareSynthFxFile(synthFxFileName(project.name), serializeSynthFx(createSynthFx(project.name, project.scene)));
+    } catch (error) {
+      setNotice(`ERROR · ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setFxBusy(false);
     }
   };
 
@@ -398,8 +431,10 @@ function ProjectView({ project }: { project: Project }) {
                 void saveActiveProject().then((r) => setNotice(r.ok ? "PROYECTO GUARDADO" : `ERROR · ${r.error}`));
               }}
             />
+          ) : openPanel === "presets" ? (
+            <PresetsPanel readOnly={readOnly} busy={fxBusy} onImport={importRecipe} onShare={shareRecipe} />
           ) : (
-            <PendingPanel title={PANEL_TITLES[openPanel]} showTestChange={openPanel === "presets" && !readOnly} />
+            <PendingPanel title={PANEL_TITLES[openPanel]} showTestChange={false} />
           )}
         </PanelSheet>
       )}
