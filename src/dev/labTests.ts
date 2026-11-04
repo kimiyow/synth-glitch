@@ -4,6 +4,7 @@ import { EffectsLab } from "./lab/EffectsLab";
 import { StackBench } from "./lab/StackBench";
 import { Sp01Uniforms } from "./spikes/Sp01Uniforms";
 import { Sp02SkiaApi } from "./spikes/Sp02SkiaApi";
+import { Sp11Storage } from "./spikes/Sp11Storage";
 
 /** Una prueba de testLab: spike, golden image o banco de rendimiento. */
 export type LabTest = {
@@ -14,6 +15,12 @@ export type LabTest = {
 };
 
 export const LAB_TESTS: LabTest[] = [
+  {
+    id: "sp-11",
+    title: "SP-11 · GUARDADO ATÓMICO",
+    description: "Escritura con temporal + renombrado, recuperación tras un corte y 400 trazos ≤ 150 ms",
+    Component: Sp11Storage,
+  },
   {
     id: "m1-effects",
     title: "M1 · EFECTOS",
