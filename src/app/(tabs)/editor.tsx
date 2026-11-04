@@ -11,7 +11,7 @@ import { EFFECTS } from "../../engine/registry";
 import type { SaveStatus } from "../../project/autosave";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
-import type { Project, Scene } from "../../state/types";
+import type { Project } from "../../state/types";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
 import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
 import { EditorEmpty } from "../../ui/editor/EditorEmpty";
@@ -142,7 +142,7 @@ function SaveIndicator({ status, readOnly, updatedAt }: { status: SaveStatus; re
 
 /** Solo desarrollo: cambia el efecto de la última capa (o añade una) para probar el autoguardado. */
 function testChange() {
-  sceneStore.getState().commit((scene): Scene => {
+  sceneStore.getState().commit("cambio de prueba", (scene) => {
     const effect = EFFECTS[Math.floor(Math.random() * EFFECTS.length)];
     const layer = {
       kind: "effect" as const,
@@ -151,8 +151,8 @@ function testChange() {
       params: { ...effect.defaults },
       visible: true,
     };
-    const layers = scene.layers.length >= 3 ? [...scene.layers.slice(0, -1), layer] : [...scene.layers, layer];
-    return { ...scene, layers };
+    if (scene.layers.length >= 3) scene.layers.pop();
+    scene.layers.push(layer);
   });
 }
 

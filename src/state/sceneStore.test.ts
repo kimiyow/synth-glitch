@@ -24,7 +24,9 @@ describe("sceneStore", () => {
   it("un cambio confirmado actualiza la escena y se autoguarda a 1 s", () => {
     const store = make();
     store.getState().open(project(), false);
-    store.getState().commit((s) => ({ ...s, seed: 99 }));
+    store.getState().commit("semilla", (s) => {
+      s.seed = 99;
+    });
     expect(store.getState().saveStatus.state).toBe("pending");
     expect(store.getState().project?.updatedAt).toBe(T1.toISOString());
     jest.advanceTimersByTime(1000);
@@ -35,7 +37,9 @@ describe("sceneStore", () => {
   it("no cambia ni guarda un proyecto de solo lectura", () => {
     const store = make();
     store.getState().open(project(), true);
-    store.getState().commit((s) => ({ ...s, seed: 99 }));
+    store.getState().commit("semilla", (s) => {
+      s.seed = 99;
+    });
     expect(store.getState().rename("X")).toBe(false);
     jest.advanceTimersByTime(5000);
     expect(store.getState().project?.scene.seed).toBe(1);
@@ -54,7 +58,9 @@ describe("sceneStore", () => {
   it("descartar no guarda", () => {
     const store = make();
     store.getState().open(project(), false);
-    store.getState().commit((s) => ({ ...s, seed: 2 }));
+    store.getState().commit("semilla", (s) => {
+      s.seed = 2;
+    });
     store.getState().discard();
     jest.advanceTimersByTime(5000);
     expect(saved).toEqual([]);
