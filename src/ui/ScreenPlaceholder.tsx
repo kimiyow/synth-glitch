@@ -6,14 +6,16 @@ import { colors, type } from "./tokens";
 type Props = {
   title: string;
   milestone: string;
+  note?: string;
 };
 
 /** Pantalla temporal mientras el hito correspondiente no está implementado. */
-export function ScreenPlaceholder({ title, milestone }: Props) {
+export function ScreenPlaceholder({ title, milestone, note }: Props) {
   return (
     <SafeAreaView style={styles.root}>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.note}>PENDIENTE · {milestone}</Text>
+      {note && <Text style={styles.note}>{note}</Text>}
     </SafeAreaView>
   );
 }

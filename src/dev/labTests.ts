@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 
 import { EffectsLab } from "./lab/EffectsLab";
+import { ProjectLab } from "./lab/ProjectLab";
 import { StackBench } from "./lab/StackBench";
 import { Sp01Uniforms } from "./spikes/Sp01Uniforms";
 import { Sp02SkiaApi } from "./spikes/Sp02SkiaApi";
@@ -15,6 +16,12 @@ export type LabTest = {
 };
 
 export const LAB_TESTS: LabTest[] = [
+  {
+    id: "m2-projects",
+    title: "M2 · PROYECTOS DE PRUEBA",
+    description: "Crea proyectos con la imagen de prueba y efectos al azar para probar la Galería",
+    Component: ProjectLab,
+  },
   {
     id: "sp-11",
     title: "SP-11 · GUARDADO ATÓMICO",
