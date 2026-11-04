@@ -22,6 +22,7 @@ import type { EffectId, Project, SourceId } from "../../state/types";
 import { EditorEmpty } from "../../ui/editor/EditorEmpty";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
 import { EffectsPanel } from "../../ui/editor/EffectsPanel";
+import { ModPanel } from "../../ui/editor/ModPanel";
 import { EditorTopBar } from "../../ui/editor/EditorTopBar";
 import { ExportPanel } from "../../ui/editor/ExportPanel";
 import { PanelSheet } from "../../ui/editor/PanelSheet";
@@ -70,6 +71,7 @@ function EmptyEditor() {
 const PANEL_TITLES: Record<PanelId, string> = {
   brush: "Pincel · M6",
   effects: "Efectos · M5",
+  mod: "Mod",
   presets: "Presets · M7",
   gesture: "Gesto · M7",
   export: "Exportar",
@@ -246,7 +248,6 @@ function ProjectView({ project }: { project: Project }) {
             <EffectsPanel
               layers={layers}
               routes={project.scene.routes}
-              sources={project.scene.sources}
               selectedLayerId={selected?.id ?? null}
               warning={
                 hasFastLuminanceRoute(layers, project.scene.routes, project.scene.sources)
@@ -261,6 +262,10 @@ function ProjectView({ project }: { project: Project }) {
                   if (r) r.amount = amount;
                 })
               }
+            />
+          ) : openPanel === "mod" ? (
+            <ModPanel
+              sources={project.scene.sources}
               onSources={(next) =>
                 sceneStore.getState().commit("ajustar fuente", (scene) => {
                   scene.sources = next;

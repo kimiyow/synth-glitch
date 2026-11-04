@@ -35,7 +35,7 @@ export function ToolModule({ icon, label, active, disabled = false, onPress }: P
 }
 
 const styles = StyleSheet.create({
-  root: { alignItems: "center", gap: 4, minWidth: 60, minHeight: 44 },
+  root: { alignItems: "center", gap: 4, minWidth: 52, minHeight: 44 },
   disabled: { opacity: 0.4 },
   pressed: { transform: [{ scale: 0.95 }] },
   pill: { width: 48, height: 32, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },

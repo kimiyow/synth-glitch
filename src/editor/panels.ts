@@ -1,6 +1,6 @@
 /** Botones de la barra inferior (4.2). Giro es un interruptor sin panel. */
-export type ToolButtonId = "brush" | "effects" | "gyro" | "presets" | "gesture";
-export type PanelId = "brush" | "effects" | "presets" | "gesture" | "export";
+export type ToolButtonId = "brush" | "effects" | "mod" | "gyro" | "presets" | "gesture";
+export type PanelId = "brush" | "effects" | "mod" | "presets" | "gesture" | "export";
 
 /**
  * Gestor de superposiciones (ADR-07, 3.9) como pila pura:

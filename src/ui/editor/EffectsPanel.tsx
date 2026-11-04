@@ -2,51 +2,36 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { EFFECT_BY_ID, EFFECTS } from "../../engine/registry";
-import type { EffectId, Layer, Route, SourceConfig, SourceId } from "../../state/types";
+import type { EffectId, Layer, Route, SourceId } from "../../state/types";
 import { Pill } from "../kit/Pill";
 import { colors, radius, type } from "../tokens";
 import { RouteRow } from "./RouteRow";
-import { SourceEditor, type ModSourceId } from "./SourceEditor";
 
 const CATEGORIES = [
   { id: "image", label: "IMAGEN", milestone: null },
   { id: "generator", label: "GENERADOR", milestone: "M8" },
-  { id: "mod", label: "MOD", milestone: null },
 ] as const;
 type Category = (typeof CATEGORIES)[number]["id"];
-
-const MOD_TILES: { id: ModSourceId | "mic"; label: string; disabled?: boolean }[] = [
-  { id: "lfo", label: "LFO" },
-  { id: "adsr", label: "ADSR" },
-  { id: "sh", label: "S&H" },
-  { id: "seq", label: "SEQ" },
-  { id: "tempo", label: "TEMPO" },
-  { id: "mic", label: "MIC · M9", disabled: true },
-];
 
 const TILE = 71;
 
 type Props = {
   layers: readonly Layer[];
   routes: readonly Route[];
-  sources: SourceConfig;
   selectedLayerId: string | null;
   warning: string | null;
   onTile: (effect: EffectId) => void;
   onRouteSource: (layerId: string, axis: "x" | "y", source: SourceId) => void;
   onRouteAmount: (layerId: string, axis: "x" | "y", amount: number) => void;
-  onSources: (next: SourceConfig) => void;
-  onTempo: (bpm: number) => void;
 };
 
 /**
  * Panel Efectos (4.2): fichas de efecto con tres estados (el número es la posición en la
- * pila), modulación por eje del efecto seleccionado y fuentes MOD (S1).
+ * pila) y modulación por eje del efecto seleccionado. Las fuentes se ajustan en el panel Mod.
  */
 export function EffectsPanel(props: Props) {
-  const { layers, routes, sources, selectedLayerId, warning, onTile } = props;
+  const { layers, routes, selectedLayerId, warning, onTile } = props;
   const [category, setCategory] = useState<Category>("image");
-  const [modSource, setModSource] = useState<ModSourceId>("lfo");
   const effectLayers = layers.filter((l) => l.kind === "effect");
   const selected = effectLayers.find((l) => l.id === selectedLayerId);
   const routeFor = (axis: "x" | "y") =>
@@ -67,8 +52,8 @@ export function EffectsPanel(props: Props) {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tiles}>
-        {category === "image"
-          ? EFFECTS.map((effect) => {
+        {category === "image" &&
+          EFFECTS.map((effect) => {
               const index = effectLayers.findIndex((l) => l.kind === "effect" && l.effect === effect.id);
               const on = index >= 0;
               const isSel = on && effectLayers[index].id === selectedLayerId;
@@ -82,18 +67,7 @@ export function EffectsPanel(props: Props) {
                   onPress={() => onTile(effect.id)}
                 />
               );
-            })
-          : MOD_TILES.map((m) => (
-              <Tile
-                key={m.id}
-                label={m.label}
-                on={false}
-                selected={m.id === modSource}
-                disabled={m.disabled}
-                badge={null}
-                onPress={() => m.id !== "mic" && setModSource(m.id)}
-              />
-            ))}
+            })}
       </ScrollView>
 
       {warning && <Text style={styles.warning}>{warning}</Text>}
@@ -123,9 +97,6 @@ export function EffectsPanel(props: Props) {
           <Text style={styles.readout}>TOCA UNA FICHA PARA ENCENDER UN EFECTO</Text>
         ))}
 
-      {category === "mod" && (
-        <SourceEditor source={modSource} sources={sources} onChange={props.onSources} onTempo={props.onTempo} />
-      )}
     </View>
   );
 }

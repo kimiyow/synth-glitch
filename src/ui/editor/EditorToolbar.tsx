@@ -9,6 +9,7 @@ import { colors } from "../tokens";
 const BUTTONS: { id: ToolButtonId; label: string; icon: SFSymbol }[] = [
   { id: "brush", label: "Pincel", icon: "paintbrush.pointed" },
   { id: "effects", label: "Efectos", icon: "wand.and.stars" },
+  { id: "mod", label: "Mod", icon: "waveform.path" },
   { id: "gyro", label: "Giro", icon: "gyroscope" },
   { id: "presets", label: "Presets", icon: "square.stack.3d.up" },
   { id: "gesture", label: "Gesto", icon: "hand.draw" },
