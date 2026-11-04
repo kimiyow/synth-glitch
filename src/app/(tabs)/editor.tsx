@@ -8,14 +8,17 @@ import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
 import { EditorCanvas } from "../../editor/EditorCanvas";
 import { popOverlay, toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../editor/panels";
 import { croppedSize } from "../../engine/crop";
-import { EFFECTS } from "../../engine/registry";
+import { canAddLayer, isCostHigh, MAX_LAYERS } from "../../engine/layerCost";
+import { EFFECT_BY_ID, EFFECTS } from "../../engine/registry";
+import { useSlowFrames } from "../../editor/useSlowFrames";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
-import type { Project } from "../../state/types";
+import type { EffectId, Project } from "../../state/types";
 import { EditorEmpty } from "../../ui/editor/EditorEmpty";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
+import { EffectsPanel } from "../../ui/editor/EffectsPanel";
 import { EditorTopBar } from "../../ui/editor/EditorTopBar";
 import { ExportPanel } from "../../ui/editor/ExportPanel";
 import { PanelSheet } from "../../ui/editor/PanelSheet";
@@ -88,6 +91,11 @@ function ProjectView({ project }: { project: Project }) {
   const [activeTool, setActiveTool] = useState<"brush" | "effects">(isClip ? "effects" : "brush");
   const [overlays, setOverlays] = useState<OverlayStack>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const layers = project.scene.layers;
+  const [selectedId, setSelectedId] = useState<string | null>(() => layers.filter((l) => l.kind === "effect").at(-1)?.id ?? null);
+  const selected = layers.find((l) => l.id === selectedId) ?? null;
+  const slowFrames = useSlowFrames();
+  const showCostWarning = layers.length > 0 && (isCostHigh(layers) || slowFrames);
   const openPanel = (overlays.at(-1) ?? null) as PanelId | null;
 
   useEffect(() => {
@@ -103,6 +111,27 @@ function ProjectView({ project }: { project: Project }) {
     setOverlays((stack) => toggleOverlay(stack, id));
   };
   const closeTop = () => setOverlays((stack) => popOverlay(stack));
+
+  // Fichas (4.2): apagada → enciende y selecciona; encendida → selecciona; seleccionada → apaga.
+  const onTile = (effect: EffectId) => {
+    if (readOnly) return;
+    const layer = layers.find((l) => l.kind === "effect" && l.effect === effect);
+    if (!layer) {
+      if (!canAddLayer(layers)) return setNotice(`MÁXIMO ${MAX_LAYERS} CAPAS`);
+      const id = `${effect}-${Date.now().toString(36)}`;
+      sceneStore.getState().commit(`encender ${effect}`, (scene) => {
+        scene.layers.push({ kind: "effect", id, effect, params: { ...EFFECT_BY_ID[effect].defaults }, visible: true });
+      });
+      setSelectedId(id);
+    } else if (layer.id !== selectedId) {
+      setSelectedId(layer.id);
+    } else {
+      sceneStore.getState().commit(`apagar ${effect}`, (scene) => {
+        scene.layers = scene.layers.filter((l) => l.id !== layer.id);
+      });
+      setSelectedId(layers.filter((l) => l.kind === "effect" && l.id !== layer.id).at(-1)?.id ?? null);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -132,12 +161,17 @@ function ProjectView({ project }: { project: Project }) {
             <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
           </View>
         )}
+        {showCostWarning && (
+          <Text style={styles.warning}>RENDIMIENTO BAJO · {layers.length} CAPAS</Text>
+        )}
         {notice && <Text style={styles.notice}>{notice}</Text>}
       </View>
 
       {openPanel && (
         <PanelSheet onClose={closeTop}>
-          {openPanel === "export" ? (
+          {openPanel === "effects" ? (
+            <EffectsPanel layers={layers} selectedLayerId={selected?.id ?? null} onTile={onTile} />
+          ) : openPanel === "export" ? (
             <ExportPanel
               name={project.name}
               readOnly={readOnly}
@@ -204,6 +238,18 @@ const styles = StyleSheet.create({
     fontSize: type.label,
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  warning: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    color: colors.paperText,
+    backgroundColor: colors.paper,
+    fontFamily: type.family,
+    fontSize: type.micro,
+    letterSpacing: 1.2,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   pending: { minHeight: 80, gap: 12 },
   panelTitle: { color: colors.inkText, fontFamily: type.family, fontSize: type.body },
