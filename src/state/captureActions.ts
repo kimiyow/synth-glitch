@@ -1,12 +1,12 @@
 import { Skia, type SkImage } from "@shopify/react-native-skia";
 import { getThumbnailAsync } from "expo-video-thumbnails";
 
-import { PREVIEW_LONG_SIDE, renderSceneJpeg, THUMB_LONG_SIDE } from "../editor/renderPreviews";
+import { PREVIEW_LONG_SIDE, renderGeneratorJpeg, renderSceneJpeg, THUMB_LONG_SIDE } from "../editor/renderPreviews";
 import { cropRectFor } from "../engine/crop";
 import { createProject } from "../project/schema";
 import { createProjectFiles, newProjectId } from "../project/storage";
 import { projectFs, sceneStore } from "./activeScene";
-import type { CropAspect, Project } from "./types";
+import type { CropAspect, GeneratorId, Project } from "./types";
 
 type Result = { ok: true; project: Project } | { ok: false; error: string };
 
@@ -27,12 +27,14 @@ function extensionOf(uri: string, fallback: string) {
  * vista previa y miniatura, y lo deja abierto en el store.
  */
 async function createFromMedia(args: {
-  kind: "photo" | "clip";
-  sourceUri: string;
+  kind: "photo" | "clip" | "generative";
+  /** El medio se copia desde un archivo (foto, clip) o se escribe desde bytes (generativo). */
+  source: { sourceUri: string } | { bytes: Uint8Array };
   fileName: string;
   /** Imagen con la que se generan preview y miniatura (la foto o el primer cuadro del clip). */
   poster: SkImage;
   aspect: CropAspect;
+  seed?: number;
 }): Promise<Result> {
   const now = new Date();
   const width = args.poster.width();
@@ -40,7 +42,7 @@ async function createFromMedia(args: {
   const base = createProject({
     id: newProjectId(now),
     media: { kind: args.kind, file: args.fileName, width, height },
-    seed: Math.floor(Math.random() * 2 ** 31),
+    seed: args.seed ?? Math.floor(Math.random() * 2 ** 31),
     now,
   });
   const project: Project = {
@@ -50,7 +52,7 @@ async function createFromMedia(args: {
   const preview = await renderSceneJpeg(args.poster, project.scene, PREVIEW_LONG_SIDE);
   const thumb = await renderSceneJpeg(args.poster, project.scene, THUMB_LONG_SIDE, 80);
   createProjectFiles(projectFs, project, {
-    media: { name: args.fileName, sourceUri: args.sourceUri },
+    media: { name: args.fileName, ...args.source },
     preview,
     thumb,
   });
@@ -70,7 +72,7 @@ export function createProjectFromPhoto(uri: string, aspect: CropAspect): Promise
   return guard(async () => {
     const poster = await decode(uri);
     try {
-      return await createFromMedia({ kind: "photo", sourceUri: uri, fileName: `media.${extensionOf(uri, "jpg")}`, poster, aspect });
+      return await createFromMedia({ kind: "photo", source: { sourceUri: uri }, fileName: `media.${extensionOf(uri, "jpg")}`, poster, aspect });
     } finally {
       poster.dispose();
     }
@@ -82,7 +84,30 @@ export function createProjectFromClip(uri: string, aspect: CropAspect): Promise<
     const frame = await getThumbnailAsync(uri, { time: 0, quality: 1 });
     const poster = await decode(frame.uri);
     try {
-      return await createFromMedia({ kind: "clip", sourceUri: uri, fileName: `media.${extensionOf(uri, "mp4")}`, poster, aspect });
+      return await createFromMedia({ kind: "clip", source: { sourceUri: uri }, fileName: `media.${extensionOf(uri, "mp4")}`, poster, aspect });
+    } finally {
+      poster.dispose();
+    }
+  });
+}
+
+/** Resolución de un proyecto generativo por aspecto (lado largo ≤ 1920 px). */
+export const GENERATIVE_SIZE: Record<Exclude<CropAspect, "free">, { width: number; height: number }> = {
+  "9:16": { width: 1080, height: 1920 },
+  "1:1": { width: 1440, height: 1440 },
+  "4:5": { width: 1440, height: 1800 },
+};
+
+/** CAM-06: proyecto sin imagen; la base es un cuadro fijo del generador elegido. */
+export function createGenerativeProject(aspect: Exclude<CropAspect, "free">, generator: GeneratorId): Promise<Result> {
+  return guard(async () => {
+    const { width, height } = GENERATIVE_SIZE[aspect];
+    const seed = Math.floor(Math.random() * 2 ** 31);
+    const bytes = await renderGeneratorJpeg(generator, width, height, seed);
+    const poster = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(bytes));
+    if (!poster) throw new Error("NO SE PUDO LEER EL GENERADOR");
+    try {
+      return await createFromMedia({ kind: "generative", source: { bytes }, fileName: "media.jpg", poster, aspect, seed });
     } finally {
       poster.dispose();
     }

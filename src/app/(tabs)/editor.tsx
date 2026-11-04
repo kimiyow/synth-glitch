@@ -1,26 +1,27 @@
 import { useImage } from "@shopify/react-native-skia";
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
 import { EditorCanvas } from "../../editor/EditorCanvas";
 import { EffectThumb } from "../../editor/EffectThumb";
+import { blankImage, generatorLayer } from "../../editor/renderPreviews";
 import { MAX_STROKES, stampSeed, type BrushTool } from "../../paint/strokeInterpolate";
 import { BrushPanel } from "../../ui/editor/BrushPanel";
 import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../editor/panels";
 import { croppedSize } from "../../engine/crop";
 import { canAddLayer, isCostHigh, MAX_LAYERS } from "../../engine/layerCost";
-import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID } from "../../engine/registry";
+import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine/registry";
 import { useSlowFrames } from "../../editor/useSlowFrames";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
-import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
-import type { Layer, Project, SourceId } from "../../state/types";
-import { EditorEmpty } from "../../ui/editor/EditorEmpty";
+import { createGenerativeProject, createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
+import type { GeneratorId, Layer, Project, SourceId } from "../../state/types";
+import { EditorEmpty, GEN_THUMB, type GenerativeAspect } from "../../ui/editor/EditorEmpty";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
 import { EffectsPanel, THUMB_SIZE, type TileRef } from "../../ui/editor/EffectsPanel";
 import { ModPanel } from "../../ui/editor/ModPanel";
@@ -35,7 +36,10 @@ export default function EditorScreen() {
   return <ProjectView project={project} />;
 }
 
-/** CAM-05: importar foto o video; las importaciones no se recortan (aspecto libre). */
+/**
+ * CAM-05: importar foto o video; las importaciones no se recortan (aspecto libre).
+ * CAM-06: crear sin imagen, con un cuadro fijo del generador como base.
+ */
 function EmptyEditor() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -58,10 +62,23 @@ function EmptyEditor() {
     }
   };
 
+  const create = async (aspect: GenerativeAspect, generator: GeneratorId) => {
+    setBusy(true);
+    setMessage(null);
+    const result = await createGenerativeProject(aspect, generator);
+    if (!result.ok) setMessage(`ERROR · ${result.error}`);
+    setBusy(false);
+  };
+
+  // Una capa estable por generador para que las miniaturas no se redibujen en cada render.
+  const thumbs = useMemo(() => Object.fromEntries(GENERATORS.map((g) => [g.id, generatorLayer(g.id)])), []);
+
   return (
     <EditorEmpty
       busy={busy}
       message={message}
+      onCreate={create}
+      renderGeneratorThumb={(g) => <EffectThumb image={blankImage()} layer={thumbs[g]} seed={7} size={GEN_THUMB} />}
       onImport={importMedia}
       onCamera={() => router.navigate("/")}
       onDismissMessage={() => setMessage(null)}

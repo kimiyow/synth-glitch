@@ -1,9 +1,10 @@
-import { drawAsImage, ImageFormat, type SkImage } from "@shopify/react-native-skia";
+import { drawAsImage, ImageFormat, Skia, type SkImage } from "@shopify/react-native-skia";
 import { createElement } from "react";
 
 import { croppedSize, fitLongSide } from "../engine/crop";
 import { renderPainted } from "../paint/brushEngine";
-import type { Scene } from "../state/types";
+import { GENERATOR_BY_ID } from "../engine/registry";
+import type { GeneratorId, Layer, Scene } from "../state/types";
 import { SceneRenderer } from "./SceneRenderer";
 
 export const PREVIEW_LONG_SIDE = 2048;
@@ -29,6 +30,48 @@ export async function renderSceneJpeg(image: SkImage, scene: Scene, longSide: nu
   try {
     const bytes = rendered.encodeToBytes(ImageFormat.JPEG, quality);
     if (bytes.length === 0) throw new Error("NO SE PUDO CODIFICAR LA VISTA PREVIA");
+    return bytes;
+  } finally {
+    rendered.dispose();
+  }
+}
+
+let blank: SkImage | null = null;
+
+/** Imagen negra de 1×1 para los generadores en `replace`, que no leen su entrada. */
+export function blankImage(): SkImage {
+  if (!blank) {
+    const surface = Skia.Surface.Make(1, 1);
+    if (!surface) throw new Error("NO SE PUDO CREAR LA SUPERFICIE");
+    surface.getCanvas().clear(Skia.Color("black"));
+    blank = surface.makeImageSnapshot();
+  }
+  return blank;
+}
+
+export function generatorLayer(generator: GeneratorId): Layer {
+  const def = GENERATOR_BY_ID[generator];
+  return { kind: "generator", id: generator, generator, params: { ...def.defaults }, visible: true, blend: "replace" };
+}
+
+/**
+ * Cuadro fijo de un generador (CAM-06 con base congelada): se guarda como el medio del
+ * proyecto generativo, así pincel, efectos y exportación lo tratan como una foto.
+ */
+export async function renderGeneratorJpeg(generator: GeneratorId, width: number, height: number, seed: number): Promise<Uint8Array> {
+  const element = createElement(SceneRenderer, {
+    image: blankImage(),
+    width,
+    height,
+    layers: [generatorLayer(generator)],
+    seed,
+    frame: { time: 0, params: [] },
+  });
+  const rendered = await drawAsImage(element, { width, height });
+  if (!rendered) throw new Error("NO SE PUDO RENDERIZAR EL GENERADOR");
+  try {
+    const bytes = rendered.encodeToBytes(ImageFormat.JPEG, 95);
+    if (bytes.length === 0) throw new Error("NO SE PUDO CODIFICAR EL GENERADOR");
     return bytes;
   } finally {
     rendered.dispose();
