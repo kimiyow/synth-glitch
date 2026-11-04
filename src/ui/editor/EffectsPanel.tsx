@@ -2,11 +2,9 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine/registry";
-import type { BlendMode, EffectId, GeneratorId, Layer, Route, SourceId } from "../../state/types";
-import { ChipRow, type Chip } from "../ChipRow";
+import type { BlendMode, EffectId, GeneratorId, Layer } from "../../state/types";
 import { Pill } from "../kit/Pill";
 import { colors, radius, type } from "../tokens";
-import { RouteRow } from "./RouteRow";
 
 const CATEGORIES = [
   { id: "image", label: "IMAGEN", milestone: null },
@@ -17,33 +15,26 @@ type Category = (typeof CATEGORIES)[number]["id"];
 /** Ficha tocada: un efecto global o un generador (una capa de cada uno como máximo). */
 export type TileRef = { kind: "effect"; effect: EffectId } | { kind: "generator"; generator: GeneratorId };
 
-const BLENDS: readonly Chip<BlendMode>[] = [
-  { id: "replace", label: "REPLACE" },
-  { id: "screen", label: "SCREEN" },
-  { id: "multiply", label: "MULTIPLY" },
-  { id: "difference", label: "DIFFERENCE" },
-];
+/** Orden en que la pastilla de mezcla recorre los modos (GEN-02). */
+const BLENDS: readonly BlendMode[] = ["screen", "multiply", "difference", "replace"];
 
 const TILE = 71;
 
 type Props = {
   layers: readonly Layer[];
-  routes: readonly Route[];
   selectedLayerId: string | null;
   warning: string | null;
   onTile: (tile: TileRef) => void;
   onBlend: (layerId: string, blend: BlendMode) => void;
-  onRouteSource: (layerId: string, axis: "x" | "y", source: SourceId) => void;
-  onRouteAmount: (layerId: string, axis: "x" | "y", amount: number) => void;
 };
 
 /**
  * Panel Efectos (4.2): fichas de efecto y de generador con tres estados (el número es la
- * posición en la pila) y modulación por eje de la capa seleccionada; los generadores suman
- * el modo de mezcla (GEN-02). Las fuentes se ajustan en el panel Mod.
+ * posición en la pila) y el modo de mezcla del generador seleccionado (GEN-02). La
+ * modulación de cada eje se elige en el panel Mod, para que este panel quede ligero.
  */
 export function EffectsPanel(props: Props) {
-  const { layers, routes, selectedLayerId, warning, onTile } = props;
+  const { layers, selectedLayerId, warning, onTile } = props;
   const [category, setCategory] = useState<Category>("image");
   const selected = layers.find((l) => l.id === selectedLayerId);
   const tileState = (match: (l: Layer) => boolean) => {
@@ -51,8 +42,6 @@ export function EffectsPanel(props: Props) {
     const on = index >= 0;
     return { on, selected: on && layers[index].id === selectedLayerId, badge: on ? String(index + 1) : null };
   };
-  const routeFor = (axis: "x" | "y") =>
-    routes.find((r) => r.target.layerId === selected?.id && r.target.param === axis) ?? null;
 
   return (
     <View style={styles.root}>
@@ -92,27 +81,17 @@ export function EffectsPanel(props: Props) {
       {warning && <Text style={styles.warning}>{warning}</Text>}
 
       {selected ? (
-        <View style={styles.routes}>
-          <Text style={styles.readout}>
+        <View style={styles.status}>
+          <Text style={styles.readout} numberOfLines={1}>
             {selected.kind === "effect" ? EFFECT_BY_ID[selected.effect].label : GENERATOR_BY_ID[selected.generator].label} · X{" "}
-            {selected.params.x.toFixed(2)} · Y {selected.params.y.toFixed(2)} · ARRASTRA SOBRE LA IMAGEN · DOBLE TOQUE REINICIA
+            {selected.params.x.toFixed(2)} · Y {selected.params.y.toFixed(2)}
           </Text>
           {selected.kind === "generator" && (
-            <ChipRow chips={BLENDS} value={selected.blend} onChange={(b) => props.onBlend(selected.id, b)} />
+            <Pill
+              label={`MEZCLA · ${selected.blend.toUpperCase()}`}
+              onPress={() => props.onBlend(selected.id, BLENDS[(BLENDS.indexOf(selected.blend) + 1) % BLENDS.length])}
+            />
           )}
-          {(["x", "y"] as const).map((axis) => {
-            const r = routeFor(axis);
-            return (
-              <RouteRow
-                key={axis}
-                axis={axis}
-                source={r?.source ?? "touch"}
-                amount={r?.amount ?? 0.5}
-                onSource={(s) => props.onRouteSource(selected.id, axis, s)}
-                onAmount={(a) => props.onRouteAmount(selected.id, axis, a)}
-              />
-            );
-          })}
         </View>
       ) : (
         <Text style={styles.readout}>
@@ -155,8 +134,8 @@ const styles = StyleSheet.create({
   orderSelected: { color: colors.paperText, fontWeight: "700" },
   tileLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label },
   tileLabelOn: { color: colors.inkText },
-  routes: { gap: 8 },
-  readout: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
+  status: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, minHeight: 30 },
+  readout: { flexShrink: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
   warning: {
     alignSelf: "flex-start",
     color: colors.paperText,

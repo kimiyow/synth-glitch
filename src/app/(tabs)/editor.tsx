@@ -263,7 +263,6 @@ function ProjectView({ project }: { project: Project }) {
           ) : openPanel === "effects" ? (
             <EffectsPanel
               layers={layers}
-              routes={project.scene.routes}
               selectedLayerId={selected?.id ?? null}
               warning={
                 hasFastLuminanceRoute(layers, project.scene.routes, project.scene.sources)
@@ -277,6 +276,18 @@ function ProjectView({ project }: { project: Project }) {
                   if (layer?.kind === "generator") layer.blend = blend;
                 })
               }
+            />
+          ) : openPanel === "mod" ? (
+            <ModPanel
+              layer={
+                selected
+                  ? {
+                      id: selected.id,
+                      label: selected.kind === "effect" ? EFFECT_BY_ID[selected.effect].label : GENERATOR_BY_ID[selected.generator].label,
+                    }
+                  : null
+              }
+              routes={project.scene.routes}
               onRouteSource={setRouteSource}
               onRouteAmount={(layerId, axis, amount) =>
                 sceneStore.getState().commit("cantidad de modulación", (scene) => {
@@ -284,9 +295,6 @@ function ProjectView({ project }: { project: Project }) {
                   if (r) r.amount = amount;
                 })
               }
-            />
-          ) : openPanel === "mod" ? (
-            <ModPanel
               sources={project.scene.sources}
               onSources={(next) =>
                 sceneStore.getState().commit("ajustar fuente", (scene) => {
