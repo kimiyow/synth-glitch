@@ -25,6 +25,19 @@ const REACT_SETTER_CALL = "CallExpression[callee.name=/^set[A-Z]/]";
 const UI_THREAD_MESSAGE =
   "Sin store ni setState en el hilo de UI; usa valores compartidos y una sola llamada runOnJS al terminar el gesto.";
 
+const UI_THREAD_RULES = [
+  { selector: `${WORKLET_FN} ${STORE_CALL}`, message: UI_THREAD_MESSAGE },
+  { selector: `${WORKLET_FN} ${REACT_SETTER_CALL}`, message: UI_THREAD_MESSAGE },
+  { selector: `${GESTURE_CALLBACK} ${STORE_CALL}`, message: UI_THREAD_MESSAGE },
+  { selector: `${GESTURE_CALLBACK} ${REACT_SETTER_CALL}`, message: UI_THREAD_MESSAGE },
+];
+
+// El React Compiler lee `x.y` al renderizar para memoizar; con `x!.y` truena si x es null.
+const NO_NON_NULL_MEMBER = {
+  selector: "MemberExpression > TSNonNullExpression.object",
+  message: "Sin `x!.y` en componentes: comprueba que x no sea null antes (el React Compiler lo lee al renderizar).",
+};
+
 module.exports = defineConfig([
   expoConfig,
   {
@@ -35,13 +48,13 @@ module.exports = defineConfig([
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
       "no-restricted-imports": ["error", { patterns: [LEGACY_IMPORTS] }],
-      "no-restricted-syntax": [
-        "error",
-        { selector: `${WORKLET_FN} ${STORE_CALL}`, message: UI_THREAD_MESSAGE },
-        { selector: `${WORKLET_FN} ${REACT_SETTER_CALL}`, message: UI_THREAD_MESSAGE },
-        { selector: `${GESTURE_CALLBACK} ${STORE_CALL}`, message: UI_THREAD_MESSAGE },
-        { selector: `${GESTURE_CALLBACK} ${REACT_SETTER_CALL}`, message: UI_THREAD_MESSAGE },
-      ],
+      "no-restricted-syntax": ["error", ...UI_THREAD_RULES],
+    },
+  },
+  {
+    files: ["**/*.tsx"],
+    rules: {
+      "no-restricted-syntax": ["error", ...UI_THREAD_RULES, NO_NON_NULL_MEMBER],
     },
   },
   {

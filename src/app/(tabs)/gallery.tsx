@@ -98,9 +98,9 @@ export default function GalleryScreen() {
       <ProjectActionsSheet
         project={selected}
         onClose={() => setSelected(null)}
-        onRename={(name) => afterAction(renameProjectById(selected!.id, name))}
-        onDuplicate={() => afterAction(duplicateProjectById(selected!.id))}
-        onDelete={() => afterAction(deleteProjectById(selected!.id))}
+        onRename={(id, name) => afterAction(renameProjectById(id, name))}
+        onDuplicate={(id) => afterAction(duplicateProjectById(id))}
+        onDelete={(id) => afterAction(deleteProjectById(id))}
       />
     </SafeAreaView>
   );

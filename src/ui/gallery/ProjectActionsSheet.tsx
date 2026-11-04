@@ -20,9 +20,9 @@ type Props = {
   /** null = cerrada. */
   project: { id: string; name: string; readOnly: boolean } | null;
   onClose: () => void;
-  onRename: (name: string) => Result;
-  onDuplicate: () => Result;
-  onDelete: () => Result;
+  onRename: (id: string, name: string) => Result;
+  onDuplicate: (id: string) => Result;
+  onDelete: (id: string) => Result;
 };
 
 /**
@@ -45,8 +45,9 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
     setError(null);
   }
 
-  const run = (action: () => Result) => {
-    const result = action();
+  const run = (action: (id: string) => Result) => {
+    if (!project) return;
+    const result = action(project.id);
     if (result.ok) onClose();
     else setError(result.error);
   };
@@ -81,11 +82,11 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
                 selectTextOnFocus
                 maxLength={40}
                 returnKeyType="done"
-                onSubmitEditing={() => run(() => onRename(name))}
+                onSubmitEditing={() => run((id) => onRename(id, name))}
                 accessibilityLabel="Nombre del proyecto"
                 style={styles.input}
               />
-              <SheetButton label="GUARDAR" onPress={() => run(() => onRename(name))} />
+              <SheetButton label="GUARDAR" onPress={() => run((id) => onRename(id, name))} />
               <SheetButton label="CANCELAR" muted onPress={() => setMode("actions")} />
             </>
           )}
