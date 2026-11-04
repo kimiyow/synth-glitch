@@ -1,5 +1,7 @@
 import type { ComponentType } from "react";
 
+import { EffectsLab } from "./lab/EffectsLab";
+import { StackBench } from "./lab/StackBench";
 import { Sp01Uniforms } from "./spikes/Sp01Uniforms";
 import { Sp02SkiaApi } from "./spikes/Sp02SkiaApi";
 
@@ -12,6 +14,18 @@ export type LabTest = {
 };
 
 export const LAB_TESTS: LabTest[] = [
+  {
+    id: "m1-effects",
+    title: "M1 · EFECTOS",
+    description: "Los 7 efectos sobre la imagen de prueba; toca uno para ajustar X/Y con el dedo",
+    Component: EffectsLab,
+  },
+  {
+    id: "sp-04",
+    title: "SP-04 · PILA DE CAPAS",
+    description: "FPS con 1-8 capas reales, costo estimado y preview = exportación",
+    Component: StackBench,
+  },
   {
     id: "sp-01",
     title: "SP-01 · UNIFORMS Y 12 MP",
