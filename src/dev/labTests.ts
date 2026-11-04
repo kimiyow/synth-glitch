@@ -5,6 +5,7 @@ import { ProjectLab } from "./lab/ProjectLab";
 import { StackBench } from "./lab/StackBench";
 import { Sp01Uniforms } from "./spikes/Sp01Uniforms";
 import { Sp02SkiaApi } from "./spikes/Sp02SkiaApi";
+import { Sp03Stamps } from "./spikes/Sp03Stamps";
 import { Sp11Storage } from "./spikes/Sp11Storage";
 
 /** Una prueba de testLab: spike, golden image o banco de rendimiento. */
@@ -16,6 +17,12 @@ export type LabTest = {
 };
 
 export const LAB_TESTS: LabTest[] = [
+  {
+    id: "sp-03",
+    title: "SP-03 · PINCEL DE SELLOS",
+    description: "Sellos dibujados en vivo en una superficie fuera de pantalla desde el hilo de UI",
+    Component: Sp03Stamps,
+  },
   {
     id: "m2-projects",
     title: "M2 · PROYECTOS DE PRUEBA",
