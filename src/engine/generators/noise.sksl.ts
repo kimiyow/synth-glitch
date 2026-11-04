@@ -8,7 +8,7 @@ float vnoise(float2 p) {
              mix(hash21(i + float2(0.0, 1.0)), hash21(i + float2(1.0, 1.0)), f.x), f.y);
 }
 half4 main(float2 xy) {
-  float2 p = xy / resolution.y * mix(2.0, 40.0, param.x) + seed * 17.0;
+  float2 p = xy / resolution.y * mix(2.0, 40.0, param.x) + seed * 1.7;
   float t = time * mix(0.0, 1.5, param.y);
   float v = 0.0; float a = 0.5;
   for (int i = 0; i < 4; i++) { v += a * vnoise(p + t); p *= 2.0; a *= 0.5; }
