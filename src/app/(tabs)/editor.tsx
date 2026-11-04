@@ -17,11 +17,13 @@ import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine
 import { useSlowFrames } from "../../editor/useSlowFrames";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
+import { shareFile } from "../../platform/photos";
 import { pickSynthFxFile, shareSynthFxFile } from "../../platform/synthfxFile";
 import { applySynthFx, createSynthFx, parseSynthFx, serializeSynthFx, synthFxFileName } from "../../project/synthfx";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import { createGenerativeProject, createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
+import { exportJpeg } from "../../state/exportActions";
 import { confirmLeave, saveActiveProject } from "../../state/leaveGuard";
 import type { GeneratorId, Layer, Project, SourceId } from "../../state/types";
 import { EditorEmpty, GEN_THUMB, type GenerativeAspect } from "../../ui/editor/EditorEmpty";
@@ -29,7 +31,7 @@ import { EditorToolbar } from "../../ui/editor/EditorToolbar";
 import { EffectsPanel, THUMB_SIZE, type TileRef } from "../../ui/editor/EffectsPanel";
 import { ModPanel } from "../../ui/editor/ModPanel";
 import { EditorTopBar } from "../../ui/editor/EditorTopBar";
-import { ExportPanel } from "../../ui/editor/ExportPanel";
+import { ExportPanel, type ExportAction, type ExportJob } from "../../ui/editor/ExportPanel";
 import { PanelSheet } from "../../ui/editor/PanelSheet";
 import { PresetsPanel } from "../../ui/editor/PresetsPanel";
 import { colors, geometry, type } from "../../ui/tokens";
@@ -192,6 +194,35 @@ function ProjectView({ project }: { project: Project }) {
       setSelectedId(id);
     } else {
       setSelectedId(layer.id);
+    }
+  };
+
+  // Reloj del preview: el lienzo cuenta el tiempo desde que se monta (con la imagen lista);
+  // la exportación usa el mismo instante para coincidir con lo que se ve (NFR-09).
+  const clockStart = useRef<number | null>(null);
+  useEffect(() => {
+    if (image) clockStart.current = Date.now();
+  }, [image]);
+  const previewTime = () => (clockStart.current === null ? 0 : (Date.now() - clockStart.current) / 1000);
+
+  const [job, setJob] = useState<ExportJob | null>(null);
+  const [lastExport, setLastExport] = useState<string | null>(null);
+  const onExportAction = async (action: ExportAction) => {
+    if (action === "project") {
+      const r = await saveActiveProject();
+      return setNotice(r.ok ? "PROYECTO GUARDADO" : `ERROR · ${r.error}`);
+    }
+    if (action === "share") {
+      if (lastExport) await shareFile(lastExport).catch((e: unknown) => setNotice(`ERROR · ${String(e)}`));
+      return;
+    }
+    if (action === "jpg") {
+      setJob({ label: "Exportando JPG…", progress: null });
+      const r = await exportJpeg(project, previewTime());
+      setJob(null);
+      if (!r.ok) return setNotice(`ERROR · ${r.error}`);
+      setLastExport(r.uri);
+      setNotice(`JPG GUARDADO EN FOTOS · ${(r.ms / 1000).toFixed(1)} S`);
     }
   };
 
@@ -427,9 +458,15 @@ function ProjectView({ project }: { project: Project }) {
               status={saveStatus}
               draft={isDraft}
               onRename={(name) => sceneStore.getState().rename(name)}
-              onSaveProject={() => {
-                void saveActiveProject().then((r) => setNotice(r.ok ? "PROYECTO GUARDADO" : `ERROR · ${r.error}`));
+              unavailable={{
+                jpg: isClip ? "PRONTO" : undefined,
+                gif: "PRONTO",
+                project: readOnly ? "SOLO LECTURA" : undefined,
+                share: lastExport ? undefined : "EXPORTA PRIMERO",
+                gesture: "M7",
               }}
+              job={job}
+              onAction={(a) => void onExportAction(a)}
             />
           ) : openPanel === "presets" ? (
             <PresetsPanel readOnly={readOnly} busy={fxBusy} onImport={importRecipe} onShare={shareRecipe} />
