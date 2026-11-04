@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { EFFECTS } from "../../engine/registry";
+import { EFFECT_BY_ID, EFFECTS } from "../../engine/registry";
 import type { EffectId, Layer } from "../../state/types";
 import { colors, type } from "../tokens";
 
@@ -26,6 +26,7 @@ type Props = {
 export function EffectsPanel({ layers, selectedLayerId, onTile }: Props) {
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]["id"]>("image");
   const effectLayers = layers.filter((l) => l.kind === "effect");
+  const selected = effectLayers.find((l) => l.id === selectedLayerId);
 
   return (
     <View style={styles.root}>
@@ -67,6 +68,11 @@ export function EffectsPanel({ layers, selectedLayerId, onTile }: Props) {
           );
         })}
       </ScrollView>
+      <Text style={styles.readout}>
+        {selected?.kind === "effect"
+          ? `${EFFECT_BY_ID[selected.effect].label} · X ${selected.params.x.toFixed(2)} · Y ${selected.params.y.toFixed(2)} · ARRASTRA SOBRE LA IMAGEN · DOBLE TOQUE REINICIA`
+          : "TOCA UNA FICHA PARA ENCENDER UN EFECTO"}
+      </Text>
     </View>
   );
 }
@@ -93,4 +99,5 @@ const styles = StyleSheet.create({
   orderSelected: { color: colors.inkText },
   tileLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label },
   tileLabelOn: { color: colors.inkText },
+  readout: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
 });

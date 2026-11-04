@@ -155,6 +155,19 @@ function ProjectView({ project }: { project: Project }) {
             seed={project.scene.seed}
             crop={isClip ? undefined : project.scene.crop.rect}
             onTap={closeTop}
+            xyLayerId={activeTool === "effects" && !readOnly ? (selected?.id ?? null) : null}
+            onCommitXY={(id, x, y) =>
+              sceneStore.getState().commit("ajustar efecto", (scene) => {
+                const layer = scene.layers.find((l) => l.id === id);
+                if (layer) layer.params = { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
+              })
+            }
+            onResetXY={(id) =>
+              sceneStore.getState().commit("reiniciar efecto", (scene) => {
+                const layer = scene.layers.find((l) => l.id === id);
+                if (layer?.kind === "effect") layer.params = { ...EFFECT_BY_ID[layer.effect].defaults };
+              })
+            }
           />
         ) : (
           <View style={styles.noImage}>
