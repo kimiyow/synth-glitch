@@ -1,17 +1,28 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { EFFECT_BY_ID, EFFECTS } from "../../engine/registry";
-import type { EffectId, Layer, Route, SourceId } from "../../state/types";
+import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine/registry";
+import type { BlendMode, EffectId, GeneratorId, Layer, Route, SourceId } from "../../state/types";
+import { ChipRow, type Chip } from "../ChipRow";
 import { Pill } from "../kit/Pill";
 import { colors, radius, type } from "../tokens";
 import { RouteRow } from "./RouteRow";
 
 const CATEGORIES = [
   { id: "image", label: "IMAGEN", milestone: null },
-  { id: "generator", label: "GENERADOR", milestone: "M8" },
+  { id: "generator", label: "GENERADOR", milestone: null },
 ] as const;
 type Category = (typeof CATEGORIES)[number]["id"];
+
+/** Ficha tocada: un efecto global o un generador (una capa de cada uno como máximo). */
+export type TileRef = { kind: "effect"; effect: EffectId } | { kind: "generator"; generator: GeneratorId };
+
+const BLENDS: readonly Chip<BlendMode>[] = [
+  { id: "replace", label: "REPLACE" },
+  { id: "screen", label: "SCREEN" },
+  { id: "multiply", label: "MULTIPLY" },
+  { id: "difference", label: "DIFFERENCE" },
+];
 
 const TILE = 71;
 
@@ -20,20 +31,26 @@ type Props = {
   routes: readonly Route[];
   selectedLayerId: string | null;
   warning: string | null;
-  onTile: (effect: EffectId) => void;
+  onTile: (tile: TileRef) => void;
+  onBlend: (layerId: string, blend: BlendMode) => void;
   onRouteSource: (layerId: string, axis: "x" | "y", source: SourceId) => void;
   onRouteAmount: (layerId: string, axis: "x" | "y", amount: number) => void;
 };
 
 /**
- * Panel Efectos (4.2): fichas de efecto con tres estados (el número es la posición en la
- * pila) y modulación por eje del efecto seleccionado. Las fuentes se ajustan en el panel Mod.
+ * Panel Efectos (4.2): fichas de efecto y de generador con tres estados (el número es la
+ * posición en la pila) y modulación por eje de la capa seleccionada; los generadores suman
+ * el modo de mezcla (GEN-02). Las fuentes se ajustan en el panel Mod.
  */
 export function EffectsPanel(props: Props) {
   const { layers, routes, selectedLayerId, warning, onTile } = props;
   const [category, setCategory] = useState<Category>("image");
-  const effectLayers = layers.filter((l) => l.kind === "effect");
-  const selected = effectLayers.find((l) => l.id === selectedLayerId);
+  const selected = layers.find((l) => l.id === selectedLayerId);
+  const tileState = (match: (l: Layer) => boolean) => {
+    const index = layers.findIndex(match);
+    const on = index >= 0;
+    return { on, selected: on && layers[index].id === selectedLayerId, badge: on ? String(index + 1) : null };
+  };
   const routeFor = (axis: "x" | "y") =>
     routes.find((r) => r.target.layerId === selected?.id && r.target.param === axis) ?? null;
 
@@ -53,50 +70,55 @@ export function EffectsPanel(props: Props) {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tiles}>
         {category === "image" &&
-          EFFECTS.map((effect) => {
-              const index = effectLayers.findIndex((l) => l.kind === "effect" && l.effect === effect.id);
-              const on = index >= 0;
-              const isSel = on && effectLayers[index].id === selectedLayerId;
-              return (
-                <Tile
-                  key={effect.id}
-                  label={effect.label}
-                  on={on}
-                  selected={isSel}
-                  badge={on ? String(index + 1) : null}
-                  onPress={() => onTile(effect.id)}
-                />
-              );
-            })}
+          EFFECTS.map((effect) => (
+            <Tile
+              key={effect.id}
+              label={effect.label}
+              {...tileState((l) => l.kind === "effect" && l.effect === effect.id)}
+              onPress={() => onTile({ kind: "effect", effect: effect.id })}
+            />
+          ))}
+        {category === "generator" &&
+          GENERATORS.map((gen) => (
+            <Tile
+              key={gen.id}
+              label={gen.label}
+              {...tileState((l) => l.kind === "generator" && l.generator === gen.id)}
+              onPress={() => onTile({ kind: "generator", generator: gen.id })}
+            />
+          ))}
       </ScrollView>
 
       {warning && <Text style={styles.warning}>{warning}</Text>}
 
-      {category === "image" &&
-        (selected?.kind === "effect" ? (
-          <View style={styles.routes}>
-            <Text style={styles.readout}>
-              {EFFECT_BY_ID[selected.effect].label} · X {selected.params.x.toFixed(2)} · Y {selected.params.y.toFixed(2)} ·
-              ARRASTRA SOBRE LA IMAGEN · DOBLE TOQUE REINICIA
-            </Text>
-            {(["x", "y"] as const).map((axis) => {
-              const r = routeFor(axis);
-              return (
-                <RouteRow
-                  key={axis}
-                  axis={axis}
-                  source={r?.source ?? "touch"}
-                  amount={r?.amount ?? 0.5}
-                  onSource={(s) => props.onRouteSource(selected.id, axis, s)}
-                  onAmount={(a) => props.onRouteAmount(selected.id, axis, a)}
-                />
-              );
-            })}
-          </View>
-        ) : (
-          <Text style={styles.readout}>TOCA UNA FICHA PARA ENCENDER UN EFECTO</Text>
-        ))}
-
+      {selected ? (
+        <View style={styles.routes}>
+          <Text style={styles.readout}>
+            {selected.kind === "effect" ? EFFECT_BY_ID[selected.effect].label : GENERATOR_BY_ID[selected.generator].label} · X{" "}
+            {selected.params.x.toFixed(2)} · Y {selected.params.y.toFixed(2)} · ARRASTRA SOBRE LA IMAGEN · DOBLE TOQUE REINICIA
+          </Text>
+          {selected.kind === "generator" && (
+            <ChipRow chips={BLENDS} value={selected.blend} onChange={(b) => props.onBlend(selected.id, b)} />
+          )}
+          {(["x", "y"] as const).map((axis) => {
+            const r = routeFor(axis);
+            return (
+              <RouteRow
+                key={axis}
+                axis={axis}
+                source={r?.source ?? "touch"}
+                amount={r?.amount ?? 0.5}
+                onSource={(s) => props.onRouteSource(selected.id, axis, s)}
+                onAmount={(a) => props.onRouteAmount(selected.id, axis, a)}
+              />
+            );
+          })}
+        </View>
+      ) : (
+        <Text style={styles.readout}>
+          {category === "image" ? "TOCA UNA FICHA PARA ENCENDER UN EFECTO" : "TOCA UNA FICHA PARA ENCENDER UN GENERADOR"}
+        </Text>
+      )}
     </View>
   );
 }

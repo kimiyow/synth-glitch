@@ -11,17 +11,17 @@ import { BrushPanel } from "../../ui/editor/BrushPanel";
 import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../editor/panels";
 import { croppedSize } from "../../engine/crop";
 import { canAddLayer, isCostHigh, MAX_LAYERS } from "../../engine/layerCost";
-import { EFFECT_BY_ID, EFFECTS } from "../../engine/registry";
+import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID } from "../../engine/registry";
 import { useSlowFrames } from "../../editor/useSlowFrames";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
-import type { EffectId, Project, SourceId } from "../../state/types";
+import type { Layer, Project, SourceId } from "../../state/types";
 import { EditorEmpty } from "../../ui/editor/EditorEmpty";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
-import { EffectsPanel } from "../../ui/editor/EffectsPanel";
+import { EffectsPanel, type TileRef } from "../../ui/editor/EffectsPanel";
 import { ModPanel } from "../../ui/editor/ModPanel";
 import { EditorTopBar } from "../../ui/editor/EditorTopBar";
 import { ExportPanel } from "../../ui/editor/ExportPanel";
@@ -97,7 +97,7 @@ function ProjectView({ project }: { project: Project }) {
   const [overlays, setOverlays] = useState<OverlayStack>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const layers = project.scene.layers;
-  const [selectedId, setSelectedId] = useState<string | null>(() => layers.filter((l) => l.kind === "effect").at(-1)?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => layers.at(-1)?.id ?? null);
   const selected = layers.find((l) => l.id === selectedId) ?? null;
   const slowFrames = useSlowFrames();
   const strokes = project.scene.paint.strokes;
@@ -141,24 +141,39 @@ function ProjectView({ project }: { project: Project }) {
     });
 
   // Fichas (4.2): apagada → enciende y selecciona; encendida → selecciona; seleccionada → apaga.
-  const onTile = (effect: EffectId) => {
+  const onTile = (tile: TileRef) => {
     if (readOnly) return;
-    const layer = layers.find((l) => l.kind === "effect" && l.effect === effect);
+    const name = tile.kind === "effect" ? tile.effect : tile.generator;
+    const layer = layers.find((l) =>
+      tile.kind === "effect" ? l.kind === "effect" && l.effect === tile.effect : l.kind === "generator" && l.generator === tile.generator,
+    );
     if (!layer) {
       if (!canAddLayer(layers)) return setNotice(`MÁXIMO ${MAX_LAYERS} CAPAS`);
-      const id = `${effect}-${Date.now().toString(36)}`;
-      sceneStore.getState().commit(`encender ${effect}`, (scene) => {
-        scene.layers.push({ kind: "effect", id, effect, params: { ...EFFECT_BY_ID[effect].defaults }, visible: true });
+      const id = `${name}-${Date.now().toString(36)}`;
+      // Sobre una foto, `screen` deja ver la imagen; `replace` la taparía por completo.
+      const next: Layer =
+        tile.kind === "effect"
+          ? { kind: "effect", id, effect: tile.effect, params: { ...EFFECT_BY_ID[tile.effect].defaults }, visible: true }
+          : {
+              kind: "generator",
+              id,
+              generator: tile.generator,
+              params: { ...GENERATOR_BY_ID[tile.generator].defaults },
+              visible: true,
+              blend: "screen",
+            };
+      sceneStore.getState().commit(`encender ${name}`, (scene) => {
+        scene.layers.push(next);
       });
       setSelectedId(id);
     } else if (layer.id !== selectedId) {
       setSelectedId(layer.id);
     } else {
-      sceneStore.getState().commit(`apagar ${effect}`, (scene) => {
+      sceneStore.getState().commit(`apagar ${name}`, (scene) => {
         scene.layers = scene.layers.filter((l) => l.id !== layer.id);
         scene.routes = scene.routes.filter((r) => r.target.layerId !== layer.id);
       });
-      setSelectedId(layers.filter((l) => l.kind === "effect" && l.id !== layer.id).at(-1)?.id ?? null);
+      setSelectedId(layers.filter((l) => l.id !== layer.id).at(-1)?.id ?? null);
     }
   };
 
@@ -216,6 +231,7 @@ function ProjectView({ project }: { project: Project }) {
               sceneStore.getState().commit("reiniciar efecto", (scene) => {
                 const layer = scene.layers.find((l) => l.id === id);
                 if (layer?.kind === "effect") layer.params = { ...EFFECT_BY_ID[layer.effect].defaults };
+                if (layer?.kind === "generator") layer.params = { ...GENERATOR_BY_ID[layer.generator].defaults };
               })
             }
           />
@@ -255,6 +271,12 @@ function ProjectView({ project }: { project: Project }) {
                   : null
               }
               onTile={onTile}
+              onBlend={(layerId, blend) =>
+                sceneStore.getState().commit("modo de mezcla", (scene) => {
+                  const layer = scene.layers.find((l) => l.id === layerId);
+                  if (layer?.kind === "generator") layer.blend = blend;
+                })
+              }
               onRouteSource={setRouteSource}
               onRouteAmount={(layerId, axis, amount) =>
                 sceneStore.getState().commit("cantidad de modulación", (scene) => {
