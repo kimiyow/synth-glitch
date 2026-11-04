@@ -5,9 +5,9 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 
 import { SceneRenderer } from "../../editor/SceneRenderer";
-import { EFFECTS, EFFECT_BY_ID } from "../../engine/registry";
+import { EFFECTS, GENERATORS } from "../../engine/registry";
 import type { FrameInputs } from "../../engine/renderGraph";
-import type { EffectId, Layer } from "../../state/types";
+import type { Layer } from "../../state/types";
 import { colors, geometry, type } from "../../ui/tokens";
 import { LabChip, labStyles } from "./labUi";
 import { useTestImage } from "./testImage";
@@ -15,21 +15,35 @@ import { useLabClock } from "./useLabClock";
 
 const GAP = 8;
 
-function singleLayer(effect: EffectId): Layer[] {
-  return [{ kind: "effect", id: effect, effect, params: { ...EFFECT_BY_ID[effect].defaults }, visible: true }];
-}
+type LabItem = { id: string; label: string; defaults: { x: number; y: number }; layers: Layer[] };
 
-/** M1: los 7 efectos con valores por defecto; toca uno para ajustar X/Y con el dedo. */
+/** Los 7 efectos y los 3 generadores (M8, en `replace`), cada uno solo y con sus valores por defecto. */
+const ITEMS: LabItem[] = [
+  ...EFFECTS.map((e): LabItem => ({
+    id: e.id,
+    label: e.label,
+    defaults: e.defaults,
+    layers: [{ kind: "effect", id: e.id, effect: e.id, params: { ...e.defaults }, visible: true }],
+  })),
+  ...GENERATORS.map((g): LabItem => ({
+    id: g.id,
+    label: `GEN · ${g.label}`,
+    defaults: g.defaults,
+    layers: [{ kind: "generator", id: g.id, generator: g.id, params: { ...g.defaults }, visible: true, blend: "replace" }],
+  })),
+];
+
+/** M1 y M8: efectos y generadores con valores por defecto; toca uno para ajustar X/Y con el dedo. */
 export function EffectsLab() {
   const image = useTestImage();
-  const [selected, setSelected] = useState<EffectId | null>(null);
+  const [selected, setSelected] = useState<LabItem | null>(null);
 
   if (!image) return <Text style={[labStyles.label, styles.pad]}>GENERANDO IMAGEN…</Text>;
-  if (selected) return <EffectDetail image={image} effect={selected} onBack={() => setSelected(null)} />;
+  if (selected) return <EffectDetail image={image} item={selected} onBack={() => setSelected(null)} />;
   return <EffectsGrid image={image} onSelect={setSelected} />;
 }
 
-function EffectsGrid({ image, onSelect }: { image: SkImage; onSelect: (id: EffectId) => void }) {
+function EffectsGrid({ image, onSelect }: { image: SkImage; onSelect: (item: LabItem) => void }) {
   const { width } = useWindowDimensions();
   const tileW = Math.floor((width - geometry.compactMargin * 2 - GAP) / 2);
   const tileH = Math.round((tileW * 4) / 3);
@@ -38,10 +52,10 @@ function EffectsGrid({ image, onSelect }: { image: SkImage; onSelect: (id: Effec
 
   return (
     <ScrollView contentContainerStyle={styles.grid}>
-      {EFFECTS.map((effect) => (
-        <Pressable key={effect.id} accessibilityRole="button" onPress={() => onSelect(effect.id)} style={{ width: tileW }}>
+      {ITEMS.map((effect) => (
+        <Pressable key={effect.id} accessibilityRole="button" onPress={() => onSelect(effect)} style={{ width: tileW }}>
           <Canvas style={{ width: tileW, height: tileH }}>
-            <SceneRenderer image={image} width={tileW} height={tileH} layers={singleLayer(effect.id)} seed={0} frame={frame} />
+            <SceneRenderer image={image} width={tileW} height={tileH} layers={effect.layers} seed={0} frame={frame} />
           </Canvas>
           <Text style={styles.tileLabel}>
             {effect.label} · {effect.defaults.x.toFixed(2)}, {effect.defaults.y.toFixed(2)}
@@ -52,10 +66,10 @@ function EffectsGrid({ image, onSelect }: { image: SkImage; onSelect: (id: Effec
   );
 }
 
-function EffectDetail({ image, effect, onBack }: { image: SkImage; effect: EffectId; onBack: () => void }) {
+function EffectDetail({ image, item, onBack }: { image: SkImage; item: LabItem; onBack: () => void }) {
   const { width } = useWindowDimensions();
   const canvasH = Math.round((width * 4) / 3);
-  const defaults = EFFECT_BY_ID[effect].defaults;
+  const defaults = item.defaults;
   const [shown, setShown] = useState(defaults);
   const time = useLabClock();
   const px = useSharedValue(defaults.x);
@@ -94,12 +108,12 @@ function EffectDetail({ image, effect, onBack }: { image: SkImage; effect: Effec
     <ScrollView>
       <GestureDetector gesture={Gesture.Exclusive(doubleTap, pan)}>
         <Canvas style={{ width, height: canvasH }}>
-          <SceneRenderer image={image} width={width} height={canvasH} layers={singleLayer(effect)} seed={0} frame={frame} />
+          <SceneRenderer image={image} width={width} height={canvasH} layers={item.layers} seed={0} frame={frame} />
         </Canvas>
       </GestureDetector>
       <View style={labStyles.controls}>
         <Text style={labStyles.data}>
-          {EFFECT_BY_ID[effect].label} · X {shown.x.toFixed(2)} · Y {shown.y.toFixed(2)}
+          {item.label} · X {shown.x.toFixed(2)} · Y {shown.y.toFixed(2)}
         </Text>
         <Text style={labStyles.label}>
           ARRASTRA: IZQUIERDA→DERECHA = X, ABAJO→ARRIBA = Y · DOBLE TOQUE REINICIA

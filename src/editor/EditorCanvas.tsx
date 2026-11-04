@@ -13,7 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { FULL_CROP, type CropRect } from "../engine/crop";
-import { buildEffectChain, type FrameInputs } from "../engine/renderGraph";
+import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate } from "../modulation/evaluate";
 import {
   advanceStroke,
@@ -118,7 +118,7 @@ export function EditorCanvas(props: Props) {
 
   // Parámetros efectivos por nodo de la cadena: el gesto los cambia en el hilo de UI y
   // al soltar se confirman en el store; aquí se resincronizan con lo confirmado.
-  const chain = buildEffectChain(layers);
+  const chain = buildLayerChain(layers);
   const committed = chain.flatMap((n) => [n.base.x, n.base.y]);
   const committedKey = committed.join(",");
   const liveParams = useSharedValue<number[]>(committed);

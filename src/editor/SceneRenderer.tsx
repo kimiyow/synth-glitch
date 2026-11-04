@@ -3,8 +3,8 @@ import type { ReactElement } from "react";
 import { isSharedValue, useDerivedValue, type DerivedValue } from "react-native-reanimated";
 
 import { cropViewport, FULL_CROP, type CropRect } from "../engine/crop";
-import { buildEffectChain, nodeUniforms, type ChainNode, type FrameInputs } from "../engine/renderGraph";
-import { getEffectRuntime } from "../engine/runtimeEffects";
+import { buildLayerChain, nodeUniforms, type ChainNode, type FrameInputs } from "../engine/renderGraph";
+import { getEffectRuntime, getGeneratorRuntime } from "../engine/runtimeEffects";
 import type { Layer } from "../state/types";
 
 type Props = {
@@ -24,11 +24,11 @@ type Props = {
 };
 
 /**
- * Árbol de Skia de la escena: medio → efectos apilados → recorte (3.3). Va dentro de un
+ * Árbol de Skia de la escena: medio → capas de efecto y generador apiladas → recorte (3.3). Va dentro de un
  * Canvas o de drawAsImage. `width × height` es el tamaño de salida (la región recortada).
  */
 export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP }: Props) {
-  const chain = buildEffectChain(layers);
+  const chain = buildLayerChain(layers);
   // Los efectos se evalúan sobre la imagen completa, así el recorte no cambia su aspecto.
   const { fullW, fullH, tx, ty } = cropViewport(width, height, crop);
   const resolution: [number, number] = [fullW, fullH];
@@ -37,7 +37,7 @@ export function SceneRenderer({ image, width, height, layers, seed, frame, crop 
     <ImageShader image={image} fit="cover" rect={{ x: 0, y: 0, width: fullW, height: fullH }} tx="clamp" ty="clamp" />
   );
   chain.forEach((chainNode, index) => {
-    const source = getEffectRuntime(chainNode.effect);
+    const source = runtimeFor(chainNode);
     if (!source) return; // Un shader que no compila se salta en lugar de romper la cadena.
     node = isLiveFrame(frame) ? (
       <LiveEffect chain={chain} index={index} frame={frame} resolution={resolution} seed={seed}>
@@ -61,6 +61,10 @@ export function SceneRenderer({ image, width, height, layers, seed, frame, crop 
   );
 }
 
+function runtimeFor(node: ChainNode) {
+  return node.kind === "effect" ? getEffectRuntime(node.effect) : getGeneratorRuntime(node.generator);
+}
+
 function isLiveFrame(frame: FrameInputs | DerivedValue<FrameInputs>): frame is DerivedValue<FrameInputs> {
   return isSharedValue(frame);
 }
@@ -81,7 +85,7 @@ function LiveEffect({
   children: ReactElement;
 }) {
   const uniforms = useDerivedValue(() => nodeUniforms(chain, index, frame.get(), resolution, seed));
-  const source = getEffectRuntime(chain[index].effect);
+  const source = runtimeFor(chain[index]);
   if (!source) return children;
   return (
     <Shader source={source} uniforms={uniforms}>

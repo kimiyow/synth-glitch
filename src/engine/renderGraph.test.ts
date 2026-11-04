@@ -2,45 +2,55 @@ import { describe, expect, it } from "@jest/globals";
 
 import type { EffectId, Layer } from "../state/types";
 import { MAX_LAYERS } from "./layerCost";
-import { buildEffectChain, nodeUniforms } from "./renderGraph";
+import { buildLayerChain, nodeUniforms } from "./renderGraph";
 
 function fx(id: string, effect: EffectId, visible = true, x = 0.1, y = 0.2): Layer {
   return { kind: "effect", id, effect, params: { x, y }, visible };
 }
 
-describe("buildEffectChain", () => {
+describe("buildLayerChain", () => {
   it("conserva el orden y omite capas ocultas", () => {
-    const chain = buildEffectChain([fx("a", "vhs"), fx("b", "crt", false), fx("c", "wave")]);
+    const chain = buildLayerChain([fx("a", "vhs"), fx("b", "crt", false), fx("c", "wave")]);
     expect(chain.map((n) => n.layerId)).toEqual(["a", "c"]);
   });
 
-  it("omite generadores hasta M8", () => {
+  it("incluye generadores en su lugar de la pila, con su modo de mezcla", () => {
     const gen: Layer = {
       kind: "generator",
       id: "g",
       generator: "bars",
       params: { x: 0, y: 0 },
       visible: true,
-      blend: "replace",
+      blend: "multiply",
     };
-    expect(buildEffectChain([gen, fx("a", "vhs")]).map((n) => n.layerId)).toEqual(["a"]);
+    const chain = buildLayerChain([fx("a", "vhs"), gen, fx("b", "crt")]);
+    expect(chain.map((n) => n.layerId)).toEqual(["a", "g", "b"]);
+    expect(chain[1]).toMatchObject({ kind: "generator", generator: "bars", blend: 2 });
+  });
+
+  it("solo los generadores reciben el uniform blend", () => {
+    const gen: Layer = { kind: "generator", id: "g", generator: "noise", params: { x: 0.5, y: 0.5 }, visible: true, blend: "screen" };
+    const chain = buildLayerChain([fx("a", "vhs"), gen]);
+    const frame = { time: 0, params: [] };
+    expect(nodeUniforms(chain, 0, frame, [1, 1], 0)).not.toHaveProperty("blend");
+    expect(nodeUniforms(chain, 1, frame, [1, 1], 0).blend).toBe(1);
   });
 
   it("corta en el tope técnico", () => {
     const many = Array.from({ length: MAX_LAYERS + 3 }, (_, i) => fx(`l${i}`, "wave"));
-    expect(buildEffectChain(many)).toHaveLength(MAX_LAYERS);
+    expect(buildLayerChain(many)).toHaveLength(MAX_LAYERS);
   });
 
   it("copia los valores base para no compartir referencias con la escena", () => {
     const layer = fx("a", "vhs");
-    const [node] = buildEffectChain([layer]);
+    const [node] = buildLayerChain([layer]);
     expect(node.base).toEqual(layer.params);
     expect(node.base).not.toBe(layer.params);
   });
 });
 
 describe("nodeUniforms", () => {
-  const chain = buildEffectChain([fx("a", "vhs", true, 0.1, 0.2), fx("b", "crt", true, 0.3, 0.4)]);
+  const chain = buildLayerChain([fx("a", "vhs", true, 0.1, 0.2), fx("b", "crt", true, 0.3, 0.4)]);
 
   it("usa los valores base si el cuadro no trae parámetros", () => {
     expect(nodeUniforms(chain, 1, { time: 2, params: [] }, [100, 50], 7)).toEqual({

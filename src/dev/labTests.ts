@@ -37,8 +37,8 @@ export const LAB_TESTS: LabTest[] = [
   },
   {
     id: "m1-effects",
-    title: "M1 · EFECTOS",
-    description: "Los 7 efectos sobre la imagen de prueba; toca uno para ajustar X/Y con el dedo",
+    title: "M1 · EFECTOS Y GENERADORES",
+    description: "Los 7 efectos y los 3 generadores (M8); toca uno para ajustar X/Y con el dedo",
     Component: EffectsLab,
   },
   {

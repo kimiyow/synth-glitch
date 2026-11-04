@@ -19,8 +19,12 @@ function sourceHz(route: Route, s: SourceConfig): number {
   return 0;
 }
 
-/** Guardarraíl fotosensible no bloqueante: true si hay que mostrar el aviso. */
+/**
+ * Guardarraíl fotosensible no bloqueante: true si hay que mostrar el aviso. El generador
+ * `bars` alterna blanco y negro a 4-24 Hz en toda la imagen (6.4), así que siempre avisa.
+ */
 export function hasFastLuminanceRoute(layers: readonly Layer[], routes: readonly Route[], sources: SourceConfig): boolean {
+  if (layers.some((l) => l.kind === "generator" && l.generator === "bars" && l.visible)) return true;
   return routes.some((r) => {
     const layer = layers.find((l) => l.id === r.target.layerId);
     if (!layer || layer.kind !== "effect" || !layer.visible || r.amount === 0) return false;
