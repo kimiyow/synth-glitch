@@ -11,7 +11,10 @@ export type ChainNode = {
   layerId: string;
   /** Valores base (x, y) de la capa; la modulación los sobrescribe por cuadro. */
   base: { x: number; y: number };
-} & ({ kind: "effect"; effect: EffectId } | { kind: "generator"; generator: GeneratorId; blend: number });
+} & (
+  | { kind: "effect"; effect: EffectId }
+  | { kind: "generator"; generator: GeneratorId; blend: number; seedOffset: number }
+);
 
 /** Entradas que cambian por cuadro: tiempo y (x, y) efectivos por nodo, intercalados. */
 export type FrameInputs = {
@@ -38,7 +41,14 @@ export function buildLayerChain(layers: readonly Layer[]): ChainNode[] {
     chain.push(
       layer.kind === "effect"
         ? { kind: "effect", layerId: layer.id, effect: layer.effect, base }
-        : { kind: "generator", layerId: layer.id, generator: layer.generator, blend: BLEND_INDEX[layer.blend], base },
+        : {
+            kind: "generator",
+            layerId: layer.id,
+            generator: layer.generator,
+            blend: BLEND_INDEX[layer.blend],
+            seedOffset: layer.seed ?? 0,
+            base,
+          },
     );
   }
   return chain;
@@ -78,7 +88,7 @@ export function nodeUniforms(
     resolution,
     param: [clamp01(x), clamp01(y)],
     time: frame.time,
-    seed: shaderSeed(seed),
+    seed: shaderSeed(node.kind === "generator" ? seed + node.seedOffset : seed),
   };
   if (node.kind === "generator") uniforms.blend = node.blend;
   return uniforms;

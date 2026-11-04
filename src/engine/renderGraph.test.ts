@@ -71,4 +71,9 @@ describe("nodeUniforms", () => {
     expect(nodeUniforms(chain, 0, { time: 0, params: [] }, [1, 1], 2_000_000_123).seed).toBe(123);
     expect(nodeUniforms(chain, 0, { time: 0, params: [] }, [1, 1], 7).seed).toBe(7);
   });
+
+  it("suma la semilla propia del generador a la del proyecto", () => {
+    const gen: Layer = { kind: "generator", id: "g", generator: "noise", params: { x: 0, y: 0 }, visible: true, blend: "screen", seed: 5 };
+    expect(nodeUniforms(buildLayerChain([gen]), 0, { time: 0, params: [] }, [1, 1], 998).seed).toBe(3);
+  });
 });

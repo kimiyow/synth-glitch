@@ -152,6 +152,7 @@ export function parseLayer(v: unknown, path: string): Layer {
     ...base,
     generator: oneOf(o.generator, GENERATOR_IDS, `${path}.generator`),
     blend: oneOf(o.blend, BLENDS, `${path}.blend`),
+    ...(o.seed === undefined ? {} : { seed: num(o.seed, `${path}.seed`) }),
   };
 }
 

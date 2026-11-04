@@ -1,11 +1,12 @@
 import { useImage } from "@shopify/react-native-skia";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
 import { EditorCanvas } from "../../editor/EditorCanvas";
+import { EffectThumb } from "../../editor/EffectThumb";
 import { MAX_STROKES, stampSeed, type BrushTool } from "../../paint/strokeInterpolate";
 import { BrushPanel } from "../../ui/editor/BrushPanel";
 import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../editor/panels";
@@ -21,7 +22,7 @@ import { createProjectFromClip, createProjectFromPhoto } from "../../state/captu
 import type { Layer, Project, SourceId } from "../../state/types";
 import { EditorEmpty } from "../../ui/editor/EditorEmpty";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
-import { EffectsPanel, type TileRef } from "../../ui/editor/EffectsPanel";
+import { EffectsPanel, THUMB_SIZE, type TileRef } from "../../ui/editor/EffectsPanel";
 import { ModPanel } from "../../ui/editor/ModPanel";
 import { EditorTopBar } from "../../ui/editor/EditorTopBar";
 import { ExportPanel } from "../../ui/editor/ExportPanel";
@@ -140,7 +141,8 @@ function ProjectView({ project }: { project: Project }) {
       });
     });
 
-  // Fichas (4.2): apagada → enciende y selecciona; encendida → selecciona; seleccionada → apaga.
+  // Fichas: apagada → enciende y selecciona; encendida → selecciona. El panel abre el detalle
+  // y desde ahí se quita (estilo Picsart; sustituye a "tocar la seleccionada la apaga" de 4.2).
   const onTile = (tile: TileRef) => {
     if (readOnly) return;
     const name = tile.kind === "effect" ? tile.effect : tile.generator;
@@ -166,15 +168,36 @@ function ProjectView({ project }: { project: Project }) {
         scene.layers.push(next);
       });
       setSelectedId(id);
-    } else if (layer.id !== selectedId) {
-      setSelectedId(layer.id);
     } else {
-      sceneStore.getState().commit(`apagar ${name}`, (scene) => {
-        scene.layers = scene.layers.filter((l) => l.id !== layer.id);
-        scene.routes = scene.routes.filter((r) => r.target.layerId !== layer.id);
-      });
-      setSelectedId(layers.filter((l) => l.id !== layer.id).at(-1)?.id ?? null);
+      setSelectedId(layer.id);
     }
+  };
+
+  const removeLayer = (layerId: string) => {
+    sceneStore.getState().commit("quitar capa", (scene) => {
+      scene.layers = scene.layers.filter((l) => l.id !== layerId);
+      scene.routes = scene.routes.filter((r) => r.target.layerId !== layerId);
+    });
+    setSelectedId(layers.filter((l) => l.id !== layerId).at(-1)?.id ?? null);
+  };
+
+  const resetLayer = (layerId: string) =>
+    sceneStore.getState().commit("reiniciar efecto", (scene) => {
+      const layer = scene.layers.find((l) => l.id === layerId);
+      if (layer?.kind === "effect") layer.params = { ...EFFECT_BY_ID[layer.effect].defaults };
+      if (layer?.kind === "generator") layer.params = { ...GENERATOR_BY_ID[layer.generator].defaults };
+    });
+
+  // Deslizador de parámetro: vista previa sin historial mientras se arrastra y un solo
+  // cambio deshacible al soltar (3.8: un movimiento completo de deslizador).
+  const paramStart = useRef<{ x: number; y: number } | null>(null);
+  const setParams = (layerId: string, params: { x: number; y: number }, label: string | null) => {
+    const recipe = (scene: { layers: Layer[] }) => {
+      const layer = scene.layers.find((l) => l.id === layerId);
+      if (layer) layer.params = params;
+    };
+    if (label) sceneStore.getState().commit(label, recipe);
+    else sceneStore.getState().adjust(recipe);
   };
 
   return (
@@ -227,13 +250,7 @@ function ProjectView({ project }: { project: Project }) {
                 if (layer) layer.params = { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
               })
             }
-            onResetXY={(id) =>
-              sceneStore.getState().commit("reiniciar efecto", (scene) => {
-                const layer = scene.layers.find((l) => l.id === id);
-                if (layer?.kind === "effect") layer.params = { ...EFFECT_BY_ID[layer.effect].defaults };
-                if (layer?.kind === "generator") layer.params = { ...GENERATOR_BY_ID[layer.generator].defaults };
-              })
-            }
+            onResetXY={resetLayer}
           />
         ) : (
           <View style={styles.noImage}>
@@ -269,13 +286,41 @@ function ProjectView({ project }: { project: Project }) {
                   ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA"
                   : null
               }
+              renderThumb={(layer) => <EffectThumb image={image} layer={layer} seed={project.scene.seed} size={THUMB_SIZE} />}
               onTile={onTile}
+              onRemove={removeLayer}
+              onReset={resetLayer}
               onBlend={(layerId, blend) =>
                 sceneStore.getState().commit("modo de mezcla", (scene) => {
                   const layer = scene.layers.find((l) => l.id === layerId);
                   if (layer?.kind === "generator") layer.blend = blend;
                 })
               }
+              onSeed={(layerId) =>
+                sceneStore.getState().commit("semilla", (scene) => {
+                  const layer = scene.layers.find((l) => l.id === layerId);
+                  if (layer?.kind === "generator") layer.seed = Math.floor(Math.random() * 1000);
+                })
+              }
+              onParamStart={(layerId) => {
+                const layer = layers.find((l) => l.id === layerId);
+                paramStart.current = layer ? { ...layer.params } : null;
+              }}
+              onParam={(layerId, axis, value) => {
+                const layer = sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId);
+                if (layer) setParams(layerId, { ...layer.params, [axis]: value }, null);
+              }}
+              onParamEnd={(layerId) => {
+                const start = paramStart.current;
+                const layer = sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId);
+                paramStart.current = null;
+                if (!start || !layer || (start.x === layer.params.x && start.y === layer.params.y)) return;
+                const final = { ...layer.params };
+                // Se vuelve al valor inicial sin historial y se confirma el final como un solo cambio.
+                setParams(layerId, start, null);
+                setParams(layerId, final, "ajustar efecto");
+              }}
+              onModulate={() => setOverlays((stack) => toggleOverlay(stack, "mod"))}
             />
           ) : openPanel === "mod" ? (
             <ModPanel

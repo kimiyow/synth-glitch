@@ -37,6 +37,8 @@ export type GeneratorLayer = {
   params: { x: number; y: number };
   visible: boolean;
   blend: BlendMode;
+  /** Semilla propia de la capa (0-999), sumada a la del proyecto. Añadida en M8; opcional. */
+  seed?: number;
 };
 export type Layer = EffectLayer | GeneratorLayer;
 
