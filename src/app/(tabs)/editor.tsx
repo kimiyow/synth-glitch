@@ -8,7 +8,7 @@ import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
 import { EditorCanvas } from "../../editor/EditorCanvas";
 import { MAX_STROKES, stampSeed, type BrushTool } from "../../paint/strokeInterpolate";
 import { BrushPanel } from "../../ui/editor/BrushPanel";
-import { popOverlay, toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../editor/panels";
+import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../editor/panels";
 import { croppedSize } from "../../engine/crop";
 import { canAddLayer, isCostHigh, MAX_LAYERS } from "../../engine/layerCost";
 import { EFFECT_BY_ID, EFFECTS } from "../../engine/registry";
@@ -118,7 +118,6 @@ function ProjectView({ project }: { project: Project }) {
     if (id === "brush" || id === "effects") setActiveTool(id);
     setOverlays((stack) => toggleOverlay(stack, id));
   };
-  const closeTop = () => setOverlays((stack) => popOverlay(stack));
 
   // Fichas (4.2): apagada → enciende y selecciona; encendida → selecciona; seleccionada → apaga.
   const onTile = (effect: EffectId) => {
@@ -162,7 +161,6 @@ function ProjectView({ project }: { project: Project }) {
             layers={isClip ? [] : project.scene.layers}
             seed={project.scene.seed}
             crop={isClip ? undefined : project.scene.crop.rect}
-            onTap={closeTop}
             paintable={!isClip}
             brush={
               activeTool === "brush" && !readOnly
@@ -172,7 +170,6 @@ function ProjectView({ project }: { project: Project }) {
             strokes={strokes}
             mediaWidth={media.width}
             mediaHeight={media.height}
-            overlayOpen={overlays.length > 0}
             showSizePreview={sizePreview}
             onCommitStroke={(stamps) =>
               sceneStore.getState().commit("trazo", (scene) => {
@@ -210,7 +207,7 @@ function ProjectView({ project }: { project: Project }) {
       </View>
 
       {openPanel && (
-        <PanelSheet onClose={closeTop}>
+        <PanelSheet>
           {openPanel === "brush" ? (
             <BrushPanel
               tool={brushTool}

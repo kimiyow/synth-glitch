@@ -1,26 +1,18 @@
 import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
-import { Directions, Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import { colors } from "../tokens";
 
 /**
- * Contenedor de panel sobre la barra inferior. Deslizar hacia abajo lo cierra (3.9).
- * El gesto corre en el hilo de JS (runOnJS) para no llamar a JS desde un worklet.
+ * Contenedor de panel sobre la barra inferior. Solo se cierra con su propio botón
+ * (decisión de producto: tocar fuera o deslizar no lo cierra, para pintar cómodo).
  */
-export function PanelSheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
-  const flingDown = Gesture.Fling()
-    .direction(Directions.DOWN)
-    .runOnJS(true)
-    .onEnd(() => onClose());
-
+export function PanelSheet({ children }: { children: ReactNode }) {
   return (
-    <GestureDetector gesture={flingDown}>
-      <View style={styles.root}>
-        <View style={styles.handle} />
-        {children}
-      </View>
-    </GestureDetector>
+    <View style={styles.root}>
+      <View style={styles.handle} />
+      {children}
+    </View>
   );
 }
 

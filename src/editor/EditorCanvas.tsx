@@ -50,8 +50,6 @@ type Props = {
   layers: readonly Layer[];
   seed: number;
   crop?: CropRect;
-  /** Toque de 1 dedo sobre el lienzo (cierra la superposición abierta, 3.9). */
-  onTap?: () => void;
   /** Id de la capa que ajusta el gesto X/Y de 1 dedo (FX-04); null = desactivado. */
   xyLayerId?: string | null;
   onCommitXY?: (layerId: string, x: number, y: number) => void;
@@ -62,7 +60,6 @@ type Props = {
   strokes?: readonly Stroke[];
   mediaWidth?: number;
   mediaHeight?: number;
-  overlayOpen?: boolean;
   showSizePreview?: boolean;
   onCommitStroke?: (stamps: Stamp[]) => void;
 };
@@ -75,8 +72,8 @@ const NO_STROKES: readonly Stroke[] = [];
  * Un dedo queda libre para la herramienta (M5, M6).
  */
 export function EditorCanvas(props: Props) {
-  const { image, contentWidth, contentHeight, layers, seed, crop, onTap, xyLayerId = null, onCommitXY, onResetXY } = props;
-  const { paintable = false, brush = null, strokes = NO_STROKES, overlayOpen = false, showSizePreview = false } = props;
+  const { image, contentWidth, contentHeight, layers, seed, crop, xyLayerId = null, onCommitXY, onResetXY } = props;
+  const { paintable = false, brush = null, strokes = NO_STROKES, showSizePreview = false } = props;
   const mediaWidth = props.mediaWidth ?? contentWidth;
   const mediaHeight = props.mediaHeight ?? contentHeight;
   const [view, setView] = useState({ width: 0, height: 0 });
@@ -210,24 +207,20 @@ export function EditorCanvas(props: Props) {
     paint.beginStroke();
     placeAt(px, py);
   };
-  // Con un panel abierto, un toque lo cierra y no pinta (S8): el trazo empieza al arrastrar.
+  // Al apoyar el dedo se coloca un sello, también con un panel abierto: los paneles solo
+  // se cierran con su propio botón (decisión de producto, sustituye a S8).
   const brushPan = Gesture.Pan()
     .maxPointers(1)
-    .minDistance(overlayOpen ? 8 : 0)
+    .minDistance(0)
     .enabled(brushOn)
-    .onBegin((e) => {
-      if (!overlayOpen) startStroke(e.x, e.y);
-    })
-    .onStart((e) => {
-      if (overlayOpen) startStroke(e.x, e.y);
-    })
+    .onBegin((e) => startStroke(e.x, e.y))
     .onUpdate((e) => {
       if (!cancelled.get()) placeAt(e.x, e.y);
     });
   // Confirmación del trazo en el hilo de JS: una llamada por gesto (3.2).
   const brushCommit = Gesture.Pan()
     .maxPointers(1)
-    .minDistance(overlayOpen ? 8 : 0)
+    .minDistance(0)
     .enabled(brushOn)
     .runOnJS(true)
     .onFinalize(() => {
@@ -242,13 +235,7 @@ export function EditorCanvas(props: Props) {
       props.onCommitStroke?.(stamps);
     });
 
-  const tap = Gesture.Tap()
-    .maxDuration(250)
-    .runOnJS(true)
-    .onEnd((_e, success) => {
-      if (success) onTap?.();
-    });
-  const gestures = Gesture.Simultaneous(pinch, xyPan, xyCommit, brushPan, brushCommit, Gesture.Exclusive(doubleTap, tap));
+  const gestures = Gesture.Simultaneous(pinch, xyPan, xyCommit, brushPan, brushCommit, doubleTap);
   const sceneImage: SkImage | DerivedValue<SkImage | null> = paintable && paint.ready ? paint.shown : image;
 
   const transform = useDerivedValue(() => [
