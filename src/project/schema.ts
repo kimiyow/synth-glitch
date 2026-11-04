@@ -1,3 +1,4 @@
+import { DEFAULT_SOURCES, parseSources } from "../modulation/sources";
 import type {
   CropAspect,
   EffectId,
@@ -44,7 +45,7 @@ export function createScene(media: Scene["media"], seed: number): Scene {
     paint: { strokes: [] },
     layers: [],
     routes: [],
-    sources: {},
+    sources: JSON.parse(JSON.stringify(DEFAULT_SOURCES)),
     tracks: [],
     seed,
   };
@@ -204,8 +205,7 @@ function scene(v: unknown, path: string): Scene {
     paint: paint(o.paint, `${path}.paint`),
     layers: arr(o.layers, `${path}.layers`).map((l, i) => parseLayer(l, `${path}.layers[${i}]`)),
     routes: arr(o.routes, `${path}.routes`).map((r, i) => parseRoute(r, `${path}.routes[${i}]`)),
-    // SourceConfig se define en M7; por ahora se acepta un objeto vacío.
-    sources: {},
+    sources: parseSources(o.sources),
     tracks: arr(o.tracks, `${path}.tracks`).map((t, i) => track(t, `${path}.tracks[${i}]`)),
     seed: num(o.seed, `${path}.seed`),
   };

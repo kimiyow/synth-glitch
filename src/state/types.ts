@@ -53,10 +53,20 @@ export type Route = {
 };
 
 /**
- * Parámetros de LFO, ADSR, S&H, SEQ, tempo, mic y orientación.
- * El SDD no fija su forma todavía; se define en M7.
+ * Configuración de las fuentes (3.5). El SDD no fijaba su forma; definida en M7.
+ * Una instancia de cada tipo por escena (sourceIndex = 0). Divisiones en pulsos (beats).
  */
-export type SourceConfig = Record<string, never>;
+export type LfoShape = "sine" | "triangle" | "square" | "saw" | "random";
+export type SeqDirection = "forward" | "backward" | "pingpong" | "random";
+export type SourceConfig = {
+  tempo: { bpm: number };
+  lfo: { shape: LfoShape; rateHz: number; sync: boolean; division: number; phase: number; depth: number };
+  adsr: { attack: number; decay: number; sustain: number; release: number };
+  sh: { division: number; slew: number };
+  seq: { steps: number[]; division: number; direction: SeqDirection };
+  orientation: { sensitivity: number; deadzone: number; swapAxes: boolean };
+  mic: { floor: number; ceiling: number; attack: number; release: number; hitThreshold: number };
+};
 
 /** Pares [x, y] intercalados. */
 export type GestureTrack = { durationMs: number; rateHz: 30; samples: number[] };
