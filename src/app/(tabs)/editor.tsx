@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
+import { croppedSize } from "../../engine/crop";
 import { SceneRenderer } from "../../editor/SceneRenderer";
 import { EFFECTS } from "../../engine/registry";
 import type { SaveStatus } from "../../project/autosave";
@@ -29,7 +30,8 @@ function ProjectView({ project }: { project: Project }) {
   const saveStatus = useScene((s) => s.saveStatus);
   const { media } = project.scene;
   const image = useImage(media.file ? projectFs.uri(project.id, media.file) : null);
-  const height = Math.round((width * media.height) / media.width);
+  const cropped = croppedSize(media.width, media.height, project.scene.crop.rect);
+  const height = Math.round((width * cropped.height) / cropped.width);
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -51,6 +53,7 @@ function ProjectView({ project }: { project: Project }) {
               layers={project.scene.layers}
               seed={project.scene.seed}
               frame={{ time: 0, params: [] }}
+              crop={project.scene.crop.rect}
             />
           </Canvas>
         ) : (
