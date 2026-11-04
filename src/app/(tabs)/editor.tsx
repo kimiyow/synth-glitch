@@ -38,7 +38,9 @@ function ProjectView({ project }: { project: Project }) {
           <Text style={styles.title} numberOfLines={1}>
             {project.name}
           </Text>
-          <SaveIndicator status={saveStatus} readOnly={readOnly} />
+        </View>
+        <View style={styles.statusRow}>
+          <SaveIndicator status={saveStatus} readOnly={readOnly} updatedAt={project.updatedAt} />
         </View>
         {image ? (
           <Canvas style={{ width, height }}>
@@ -71,7 +73,7 @@ function ProjectView({ project }: { project: Project }) {
   );
 }
 
-function SaveIndicator({ status, readOnly }: { status: SaveStatus; readOnly: boolean }) {
+function SaveIndicator({ status, readOnly, updatedAt }: { status: SaveStatus; readOnly: boolean; updatedAt: string }) {
   if (readOnly) return <Text style={styles.label}>SOLO LECTURA</Text>;
   if (status.state === "error") {
     return (
@@ -80,7 +82,10 @@ function SaveIndicator({ status, readOnly }: { status: SaveStatus; readOnly: boo
       </Pressable>
     );
   }
-  return <Text style={styles.label}>{status.state === "saved" ? "GUARDADO" : "Guardando cambios…"}</Text>;
+  if (status.state === "saved") {
+    return <Text style={styles.label}>GUARDADO · {new Date(updatedAt).toLocaleTimeString("es-MX")}</Text>;
+  }
+  return <Text style={styles.saving}>Guardando cambios…</Text>;
 }
 
 /** Solo desarrollo: cambia el efecto de la última capa (o añade una) para probar el autoguardado. */
@@ -110,6 +115,8 @@ const styles = StyleSheet.create({
     minHeight: geometry.target,
   },
   title: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.title },
+  statusRow: { paddingHorizontal: geometry.compactMargin, paddingBottom: 8 },
+  saving: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   error: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   noImage: { alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface },
