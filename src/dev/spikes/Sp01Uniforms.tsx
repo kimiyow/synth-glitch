@@ -112,7 +112,7 @@ export function Sp01Uniforms() {
         </Chip>
         {exportResult && <Text style={styles.result}>{exportResult}</Text>}
         <Text style={styles.hint}>
-          Mide con --no-dev --minify. Arrastra 10 s por cada número de capas y anota los UI fps del HUD.
+          Mide con EXPO_PUBLIC_DEV_TOOLS=1 npx expo start --no-dev --minify. Arrastra 10 s por cada número de capas y anota los UI fps del HUD.
         </Text>
       </View>
     </ScrollView>

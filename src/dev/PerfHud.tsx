@@ -14,7 +14,7 @@ import {
 } from "./frameWindow";
 
 /**
- * HUD de rendimiento (solo desarrollo). Mide el hilo de UI con useFrameCallback y
+ * HUD de rendimiento (desarrollo o EXPO_PUBLIC_DEV_TOOLS=1). Mide el hilo de UI con useFrameCallback y
  * el de JS con requestAnimationFrame; solo hay un setState cada 500 ms.
  * Toque: plegar o desplegar. Mantener: abrir testLab.
  */

@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import { DEV_TOOLS_ENABLED } from "../dev/devTools";
 import { PerfHud } from "../dev/PerfHud";
 import { colors } from "../ui/tokens";
 
@@ -11,7 +12,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="test-lab" />
       </Stack>
-      {__DEV__ && <PerfHud />}
+      {DEV_TOOLS_ENABLED && <PerfHud />}
     </GestureHandlerRootView>
   );
 }
