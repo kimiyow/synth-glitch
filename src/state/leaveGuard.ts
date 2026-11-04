@@ -1,16 +1,17 @@
-import { Skia } from "@shopify/react-native-skia";
 import { Alert } from "react-native";
 
 import { PREVIEW_LONG_SIDE, renderSceneJpeg, THUMB_LONG_SIDE } from "../editor/renderPreviews";
 import { writeImages } from "../project/storage";
 import { projectFs, sceneStore } from "./activeScene";
+import { loadOriginal } from "./exportActions";
 import { hasUnsavedWork } from "./sceneStore";
 
 type Result = { ok: true } | { ok: false; error: string };
 
 /**
- * "Guardar proyecto": escribe `project.json` y renueva la vista previa y la miniatura de
- * la Galería con la escena actual (fotos y generativos; los clips conservan su cuadro).
+ * "Guardar proyecto": escribe `project.json` y renueva la miniatura de la Galería con la
+ * escena actual. En fotos y generativos también la vista previa; en clips `preview.jpg`
+ * es el primer cuadro limpio (lo usan las fichas de efectos) y no se toca.
  */
 export async function saveActiveProject(): Promise<Result> {
   const store = sceneStore.getState();
@@ -19,14 +20,12 @@ export async function saveActiveProject(): Promise<Result> {
     return { ok: false, error: status.state === "error" ? status.error : "NO SE PUDO GUARDAR" };
   }
   const project = sceneStore.getState().project;
-  const file = project?.scene.media.file;
-  if (!project || !file || project.scene.media.kind === "clip") return { ok: true };
+  if (!project?.scene.media.file) return { ok: true };
   try {
-    const data = await Skia.Data.fromURI(projectFs.uri(project.id, file));
-    const image = Skia.Image.MakeImageFromEncoded(data);
-    if (!image) return { ok: true };
+    const image = await loadOriginal(project);
     try {
-      const preview = await renderSceneJpeg(image, project.scene, PREVIEW_LONG_SIDE);
+      const isClip = project.scene.media.kind === "clip";
+      const preview = isClip ? undefined : await renderSceneJpeg(image, project.scene, PREVIEW_LONG_SIDE);
       const thumb = await renderSceneJpeg(image, project.scene, THUMB_LONG_SIDE, 80);
       writeImages(projectFs, project.id, { preview, thumb });
     } finally {

@@ -1,4 +1,5 @@
 import { Skia, type SkImage } from "@shopify/react-native-skia";
+import { getThumbnailAsync } from "expo-video-thumbnails";
 import { applyPalette, GIFEncoder, quantize } from "gifenc";
 
 import { createFrameRenderer, exportLongSide, renderSceneJpeg, sceneFrameAt } from "../editor/renderPreviews";
@@ -15,11 +16,13 @@ export function exportFileName(project: Project, extension: "jpg" | "gif"): stri
   return synthFxFileName(project.name).replace(/\.synthfx$/, `.${extension}`);
 }
 
-/** Original del proyecto (foto o base generativa) decodificado. */
+/** Original del proyecto decodificado: la foto, la base generativa o el primer cuadro del clip. */
 export async function loadOriginal(project: Project): Promise<SkImage> {
   const file = project.scene.media.file;
   if (!file) throw new Error("EL PROYECTO NO TIENE IMAGEN");
-  const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(projectFs.uri(project.id, file)));
+  let uri = projectFs.uri(project.id, file);
+  if (project.scene.media.kind === "clip") uri = (await getThumbnailAsync(uri, { time: 0, quality: 1 })).uri;
+  const image = Skia.Image.MakeImageFromEncoded(await Skia.Data.fromURI(uri));
   if (!image) throw new Error("NO SE PUDO LEER LA IMAGEN");
   return image;
 }

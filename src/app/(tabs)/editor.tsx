@@ -1,6 +1,6 @@
-import { useImage } from "@shopify/react-native-skia";
-import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useImage, useVideo } from "@shopify/react-native-skia";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -108,14 +108,24 @@ function ProjectView({ project }: { project: Project }) {
   const canUndo = useScene((s) => s.history.past.length > 0);
   const canRedo = useScene((s) => s.history.future.length > 0);
   const { media } = project.scene;
-  // Los clips muestran su primer cuadro (preview.jpg, ya recortado) hasta M10 (SP-05).
+  // Clips (SP-05): el video se reproduce en bucle y sin sonido con sus capas encima; se pausa
+  // fuera de la pestaña. Su preview.jpg (primer cuadro limpio) sirve para las fichas de efectos.
   const isClip = media.kind === "clip";
   const imageFile = isClip ? PREVIEW_FILE : media.file;
   const image = useImage(imageFile ? projectFs.uri(project.id, imageFile) : null);
-  const content =
-    isClip && image
-      ? { width: image.width(), height: image.height() }
-      : croppedSize(media.width, media.height, project.scene.crop.rect);
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  const video = useVideo(isClip && media.file ? projectFs.uri(project.id, media.file) : null, {
+    looping: true,
+    volume: 0,
+    paused: !focused,
+  });
+  const content = croppedSize(media.width, media.height, project.scene.crop.rect);
 
   // EDT-01: PINCEL activo al abrir (en clips no aplica, BRU-09).
   const [activeTool, setActiveTool] = useState<"brush" | "effects">(isClip ? "effects" : "brush");
@@ -327,14 +337,15 @@ function ProjectView({ project }: { project: Project }) {
       <View style={styles.canvasArea}>
         {image ? (
           <EditorCanvas
-            image={image}
+            image={isClip ? video.currentFrame : image}
+            rotation={isClip ? video.rotation : 0}
             contentWidth={content.width}
             contentHeight={content.height}
-            layers={isClip ? [] : project.scene.layers}
+            layers={project.scene.layers}
             routes={project.scene.routes}
             sources={project.scene.sources}
             seed={project.scene.seed}
-            crop={isClip ? undefined : project.scene.crop.rect}
+            crop={project.scene.crop.rect}
             paintable={!isClip}
             brush={
               activeTool === "brush" && !readOnly
@@ -475,7 +486,7 @@ function ProjectView({ project }: { project: Project }) {
               draft={isDraft}
               onRename={(name) => sceneStore.getState().rename(name)}
               unavailable={{
-                jpg: isClip ? "PRONTO" : undefined,
+
                 gif: isClip ? "SOLO FOTOS" : undefined,
                 project: readOnly ? "SOLO LECTURA" : undefined,
                 share: lastExport ? undefined : "EXPORTA PRIMERO",

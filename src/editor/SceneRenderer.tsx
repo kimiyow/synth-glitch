@@ -21,20 +21,35 @@ type Props = {
   frame: FrameInputs | DerivedValue<FrameInputs>;
   /** Recorte no destructivo; sin él se muestra la imagen completa. */
   crop?: CropRect;
+  /** Giro del medio (clips: los cuadros del video llegan sin rotar, SP-05). */
+  rotation?: 0 | 90 | 180 | 270;
 };
 
 /**
  * Árbol de Skia de la escena: medio → capas de efecto y generador apiladas → recorte (3.3). Va dentro de un
  * Canvas o de drawAsImage. `width × height` es el tamaño de salida (la región recortada).
  */
-export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP }: Props) {
+export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP, rotation = 0 }: Props) {
   const chain = buildLayerChain(layers);
   // Los efectos se evalúan sobre la imagen completa, así el recorte no cambia su aspecto.
   const { fullW, fullH, tx, ty } = cropViewport(width, height, crop);
   const resolution: [number, number] = [fullW, fullH];
 
+  // Con 90/270 el cuadro se coloca con los lados intercambiados y se gira sobre el centro.
+  const sideways = rotation === 90 || rotation === 270;
+  const rect = sideways
+    ? { x: (fullW - fullH) / 2, y: (fullH - fullW) / 2, width: fullH, height: fullW }
+    : { x: 0, y: 0, width: fullW, height: fullH };
   let node: ReactElement = (
-    <ImageShader image={image} fit="cover" rect={{ x: 0, y: 0, width: fullW, height: fullH }} tx="clamp" ty="clamp" />
+    <ImageShader
+      image={image}
+      fit="cover"
+      rect={rect}
+      tx="clamp"
+      ty="clamp"
+      transform={rotation ? [{ rotate: (rotation * Math.PI) / 180 }] : undefined}
+      origin={rotation ? { x: fullW / 2, y: fullH / 2 } : undefined}
+    />
   );
   chain.forEach((chainNode, index) => {
     const source = runtimeFor(chainNode);

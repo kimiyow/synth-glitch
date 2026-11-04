@@ -1,9 +1,10 @@
 import { Canvas, Group, type SkImage } from "@shopify/react-native-skia";
 import { useEffect, useState } from "react";
-import type { DerivedValue } from "react-native-reanimated";
+import type { DerivedValue, SharedValue } from "react-native-reanimated";
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  isSharedValue,
   useAnimatedStyle,
   useDerivedValue,
   runOnUI,
@@ -44,7 +45,10 @@ export function brushScreenSize(size: number, displayedWidth: number) {
 }
 
 type Props = {
-  image: SkImage;
+  /** Foto o base generativa; en clips, el cuadro actual del video (SP-05). */
+  image: SkImage | SharedValue<SkImage | null>;
+  /** Giro de los cuadros del video. */
+  rotation?: 0 | 90 | 180 | 270;
   /** Tamaño de la región visible (recortada) en px de la imagen original. */
   contentWidth: number;
   contentHeight: number;
@@ -94,7 +98,9 @@ export function EditorCanvas(props: Props) {
   // Estado al empezar el pellizco.
   const start = useSharedValue({ s: 1, tx: 0, ty: 0, fx: 0, fy: 0 });
 
-  const paint = usePaintBuffer(paintable ? image : null, mediaWidth, mediaHeight, strokes);
+  // La pintura solo existe sobre una imagen fija (foto o generativo, ADR-13).
+  const still = isSharedValue(image) ? null : (image as SkImage);
+  const paint = usePaintBuffer(paintable ? still : null, mediaWidth, mediaHeight, strokes);
   const cancelled = useSharedValue(false);
   const live = useSharedValue<Stamp[]>([]);
 
@@ -272,6 +278,7 @@ export function EditorCanvas(props: Props) {
 
   const gestures = Gesture.Simultaneous(pinch, gate, xyPan, xyCommit, brushPan, brushCommit, doubleTap);
   const sceneImage: SkImage | DerivedValue<SkImage | null> = paintable && paint.ready ? paint.shown : image;
+  const rotation = props.rotation ?? 0;
 
   const transform = useDerivedValue(() => [
     { translateX: tx.get() },
@@ -301,6 +308,7 @@ export function EditorCanvas(props: Props) {
                   seed={seed}
                   frame={frame}
                   crop={crop}
+                  rotation={rotation}
                 />
               </Group>
             </Group>

@@ -6,6 +6,7 @@ import { StackBench } from "./lab/StackBench";
 import { Sp01Uniforms } from "./spikes/Sp01Uniforms";
 import { Sp02SkiaApi } from "./spikes/Sp02SkiaApi";
 import { Sp03Stamps } from "./spikes/Sp03Stamps";
+import { Sp05Video } from "./spikes/Sp05Video";
 import { Sp11Storage } from "./spikes/Sp11Storage";
 
 /** Una prueba de testLab: spike, golden image o banco de rendimiento. */
@@ -17,6 +18,12 @@ export type LabTest = {
 };
 
 export const LAB_TESTS: LabTest[] = [
+  {
+    id: "sp-05",
+    title: "SP-05 · VIDEO CON SHADER",
+    description: "useVideo de Skia con VHS encima: giro del clip, tamaño y FPS en Expo Go",
+    Component: Sp05Video,
+  },
   {
     id: "sp-03",
     title: "SP-03 · PINCEL DE SELLOS",
