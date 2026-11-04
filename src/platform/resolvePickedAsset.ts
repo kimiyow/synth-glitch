@@ -1,12 +1,17 @@
 import type { ImagePickerAsset } from "expo-image-picker";
 
-import type { ActiveMedia } from "../state/editorStore";
-
 export const MAX_IMPORTED_CLIP_DURATION_MS = 10_000;
+
+export type PickedMedia = {
+  uri: string;
+  type: "photo" | "clip";
+  width: number;
+  height: number;
+};
 
 export type MediaPickerResult =
   | { kind: "cancelled" }
-  | { kind: "selected"; media: ActiveMedia }
+  | { kind: "selected"; media: PickedMedia }
   | { kind: "rejected"; message: string };
 
 type PickedAsset = Pick<
