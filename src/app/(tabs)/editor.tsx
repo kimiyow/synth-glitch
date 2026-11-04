@@ -1,12 +1,12 @@
-import { Canvas, useImage } from "@shopify/react-native-skia";
+import { useImage } from "@shopify/react-native-skia";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
 import { croppedSize } from "../../engine/crop";
-import { SceneRenderer } from "../../editor/SceneRenderer";
+import { EditorCanvas } from "../../editor/EditorCanvas";
 import { EFFECTS } from "../../engine/registry";
 import type { SaveStatus } from "../../project/autosave";
 import { PREVIEW_FILE } from "../../project/storage";
@@ -62,7 +62,6 @@ function EmptyEditor() {
 }
 
 function ProjectView({ project }: { project: Project }) {
-  const { width } = useWindowDimensions();
   const readOnly = useScene((s) => s.readOnly);
   const saveStatus = useScene((s) => s.saveStatus);
   const { media } = project.scene;
@@ -70,57 +69,55 @@ function ProjectView({ project }: { project: Project }) {
   const isClip = media.kind === "clip";
   const imageFile = isClip ? PREVIEW_FILE : media.file;
   const image = useImage(imageFile ? projectFs.uri(project.id, imageFile) : null);
-  const cropped = croppedSize(media.width, media.height, project.scene.crop.rect);
-  const height = Math.round((width * cropped.height) / cropped.width);
+  const content = isClip && image
+    ? { width: image.width(), height: image.height() }
+    : croppedSize(media.width, media.height, project.scene.crop.rect);
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <ScrollView>
-        <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar proyecto"
-            onPress={() => sceneStore.getState().close()}
-            hitSlop={10}
-          >
-            <Text style={styles.title}>‹</Text>
-          </Pressable>
-          <Text style={styles.title} numberOfLines={1}>
-            {project.name}
-          </Text>
-        </View>
-        <View style={styles.statusRow}>
-          <SaveIndicator status={saveStatus} readOnly={readOnly} updatedAt={project.updatedAt} />
-        </View>
+      <View style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar proyecto"
+          onPress={() => sceneStore.getState().close()}
+          hitSlop={10}
+        >
+          <Text style={styles.title}>‹</Text>
+        </Pressable>
+        <Text style={styles.title} numberOfLines={1}>
+          {project.name}
+        </Text>
+      </View>
+      <View style={styles.statusRow}>
+        <SaveIndicator status={saveStatus} readOnly={readOnly} updatedAt={project.updatedAt} />
+      </View>
+      <View style={styles.canvasArea}>
         {image ? (
-          <Canvas style={{ width, height }}>
-            <SceneRenderer
-              image={image}
-              width={width}
-              height={height}
-              layers={isClip ? [] : project.scene.layers}
-              seed={project.scene.seed}
-              frame={{ time: 0, params: [] }}
-              crop={isClip ? undefined : project.scene.crop.rect}
-            />
-          </Canvas>
+          <EditorCanvas
+            image={image}
+            contentWidth={content.width}
+            contentHeight={content.height}
+            layers={isClip ? [] : project.scene.layers}
+            seed={project.scene.seed}
+            crop={isClip ? undefined : project.scene.crop.rect}
+          />
         ) : (
-          <View style={[styles.noImage, { width, height: Math.min(height, width) }]}>
+          <View style={styles.noImage}>
             <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
           </View>
         )}
-        <View style={styles.footer}>
-          <Text style={styles.label}>
-            {isClip ? "CLIP · VISTA DEL PRIMER CUADRO · " : ""}
-            {project.scene.layers.length} CAPAS · SEMILLA {project.scene.seed} · PENDIENTE M4
-          </Text>
-          {DEV_TOOLS_ENABLED && !readOnly && (
-            <Pressable accessibilityRole="button" onPress={testChange} style={styles.button}>
-              <Text style={styles.label}>CAMBIO DE PRUEBA</Text>
-            </Pressable>
-          )}
-        </View>
-      </ScrollView>
+      </View>
+      <View style={styles.footer}>
+        <Text style={styles.label}>
+          {isClip ? "CLIP · VISTA DEL PRIMER CUADRO · " : ""}
+          {project.scene.layers.length} CAPAS · PELLIZCA PARA ZOOM
+        </Text>
+        {DEV_TOOLS_ENABLED && !readOnly && (
+          <Pressable accessibilityRole="button" onPress={testChange} style={styles.button}>
+            <Text style={styles.label}>CAMBIO DE PRUEBA</Text>
+          </Pressable>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -171,7 +168,8 @@ const styles = StyleSheet.create({
   saving: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   error: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
-  noImage: { alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface },
+  canvasArea: { flex: 1, marginHorizontal: 18 },
+  noImage: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface, borderRadius: 12 },
   footer: { padding: geometry.compactMargin, gap: 12 },
   button: {
     minHeight: geometry.target,
