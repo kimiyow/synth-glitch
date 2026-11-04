@@ -67,7 +67,8 @@ export function createProject(args: { id: string; media: Scene["media"]; seed: n
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
-class Invalid extends Error {}
+/** Error de validación del esquema; lo reutiliza `.synthfx`. */
+export class Invalid extends Error {}
 
 function fail(path: string, expected: string): never {
   throw new Invalid(`${path}: se esperaba ${expected}`);
