@@ -6,6 +6,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
 import { EditorCanvas } from "../../editor/EditorCanvas";
+import { MAX_STROKES, stampSeed, type BrushTool } from "../../paint/strokeInterpolate";
+import { BrushPanel } from "../../ui/editor/BrushPanel";
 import { popOverlay, toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../editor/panels";
 import { croppedSize } from "../../engine/crop";
 import { canAddLayer, isCostHigh, MAX_LAYERS } from "../../engine/layerCost";
@@ -95,6 +97,11 @@ function ProjectView({ project }: { project: Project }) {
   const [selectedId, setSelectedId] = useState<string | null>(() => layers.filter((l) => l.kind === "effect").at(-1)?.id ?? null);
   const selected = layers.find((l) => l.id === selectedId) ?? null;
   const slowFrames = useSlowFrames();
+  const strokes = project.scene.paint.strokes;
+  const [brushTool, setBrushTool] = useState<BrushTool>("datamosh");
+  const [brushSize, setBrushSize] = useState(0.35);
+  const [brushSpacing, setBrushSpacing] = useState(0.25);
+  const [sizePreview, setSizePreview] = useState(false);
   const showCostWarning = layers.length > 0 && (isCostHigh(layers) || slowFrames);
   const openPanel = (overlays.at(-1) ?? null) as PanelId | null;
 
@@ -107,6 +114,7 @@ function ProjectView({ project }: { project: Project }) {
   const onToolPress = (id: ToolButtonId) => {
     if (id === "gyro") return setNotice("GIRO · LLEGA EN M7");
     if (id === "brush" && isClip) return setNotice("PINCEL · SOLO FOTOS");
+    if (id === "brush" && strokes.length >= MAX_STROKES) setNotice(`LÍMITE DE ${MAX_STROKES} TRAZOS`);
     if (id === "brush" || id === "effects") setActiveTool(id);
     setOverlays((stack) => toggleOverlay(stack, id));
   };
@@ -155,6 +163,27 @@ function ProjectView({ project }: { project: Project }) {
             seed={project.scene.seed}
             crop={isClip ? undefined : project.scene.crop.rect}
             onTap={closeTop}
+            paintable={!isClip}
+            brush={
+              activeTool === "brush" && !readOnly
+                ? { tool: brushTool, size: brushSize, spacing: brushSpacing, sceneSeed: project.scene.seed }
+                : null
+            }
+            strokes={strokes}
+            mediaWidth={media.width}
+            mediaHeight={media.height}
+            overlayOpen={overlays.length > 0}
+            showSizePreview={sizePreview}
+            onCommitStroke={(stamps) =>
+              sceneStore.getState().commit("trazo", (scene) => {
+                const index = scene.paint.strokes.length;
+                scene.paint.strokes.push({
+                  id: `s${Date.now().toString(36)}-${index}`,
+                  strokeSeed: stampSeed(scene.seed, index, 0),
+                  stamps,
+                });
+              })
+            }
             xyLayerId={activeTool === "effects" && !readOnly ? (selected?.id ?? null) : null}
             onCommitXY={(id, x, y) =>
               sceneStore.getState().commit("ajustar efecto", (scene) => {
@@ -182,7 +211,19 @@ function ProjectView({ project }: { project: Project }) {
 
       {openPanel && (
         <PanelSheet onClose={closeTop}>
-          {openPanel === "effects" ? (
+          {openPanel === "brush" ? (
+            <BrushPanel
+              tool={brushTool}
+              size={brushSize}
+              spacing={brushSpacing}
+              strokes={strokes.length}
+              maxStrokes={MAX_STROKES}
+              onTool={setBrushTool}
+              onSize={setBrushSize}
+              onSpacing={setBrushSpacing}
+              onPreview={setSizePreview}
+            />
+          ) : openPanel === "effects" ? (
             <EffectsPanel layers={layers} selectedLayerId={selected?.id ?? null} onTile={onTile} />
           ) : openPanel === "export" ? (
             <ExportPanel

@@ -1,21 +1,46 @@
 import { Canvas, Group, type SkImage } from "@shopify/react-native-skia";
 import { useEffect, useState } from "react";
+import type { DerivedValue } from "react-native-reanimated";
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
+  runOnUI,
   useFrameCallback,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
 
-import type { CropRect } from "../engine/crop";
+import { FULL_CROP, type CropRect } from "../engine/crop";
 import { buildEffectChain, type FrameInputs } from "../engine/renderGraph";
-import type { Layer } from "../state/types";
+import {
+  advanceStroke,
+  MAX_SIZE,
+  MAX_STROKES,
+  MIN_SIZE,
+  STAMP_DEFAULTS,
+  stampSeed,
+  type BrushTool,
+  type StrokeCursor,
+} from "../paint/strokeInterpolate";
+import type { Layer, Stamp, Stroke } from "../state/types";
 import { colors, type } from "../ui/tokens";
 import { SceneRenderer } from "./SceneRenderer";
-import { clampAxis, clampZoom, fitContain } from "./viewTransform";
+import { usePaintBuffer } from "./usePaintBuffer";
+import { clampAxis, clampZoom, fitContain, screenToImage } from "./viewTransform";
+
+export type BrushConfig = {
+  tool: BrushTool;
+  /** Deslizadores 0-1: tamaño (1-40 % del ancho mostrado) y distancia mínima (1 px a 2 × tamaño). */
+  size: number;
+  spacing: number;
+  sceneSeed: number;
+};
+
+export function brushScreenSize(size: number, displayedWidth: number) {
+  return (MIN_SIZE + size * (MAX_SIZE - MIN_SIZE)) * displayedWidth;
+}
 
 type Props = {
   image: SkImage;
@@ -31,7 +56,18 @@ type Props = {
   xyLayerId?: string | null;
   onCommitXY?: (layerId: string, x: number, y: number) => void;
   onResetXY?: (layerId: string) => void;
+  /** Pincel (M6): solo fotos. brush = null: herramienta inactiva. */
+  paintable?: boolean;
+  brush?: BrushConfig | null;
+  strokes?: readonly Stroke[];
+  mediaWidth?: number;
+  mediaHeight?: number;
+  overlayOpen?: boolean;
+  showSizePreview?: boolean;
+  onCommitStroke?: (stamps: Stamp[]) => void;
 };
+
+const NO_STROKES: readonly Stroke[] = [];
 
 /**
  * Lienzo del Editor: la escena ajustada al visor, con zoom de 0.5× a 8× y desplazamiento
@@ -40,6 +76,9 @@ type Props = {
  */
 export function EditorCanvas(props: Props) {
   const { image, contentWidth, contentHeight, layers, seed, crop, onTap, xyLayerId = null, onCommitXY, onResetXY } = props;
+  const { paintable = false, brush = null, strokes = NO_STROKES, overlayOpen = false, showSizePreview = false } = props;
+  const mediaWidth = props.mediaWidth ?? contentWidth;
+  const mediaHeight = props.mediaHeight ?? contentHeight;
   const [view, setView] = useState({ width: 0, height: 0 });
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -53,8 +92,15 @@ export function EditorCanvas(props: Props) {
   // Estado al empezar el pellizco.
   const start = useSharedValue({ s: 1, tx: 0, ty: 0, fx: 0, fy: 0 });
 
+  const paint = usePaintBuffer(paintable ? image : null, mediaWidth, mediaHeight, strokes);
+  const cancelled = useSharedValue(false);
+  const live = useSharedValue<Stamp[]>([]);
+
   const pinch = Gesture.Pinch()
     .onStart((e) => {
+      // Un segundo dedo durante un trazo lo cancela (EDT-02, CA-11).
+      cancelled.set(true);
+      if (live.get().length > 0) paint.cancelStroke();
       start.set({ s: scale.get(), tx: tx.get(), ty: ty.get(), fx: e.focalX, fy: e.focalY });
     })
     .onUpdate((e) => {
@@ -120,13 +166,90 @@ export function EditorCanvas(props: Props) {
     .onEnd((_e, success) => {
       if (success && xyLayerId) onResetXY?.(xyLayerId);
     });
+  // Pincel (3.6): tamaño y distancia constantes en pantalla; se pasan a la imagen según el zoom (BRU-05).
+  const cropR = crop ?? FULL_CROP;
+  const brushOn = paintable && brush !== null && strokes.length < MAX_STROKES && view.width > 0;
+  const sizeScreen = brush ? brushScreenSize(brush.size, base.width) : 0;
+  const spacingScreen = brush ? 1 + brush.spacing * Math.max(0, 2 * sizeScreen - 1) : 1;
+  const fullDisplayW = base.width / cropR[2];
+  const aspectHW = mediaHeight / mediaWidth;
+  const tool = brush?.tool ?? "datamosh";
+  const sceneSeed = brush?.sceneSeed ?? 0;
+  const strokeIndex = strokes.length;
+  const cursor = useSharedValue<StrokeCursor>(null);
+
+  const placeAt = (px: number, py: number) => {
+    "worklet";
+    const s = scale.get();
+    const uv = screenToImage(px, py, s, tx.get(), ty.get(), base);
+    const mx = cropR[0] + uv.x * cropR[2];
+    const my = (cropR[1] + uv.y * cropR[3]) * aspectHW;
+    const sizeN = Math.min(MAX_SIZE, Math.max(MIN_SIZE, sizeScreen / (s * fullDisplayW)));
+    const r = advanceStroke(cursor.get(), mx, my, spacingScreen / (s * fullDisplayW));
+    cursor.set(r.cursor);
+    if (r.stamps.length === 0) return;
+    const prev = live.get();
+    const erase = tool === "erase";
+    const added: Stamp[] = r.stamps.map((p, i) => ({
+      x: p.x,
+      y: p.y,
+      size: sizeN,
+      effect: tool === "erase" ? "datamosh" : tool,
+      erase,
+      params: tool === "erase" ? [] : STAMP_DEFAULTS[tool],
+      seed: stampSeed(sceneSeed, strokeIndex, prev.length + i),
+    }));
+    live.set(prev.concat(added));
+    paint.addStamps(added);
+  };
+  const startStroke = (px: number, py: number) => {
+    "worklet";
+    cursor.set(null);
+    live.set([]);
+    cancelled.set(false);
+    paint.beginStroke();
+    placeAt(px, py);
+  };
+  // Con un panel abierto, un toque lo cierra y no pinta (S8): el trazo empieza al arrastrar.
+  const brushPan = Gesture.Pan()
+    .maxPointers(1)
+    .minDistance(overlayOpen ? 8 : 0)
+    .enabled(brushOn)
+    .onBegin((e) => {
+      if (!overlayOpen) startStroke(e.x, e.y);
+    })
+    .onStart((e) => {
+      if (overlayOpen) startStroke(e.x, e.y);
+    })
+    .onUpdate((e) => {
+      if (!cancelled.get()) placeAt(e.x, e.y);
+    });
+  // Confirmación del trazo en el hilo de JS: una llamada por gesto (3.2).
+  const brushCommit = Gesture.Pan()
+    .maxPointers(1)
+    .minDistance(overlayOpen ? 8 : 0)
+    .enabled(brushOn)
+    .runOnJS(true)
+    .onFinalize(() => {
+      const stamps = live.get();
+      live.set([]);
+      if (stamps.length === 0) return;
+      if (cancelled.get()) {
+        runOnUI(paint.cancelStroke)();
+        return;
+      }
+      paint.liveCommitted.set(true);
+      props.onCommitStroke?.(stamps);
+    });
+
   const tap = Gesture.Tap()
     .maxDuration(250)
     .runOnJS(true)
     .onEnd((_e, success) => {
       if (success) onTap?.();
     });
-  const gestures = Gesture.Simultaneous(pinch, xyPan, xyCommit, Gesture.Exclusive(doubleTap, tap));
+  const gestures = Gesture.Simultaneous(pinch, xyPan, xyCommit, brushPan, brushCommit, Gesture.Exclusive(doubleTap, tap));
+  const sceneImage: SkImage | DerivedValue<SkImage | null> = paintable && paint.ready ? paint.shown : image;
 
   const transform = useDerivedValue(() => [
     { translateX: tx.get() },
@@ -149,7 +272,7 @@ export function EditorCanvas(props: Props) {
             <Group transform={transform}>
               <Group transform={[{ translateX: base.x }, { translateY: base.y }]}>
                 <SceneRenderer
-                  image={image}
+                  image={sceneImage}
                   width={base.width}
                   height={base.height}
                   layers={layers}
@@ -161,6 +284,12 @@ export function EditorCanvas(props: Props) {
             </Group>
           </Canvas>
         </GestureDetector>
+      )}
+      {showSizePreview && brush && (
+        // BRU-02: cuadrado del tamaño real del sello en pantalla.
+        <View pointerEvents="none" style={styles.previewWrap}>
+          <View style={[styles.preview, { width: sizeScreen, height: sizeScreen }]} />
+        </View>
       )}
       <Animated.View style={[styles.reset, resetStyle]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Volver a 1×" onPress={reset} hitSlop={8}>
@@ -184,4 +313,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   resetText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label },
+  previewWrap: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },
+  preview: { borderColor: colors.inkText, borderWidth: 1, backgroundColor: "rgba(255,255,255,0.15)" },
 });

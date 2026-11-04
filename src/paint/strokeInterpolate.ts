@@ -1,5 +1,8 @@
 import type { StampEffect } from "../state/types";
 
+/** Chip del panel Pincel: un efecto de sello o BORRAR (S9). */
+export type BrushTool = StampEffect | "erase";
+
 /** 3.6: límites del pincel. */
 export const MAX_STROKES = 400;
 export const MIN_SIZE = 0.01; // 1 % del ancho

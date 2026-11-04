@@ -8,7 +8,8 @@ import { getEffectRuntime } from "../engine/runtimeEffects";
 import type { Layer } from "../state/types";
 
 type Props = {
-  image: SkImage;
+  /** Original o buffer de pintura (valor compartido en el editor). */
+  image: SkImage | DerivedValue<SkImage | null>;
   width: number;
   height: number;
   layers: readonly Layer[];
