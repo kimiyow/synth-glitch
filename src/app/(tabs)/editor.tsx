@@ -23,7 +23,7 @@ import { applySynthFx, createSynthFx, parseSynthFx, serializeSynthFx, synthFxFil
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import { createGenerativeProject, createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
-import { exportJpeg } from "../../state/exportActions";
+import { exportGif, exportJpeg } from "../../state/exportActions";
 import { confirmLeave, saveActiveProject } from "../../state/leaveGuard";
 import type { GeneratorId, Layer, Project, SourceId } from "../../state/types";
 import { EditorEmpty, GEN_THUMB, type GenerativeAspect } from "../../ui/editor/EditorEmpty";
@@ -207,6 +207,7 @@ function ProjectView({ project }: { project: Project }) {
 
   const [job, setJob] = useState<ExportJob | null>(null);
   const [lastExport, setLastExport] = useState<string | null>(null);
+  const gifCancel = useRef(false);
   const onExportAction = async (action: ExportAction) => {
     if (action === "project") {
       const r = await saveActiveProject();
@@ -223,6 +224,21 @@ function ProjectView({ project }: { project: Project }) {
       if (!r.ok) return setNotice(`ERROR · ${r.error}`);
       setLastExport(r.uri);
       setNotice(`JPG GUARDADO EN FOTOS · ${(r.ms / 1000).toFixed(1)} S`);
+    }
+    if (action === "gif") {
+      gifCancel.current = false;
+      const cancel = () => {
+        gifCancel.current = true;
+      };
+      setJob({ label: "Creando GIF…", progress: 0, onCancel: cancel });
+      const r = await exportGif(project, {
+        onProgress: (p) => setJob({ label: `Creando GIF… ${Math.round(p * 100)} %`, progress: p, onCancel: cancel }),
+        isCancelled: () => gifCancel.current,
+      });
+      setJob(null);
+      if (!r.ok) return setNotice("cancelled" in r ? "GIF CANCELADO" : `ERROR · ${r.error}`);
+      setLastExport(r.uri);
+      setNotice(`GIF GUARDADO EN FOTOS · ${(r.ms / 1000).toFixed(1)} S`);
     }
   };
 
@@ -460,7 +476,7 @@ function ProjectView({ project }: { project: Project }) {
               onRename={(name) => sceneStore.getState().rename(name)}
               unavailable={{
                 jpg: isClip ? "PRONTO" : undefined,
-                gif: "PRONTO",
+                gif: isClip ? "SOLO FOTOS" : undefined,
                 project: readOnly ? "SOLO LECTURA" : undefined,
                 share: lastExport ? undefined : "EXPORTA PRIMERO",
                 gesture: "M7",

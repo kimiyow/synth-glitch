@@ -29,6 +29,7 @@
     "expo-video": "~58.0.13",
     "expo-video-thumbnails": "~58.0.2",
     "expo-web-browser": "~58.0.7",
+    "gifenc": "^1.0.3",
     "immer": "^11.2.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",

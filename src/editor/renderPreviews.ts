@@ -1,4 +1,4 @@
-import { drawAsImage, ImageFormat, Skia, type SkImage } from "@shopify/react-native-skia";
+import { AlphaType, ColorType, drawAsImage, ImageFormat, Skia, type SkImage } from "@shopify/react-native-skia";
 import { createElement } from "react";
 
 import { croppedSize, fitLongSide } from "../engine/crop";
@@ -105,4 +105,41 @@ export async function renderGeneratorJpeg(generator: GeneratorId, width: number,
   } finally {
     rendered.dispose();
   }
+}
+
+/**
+ * Render de cuadros para el GIF (EXP-02): la pintura se reproduce una vez a la resolución
+ * de salida y cada cuadro usa el mismo árbol que el preview (NFR-09). Devuelve RGBA 8888.
+ */
+export function createFrameRenderer(image: SkImage, scene: Scene, longSide: number) {
+  const size = fitLongSide(croppedSize(image.width(), image.height(), scene.crop.rect), longSide);
+  const paintLongSide = Math.min(4096, Math.ceil(longSide / Math.max(scene.crop.rect[2], scene.crop.rect[3])));
+  const source = renderPainted(image, scene.paint.strokes, paintLongSide);
+  const info = { width: size.width, height: size.height, colorType: ColorType.RGBA_8888, alphaType: AlphaType.Unpremul };
+  return {
+    size,
+    async render(frame: FrameInputs): Promise<Uint8Array> {
+      const element = createElement(SceneRenderer, {
+        image: source,
+        width: size.width,
+        height: size.height,
+        layers: scene.layers,
+        seed: scene.seed,
+        frame,
+        crop: scene.crop.rect,
+      });
+      const rendered = await drawAsImage(element, size);
+      if (!rendered) throw new Error("NO SE PUDO RENDERIZAR EL CUADRO");
+      try {
+        const pixels = rendered.readPixels(0, 0, info);
+        if (!(pixels instanceof Uint8Array)) throw new Error("NO SE PUDIERON LEER LOS PÍXELES");
+        return pixels;
+      } finally {
+        rendered.dispose();
+      }
+    },
+    dispose() {
+      if (source !== image) source.dispose();
+    },
+  };
 }
