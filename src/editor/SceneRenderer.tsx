@@ -39,12 +39,14 @@ export function SceneRenderer({ image, width, height, layers, seed, frame, crop 
   chain.forEach((chainNode, index) => {
     const source = runtimeFor(chainNode);
     if (!source) return; // Un shader que no compila se salta en lugar de romper la cadena.
+    // La key por capa evita que React reutilice el nodo de otra capa: un generador con los
+    // uniforms de un efecto (sin `blend`) hace que Skia falle en el hilo de UI y cierra la app.
     node = isLiveFrame(frame) ? (
-      <LiveEffect chain={chain} index={index} frame={frame} resolution={resolution} seed={seed}>
+      <LiveEffect key={chainNode.layerId} chain={chain} index={index} frame={frame} resolution={resolution} seed={seed}>
         {node}
       </LiveEffect>
     ) : (
-      <Shader source={source} uniforms={nodeUniforms(chain, index, frame, resolution, seed)}>
+      <Shader key={chainNode.layerId} source={source} uniforms={nodeUniforms(chain, index, frame, resolution, seed)}>
         {node}
       </Shader>
     );
