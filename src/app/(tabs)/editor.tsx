@@ -191,6 +191,15 @@ function ProjectView({ project }: { project: Project }) {
   // Deslizador de parámetro: vista previa sin historial mientras se arrastra y un solo
   // cambio deshacible al soltar (3.8: un movimiento completo de deslizador).
   const paramStart = useRef<{ x: number; y: number } | null>(null);
+  const paramPending = useRef<{ layerId: string; params: { x: number; y: number } } | null>(null);
+  const paramTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushParam = () => {
+    if (paramTimer.current) clearTimeout(paramTimer.current);
+    paramTimer.current = null;
+    const pending = paramPending.current;
+    paramPending.current = null;
+    if (pending) setParams(pending.layerId, pending.params, null);
+  };
   const setParams = (layerId: string, params: { x: number; y: number }, label: string | null) => {
     const recipe = (scene: { layers: Layer[] }) => {
       const layer = scene.layers.find((l) => l.id === layerId);
@@ -307,10 +316,13 @@ function ProjectView({ project }: { project: Project }) {
                 paramStart.current = layer ? { ...layer.params } : null;
               }}
               onParam={(layerId, axis, value) => {
-                const layer = sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId);
-                if (layer) setParams(layerId, { ...layer.params, [axis]: value }, null);
+                const base = paramPending.current?.params ?? sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId)?.params;
+                if (!base) return;
+                paramPending.current = { layerId, params: { ...base, [axis]: value } };
+                if (!paramTimer.current) paramTimer.current = setTimeout(flushParam, 60);
               }}
               onParamEnd={(layerId) => {
+                flushParam();
                 const start = paramStart.current;
                 const layer = sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId);
                 paramStart.current = null;

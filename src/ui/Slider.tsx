@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
+import { SheetScrollLock } from "./kit/Sheet";
 import { colors, type } from "./tokens";
 
 type Props = {
@@ -20,10 +21,21 @@ const THUMB = 18;
 export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, valueText }: Props) {
   const [width, setWidth] = useState(1);
   const [active, setActive] = useState(false);
+  // La perilla sigue al dedo con su propio estado; el padre puede tardar en actualizar `value`.
+  const [drag, setDrag] = useState<number | null>(null);
+  const lockSheet = useContext(SheetScrollLock);
   const update = (e: GestureResponderEvent) => {
-    onChange(Math.min(1, Math.max(0, (e.nativeEvent.locationX - THUMB / 2) / Math.max(1, width - THUMB))));
+    const next = Math.min(1, Math.max(0, (e.nativeEvent.locationX - THUMB / 2) / Math.max(1, width - THUMB)));
+    setDrag(next);
+    onChange(next);
   };
-  const v = Math.min(1, Math.max(0, value));
+  const end = () => {
+    setActive(false);
+    setDrag(null);
+    lockSheet(false);
+    onSlidingEnd?.();
+  };
+  const v = Math.min(1, Math.max(0, drag ?? value));
   return (
     <View style={styles.root}>
       <View style={styles.header}>
@@ -42,18 +54,13 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
         onResponderTerminationRequest={() => false}
         onResponderGrant={(e) => {
           setActive(true);
+          lockSheet(true);
           onSlidingStart?.();
           update(e);
         }}
         onResponderMove={update}
-        onResponderRelease={() => {
-          setActive(false);
-          onSlidingEnd?.();
-        }}
-        onResponderTerminate={() => {
-          setActive(false);
-          onSlidingEnd?.();
-        }}
+        onResponderRelease={end}
+        onResponderTerminate={end}
         style={styles.hit}
       >
         <View style={styles.track}>
