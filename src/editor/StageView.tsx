@@ -1,12 +1,21 @@
 import { StatusBar } from "expo-status-bar";
-import { useState, type ComponentProps } from "react";
-import { Modal, StyleSheet, View } from "react-native";
+import { useEffect, useState, type ComponentProps } from "react";
+import { Modal, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useFrameCallback,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
+import { DEV_TOOLS_ENABLED } from "../dev/devTools";
+import { FULL_SCALE, stepRenderScale } from "../engine/renderScale";
 import { useStageScreen } from "../platform/screen";
-import { colors } from "../ui/tokens";
+import { colors, type } from "../ui/tokens";
 import { EditorCanvas } from "./EditorCanvas";
 
 /** 3.12: interactivo = el gesto X/Y del efecto seleccionado sigue activo; bloqueado = se ignora todo. */
@@ -30,6 +39,8 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
   const insets = useSafeAreaInsets();
   const [blackout, setBlackout] = useState(false);
   const toggleBlackout = () => setBlackout((b) => !b);
+  const scale = useRenderScale(!blackout);
+  const { width, height } = useWindowDimensions();
 
   const blackoutTap = Gesture.Tap()
     .numberOfTaps(2)
@@ -70,13 +81,23 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
       <GestureHandlerRootView style={styles.root}>
         <StatusBar hidden />
         {!blackout && (
-          <EditorCanvas
-            {...canvas}
-            brush={null}
-            xyLayerId={mode === "interactive" ? canvas.xyLayerId : null}
-            extraGesture={mode === "interactive" ? blackoutTap : undefined}
-          />
+          // STG-02: el lienzo se dibuja a `scale` del tamaño y iOS lo amplía; así se pintan
+          // menos píxeles de verdad (escalar dentro de Skia no ahorraría nada).
+          <View
+            style={[
+              styles.scaled,
+              { width: width * scale, height: height * scale, transform: [{ scale: 1 / scale }] },
+            ]}
+          >
+            <EditorCanvas
+              {...canvas}
+              brush={null}
+              xyLayerId={mode === "interactive" ? canvas.xyLayerId : null}
+              extraGesture={mode === "interactive" ? blackoutTap : undefined}
+            />
+          </View>
         )}
+        {DEV_TOOLS_ENABLED && <Text style={styles.devScale}>RES {Math.round(scale * 100)} %</Text>}
         {shield && (
           <GestureDetector gesture={blackoutTap}>
             <View style={StyleSheet.absoluteFill} accessibilityLabel="Modo escenario bloqueado" />
@@ -92,8 +113,41 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
   );
 }
 
+/**
+ * Tiempo de cuadro medido en el hilo de UI (promedio exponencial) y sondeado desde JS cada
+ * 250 ms para decidir la escala (sin llamar a JS desde el hilo de UI).
+ */
+function useRenderScale(active: boolean): number {
+  const avg = useSharedValue(16.7);
+  useFrameCallback((info) => {
+    const dt = info.timeSincePreviousFrame;
+    if (dt !== null && dt > 0 && dt < 250) avg.set(avg.get() * 0.9 + dt * 0.1);
+  }, active);
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    if (!active) return;
+    let state = FULL_SCALE;
+    const id = setInterval(() => {
+      state = stepRenderScale(state, avg.get(), 250);
+      setScale((s) => (s === state.scale ? s : state.scale));
+    }, 250);
+    return () => clearInterval(id);
+  }, [active, avg]);
+  return scale;
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
+  scaled: { position: "absolute", top: 0, left: 0, transformOrigin: "top left" },
+  devScale: {
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    color: colors.inkMute,
+    fontFamily: type.family,
+    fontSize: type.micro,
+    letterSpacing: 1,
+  },
   exit: { position: "absolute", top: 0, left: 0, width: EXIT_SIZE, height: EXIT_SIZE, alignItems: "center", justifyContent: "center" },
   ring: { width: RING, height: RING, borderRadius: RING / 2, borderWidth: 2 },
 });
