@@ -12,7 +12,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "SynthVJ necesita acceder a la cámara para capturar imágenes y clips.",
         "NSPhotoLibraryAddUsageDescription": "SynthVJ necesita permiso para guardar tus creaciones en Fotos."
-      }
+      },
+      "supportsTablet": true
     },
     "web": {
       "output": "static",
@@ -44,7 +45,9 @@
       ],
       [
         "expo-audio",
-        { "microphonePermission": "SynthVJ usa el micrófono solo para que el sonido mueva los efectos (fuente MIC). El audio no se guarda ni sale del teléfono." }
+        {
+          "microphonePermission": "SynthVJ usa el micrófono solo para que el sonido mueva los efectos (fuente MIC). El audio no se guarda ni sale del teléfono."
+        }
       ]
     ],
     "experiments": {

@@ -10,6 +10,7 @@ import { Button } from "../kit/Button";
 import { Icon } from "../kit/Icon";
 import { Pill } from "../kit/Pill";
 import { colors, radius, space, type } from "../tokens";
+import { CONTENT_MAX_WIDTH } from "../useLayout";
 
 export type GenerativeAspect = "9:16" | "1:1" | "4:5";
 const ASPECTS: readonly GenerativeAspect[] = ["9:16", "1:1", "4:5"];
@@ -111,7 +112,16 @@ function CreateGenerative({ busy, onCreate, renderGeneratorThumb, onCancel }: Pr
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: space.xl, paddingBottom: 60 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: space.xl,
+    paddingBottom: 60,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
+  },
   badge: {
     width: 76,
     height: 76,

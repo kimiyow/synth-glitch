@@ -3,6 +3,7 @@ import { createContext, useMemo, useState, type ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { colors, radius, space, type } from "../tokens";
+import { useLayout } from "../useLayout";
 
 /**
  * Los deslizadores bloquean el desplazamiento de la hoja mientras se arrastran: si no, la
@@ -17,8 +18,9 @@ export const SheetScrollLock = createContext<(locked: boolean) => void>(() => {}
 export function Sheet({ title, children, maxHeight = 300 }: { title?: string; children: ReactNode; maxHeight?: number }) {
   const [locked, setLocked] = useState(false);
   const lock = useMemo(() => (on: boolean) => setLocked(on), []);
+  const { regular, panelWidth } = useLayout();
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, regular && [styles.floating, { width: panelWidth }]]}>
       <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
       <View style={styles.handle} />
       {title && <Text style={styles.title}>{title}</Text>}
@@ -45,6 +47,13 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: space.lg,
     paddingBottom: space.md,
+  },
+  floating: {
+    alignSelf: "center",
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.inkLine,
+    marginBottom: space.sm,
   },
   handle: {
     alignSelf: "center",

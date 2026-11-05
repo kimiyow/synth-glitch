@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ToolButtonId } from "../../editor/panels";
 import { ToolModule } from "../kit/ToolModule";
 import { colors } from "../tokens";
+import { useLayout } from "../useLayout";
 
 const BUTTONS: { id: ToolButtonId; label: string; icon: SFSymbol }[] = [
   { id: "brush", label: "Pincel", icon: "paintbrush.pointed" },
@@ -26,8 +27,9 @@ type Props = {
 /** Barra de herramientas modular: sustituye a las pestañas mientras hay un proyecto abierto. */
 export function EditorToolbar({ activeTool, openPanel, disabled, onPress }: Props) {
   const insets = useSafeAreaInsets();
+  const { sideInset } = useLayout();
   return (
-    <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 8), paddingHorizontal: sideInset }]}>
       {BUTTONS.map(({ id, label, icon }) => (
         <ToolModule
           key={id}

@@ -18,6 +18,8 @@ import { colors, geometry, type } from "../../ui/tokens";
 
 const MAX_CLIP_S = 5;
 const VIEWFINDER_MARGIN = 18;
+/** Alto mínimo para el obturador (72 pt), el texto y los márgenes bajo el visor. */
+const CONTROLS_MIN_HEIGHT = 150;
 const MIN_CLIP_MS = 1000;
 const DOUBLE_TAP_MS = 300;
 /** Si la cámara no avisa que está lista tras cambiar a modo video, se graba igual. */
@@ -45,8 +47,13 @@ export default function CameraScreen() {
 function CameraCapture() {
   const { width } = useWindowDimensions();
   // Figma: visor con márgenes de 18 pt y esquinas redondeadas; se mantiene 3:4 (sensor).
-  const viewW = width - VIEWFINDER_MARGIN * 2;
-  const viewH = Math.round((viewW * 4) / 3);
+  // En iPad el ancho daría un visor más alto que la pantalla: se limita por el alto
+  // disponible para que el obturador y su texto siempre quepan debajo.
+  const [areaH, setAreaH] = useState(0);
+  const byWidth = width - VIEWFINDER_MARGIN * 2;
+  const maxH = areaH > 0 ? areaH - CONTROLS_MIN_HEIGHT : Infinity;
+  const viewH = Math.round(Math.min((byWidth * 4) / 3, maxH));
+  const viewW = Math.round((viewH * 3) / 4);
 
   const cameraRef = useRef<CameraView>(null);
   const [facing, setFacing] = useState<CameraType>("back");
@@ -164,47 +171,49 @@ function CameraCapture() {
         }
       />
 
-      <Pressable
-        accessibilityLabel="Visor. Doble toque para cambiar de cámara"
-        onPress={onViewfinderPress}
-        style={[styles.viewfinder, { width: viewW, height: viewH }]}
-      >
-        <CameraView
-          ref={cameraRef}
-          style={StyleSheet.absoluteFill}
-          facing={facing}
-          mode={mode}
-          mute
-          mirror={facing === "front"}
-          onCameraReady={onCameraReady}
-        />
-        <AspectMask width={viewW} height={viewH} aspect={aspect} />
-        <Text style={styles.aspectLabel}>{aspect}</Text>
-      </Pressable>
+      <View style={styles.area} onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}>
+        <Pressable
+          accessibilityLabel="Visor. Doble toque para cambiar de cámara"
+          onPress={onViewfinderPress}
+          style={[styles.viewfinder, { width: viewW, height: viewH }]}
+        >
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+            facing={facing}
+            mode={mode}
+            mute
+            mirror={facing === "front"}
+            onCameraReady={onCameraReady}
+          />
+          <AspectMask width={viewW} height={viewH} aspect={aspect} />
+          <Text style={styles.aspectLabel}>{aspect}</Text>
+        </Pressable>
 
-      <View style={styles.controls}>
-        {message && (
-          <Text style={styles.message} onPress={() => setMessage(null)}>
-            {message}
+        <View style={styles.controls}>
+          {message && (
+            <Text style={styles.message} onPress={() => setMessage(null)}>
+              {message}
+            </Text>
+          )}
+          <Shutter
+            recording={recording}
+            disabled={busy}
+            progress={progress}
+            onTap={takePhoto}
+            onHoldStart={startClip}
+            onHoldEnd={endClip}
+          />
+          <Text style={styles.hint}>
+            {busy
+              ? "CREANDO PROYECTO…"
+              : recording
+                ? "GRABANDO · SUELTA PARA TERMINAR"
+                : holdHintSeen
+                  ? "TOCA PARA CAPTURAR"
+                  : "TOCA PARA CAPTURAR · MANTÉN PARA GRABAR"}
           </Text>
-        )}
-        <Shutter
-          recording={recording}
-          disabled={busy}
-          progress={progress}
-          onTap={takePhoto}
-          onHoldStart={startClip}
-          onHoldEnd={endClip}
-        />
-        <Text style={styles.hint}>
-          {busy
-            ? "CREANDO PROYECTO…"
-            : recording
-              ? "GRABANDO · SUELTA PARA TERMINAR"
-              : holdHintSeen
-                ? "TOCA PARA CAPTURAR"
-                : "TOCA PARA CAPTURAR · MANTÉN PARA GRABAR"}
-        </Text>
+        </View>
       </View>
 
       <CameraMenu
@@ -231,6 +240,7 @@ const styles = StyleSheet.create({
     fontSize: type.label,
     letterSpacing: 1.2,
   },
+  area: { flex: 1 },
   controls: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   hint: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   message: {

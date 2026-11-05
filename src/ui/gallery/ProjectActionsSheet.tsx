@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useLayout } from "../useLayout";
 import { colors, geometry, radius, type } from "../tokens";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -31,6 +32,7 @@ type Props = {
  */
 export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, onDelete }: Props) {
   const insets = useSafeAreaInsets();
+  const { regular, panelWidth } = useLayout();
   const [mode, setMode] = useState<Mode>("actions");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
     <Modal visible={project !== null} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <Pressable accessibilityLabel="Cerrar" style={styles.backdrop} onPress={onClose} />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + geometry.compactMargin }]}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + geometry.compactMargin }, regular && { width: panelWidth, alignSelf: "center" }]}>
           <Text style={styles.title} numberOfLines={1}>
             {mode === "delete" ? "¿ELIMINAR?" : mode === "rename" ? "RENOMBRAR" : project?.name}
           </Text>
