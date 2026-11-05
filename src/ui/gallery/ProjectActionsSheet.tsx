@@ -63,7 +63,7 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
       supportedOrientations={[...ALL_ORIENTATIONS]}
     >
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <Pressable accessibilityLabel="Cerrar" style={styles.backdrop} onPress={onClose} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Cerrar" style={styles.backdrop} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: insets.bottom + geometry.compactMargin }, regular && { width: panelWidth, alignSelf: "center" }]}>
           <Text style={styles.title} numberOfLines={1}>
             {mode === "delete" ? "¿ELIMINAR?" : mode === "rename" ? "RENOMBRAR" : project?.name}

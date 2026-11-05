@@ -20,6 +20,8 @@ export function Pill({
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
+      // 30 pt visibles + 7 arriba y abajo = 44 pt de zona táctil (NFR-13).
+      hitSlop={{ top: 7, bottom: 7 }}
       onPress={() => {
         selectFeedback();
         onPress();

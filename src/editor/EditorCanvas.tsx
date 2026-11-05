@@ -324,7 +324,12 @@ export function EditorCanvas(props: Props) {
     <View style={styles.root} onLayout={onLayout}>
       {view.width > 0 && (
         <GestureDetector gesture={gestures}>
-          <Canvas style={StyleSheet.absoluteFill}>
+          <Canvas
+            style={StyleSheet.absoluteFill}
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel="Imagen en edición. Arrastra para pintar o ajustar el efecto seleccionado; pellizca para hacer zoom"
+          >
             <Group transform={transform}>
               <Group transform={[{ translateX: base.x }, { translateY: base.y }]}>
                 <SceneRenderer

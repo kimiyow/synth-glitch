@@ -17,7 +17,7 @@ export function CameraMenu({ visible, aspect, onSelect, onClose }: Props) {
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} supportedOrientations={[...ALL_ORIENTATIONS]}>
-      <Pressable accessibilityLabel="Cerrar menú" style={styles.backdrop} onPress={onClose} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Cerrar menú" style={styles.backdrop} onPress={onClose} />
       <View style={[styles.menu, { top: insets.top + geometry.target }]}>
         <Text style={styles.heading}>RELACIÓN</Text>
         {CAMERA_ASPECTS.map((a) => (

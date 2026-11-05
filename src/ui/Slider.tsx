@@ -47,7 +47,16 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
       <View
         accessibilityRole="adjustable"
         accessibilityLabel={label}
-        accessibilityValue={{ min: 0, max: 100, now: Math.round(v * 100) }}
+        accessibilityValue={{ min: 0, max: 100, now: Math.round(v * 100), text: valueText }}
+        // VoiceOver: deslizar arriba o abajo sube o baja un 5 % (un cambio completo cada vez).
+        accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+        onAccessibilityAction={(e) => {
+          const step = e.nativeEvent.actionName === "increment" ? 0.05 : e.nativeEvent.actionName === "decrement" ? -0.05 : 0;
+          if (step === 0) return;
+          onSlidingStart?.();
+          onChange(Math.min(1, Math.max(0, value + step)));
+          onSlidingEnd?.();
+        }}
         onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
@@ -78,7 +87,7 @@ const styles = StyleSheet.create({
   label: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label },
   value: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
   valueOn: { color: colors.inkText },
-  hit: { height: 32, justifyContent: "center" },
+  hit: { height: 44, justifyContent: "center" },
   track: { height: 3, marginHorizontal: THUMB / 2, borderRadius: 2, backgroundColor: colors.inkRaised, overflow: "hidden" },
   fill: { height: 3, backgroundColor: colors.inkText },
   thumb: {

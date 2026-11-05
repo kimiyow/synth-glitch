@@ -173,7 +173,11 @@ function CameraCapture() {
 
       <View style={styles.area} onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}>
         <Pressable
-          accessibilityLabel="Visor. Doble toque para cambiar de cámara"
+          accessibilityRole="button"
+          accessibilityLabel="Visor de la cámara"
+          accessibilityHint="Activa para cambiar entre la cámara frontal y la trasera"
+          accessibilityActions={[{ name: "activate", label: "Cambiar de cámara" }]}
+          onAccessibilityAction={() => setFacing((f) => (f === "back" ? "front" : "back"))}
           onPress={onViewfinderPress}
           style={[styles.viewfinder, { width: viewW, height: viewH }]}
         >

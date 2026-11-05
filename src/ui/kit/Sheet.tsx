@@ -59,7 +59,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    backgroundColor: "rgba(18,18,18,0.82)",
+    // Con 0.9, el peor caso (blanco detrás) queda ≈ #2A2A2A: #9A9A9A sobre él ≈ 5:1 (NFR-13).
+    backgroundColor: "rgba(18,18,18,0.9)",
     borderTopColor: colors.inkLine,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: space.lg,
