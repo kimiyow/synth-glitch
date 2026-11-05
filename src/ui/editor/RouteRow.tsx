@@ -14,7 +14,7 @@ const SOURCES: readonly Chip<SourceId>[] = [
   { id: "sh", label: "S&H" },
   { id: "seq", label: "SEQ" },
   { id: "orientation", label: "GIRO · PRONTO", disabled: true },
-  { id: "mic", label: "MIC · M9", disabled: true },
+  { id: "mic", label: "MIC" },
 ];
 
 type Props = {

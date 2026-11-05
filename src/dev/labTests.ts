@@ -7,6 +7,7 @@ import { Sp01Uniforms } from "./spikes/Sp01Uniforms";
 import { Sp02SkiaApi } from "./spikes/Sp02SkiaApi";
 import { Sp03Stamps } from "./spikes/Sp03Stamps";
 import { Sp05Video } from "./spikes/Sp05Video";
+import { Sp07Mic } from "./spikes/Sp07Mic";
 import { Sp11Storage } from "./spikes/Sp11Storage";
 
 /** Una prueba de testLab: spike, golden image o banco de rendimiento. */
@@ -18,6 +19,12 @@ export type LabTest = {
 };
 
 export const LAB_TESTS: LabTest[] = [
+  {
+    id: "sp-07",
+    title: "SP-07 · MICRÓFONO",
+    description: "expo-audio con medición: lectura real cada ~50 ms, nivel en dB y destello por golpe",
+    Component: Sp07Mic,
+  },
   {
     id: "sp-05",
     title: "SP-05 · VIDEO CON SHADER",

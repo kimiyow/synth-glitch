@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
+import { dbToUnit } from "../../modulation/micEnvelope";
 import { DIVISIONS, LFO_SHAPES, MAX_BPM, MIN_BPM, SEQ_DIRECTIONS } from "../../modulation/sources";
 import { tapTempo } from "../../modulation/tempo";
 import type { SourceConfig } from "../../state/types";
@@ -8,7 +9,15 @@ import { ChipRow } from "../ChipRow";
 import { Slider } from "../Slider";
 import { colors, type } from "../tokens";
 
-export type ModSourceId = "lfo" | "adsr" | "sh" | "seq" | "tempo";
+export type ModSourceId = "lfo" | "adsr" | "sh" | "seq" | "tempo" | "mic";
+
+/** Estado del micrófono para su editor (lo da el adaptador de plataforma). */
+export type MicView = {
+  state: "off" | "starting" | "on" | "denied" | "error";
+  db: number | null;
+  calibrating: boolean;
+  onCalibrate: () => void;
+};
 
 type Props = {
   source: ModSourceId;
@@ -17,6 +26,7 @@ type Props = {
   onChange: (next: SourceConfig) => void;
   /** Tempo: no entra al historial (3.8). */
   onTempo: (bpm: number) => void;
+  mic?: MicView;
 };
 
 const DIVISION_CHIPS = DIVISIONS.map((d) => ({ id: d, label: d < 1 ? `1/${1 / d}` : `${d}` }));
@@ -24,11 +34,56 @@ const SHAPE_LABEL = { sine: "SENO", triangle: "TRIÁNGULO", square: "CUADRADA", 
 const DIR_LABEL = { forward: "ADELANTE", backward: "ATRÁS", pingpong: "IDA Y VUELTA", random: "ALEATORIO" };
 
 /** Ajustes de una fuente de modulación (categoría MOD del panel Efectos). */
-export function SourceEditor({ source, sources, onChange, onTempo }: Props) {
+export function SourceEditor({ source, sources, onChange, onTempo, mic }: Props) {
   const set = <K extends keyof SourceConfig>(key: K, patch: Partial<SourceConfig[K]>) =>
     onChange({ ...sources, [key]: { ...sources[key], ...patch } });
 
   if (source === "tempo") return <TempoEditor bpm={sources.tempo.bpm} onTempo={onTempo} />;
+
+  if (source === "mic") {
+    const m = sources.mic;
+    const dbSlider = (lo: number, hi: number) => ({
+      toValue: (u: number) => Math.round(lo + u * (hi - lo)),
+      fromValue: (v: number) => (v - lo) / (hi - lo),
+    });
+    if (mic?.state === "denied") {
+      return (
+        <View style={styles.root}>
+          <Text style={styles.note}>SIN PERMISO DE MICRÓFONO · ACTÍVALO EN AJUSTES</Text>
+          <Btn label="ABRIR AJUSTES" onPress={() => void Linking.openSettings()} />
+        </View>
+      );
+    }
+    const unit = mic?.db === null || mic?.db === undefined ? 0 : dbToUnit(mic.db, m.floor, m.ceiling);
+    return (
+      <View style={styles.root}>
+        <View style={styles.meter}>
+          <View style={[styles.meterFill, { width: `${Math.round(unit * 100)}%` }]} />
+          <View style={[styles.meterMark, { left: `${Math.round(m.hitThreshold * 100)}%` }]} />
+        </View>
+        <View style={styles.micRow}>
+          <Text style={styles.note}>
+            {mic?.state === "on"
+              ? `${mic.db === null ? "—" : Math.round(mic.db)} dB · PISO ${m.floor} · TECHO ${m.ceiling}`
+              : mic?.state === "error"
+                ? "NO SE PUDO ABRIR EL MICRÓFONO"
+                : "ABRIENDO MICRÓFONO…"}
+          </Text>
+          <Btn label={mic?.calibrating ? "ESCUCHANDO 2 S…" : "CALIBRAR"} onPress={() => mic?.onCalibrate()} />
+        </View>
+        <Text style={styles.note}>CALIBRAR: GUARDA SILENCIO 2 S PARA FIJAR EL PISO DE LA SALA</Text>
+        <View style={styles.pair}>
+          <CommitSlider label={(v) => `Piso ${v} dB`} {...dbSlider(-90, -20)} value={m.floor} onCommit={(floor) => set("mic", { floor: Math.min(floor, m.ceiling - 10) })} />
+          <CommitSlider label={(v) => `Techo ${v} dB`} {...dbSlider(-60, 0)} value={m.ceiling} onCommit={(ceiling) => set("mic", { ceiling: Math.max(ceiling, m.floor + 10) })} />
+        </View>
+        <View style={styles.pair}>
+          <CommitSlider label={(v) => `Ataque ${v.toFixed(2)} s`} toValue={(u) => Math.round(u * 50) / 100} fromValue={(v) => v / 0.5} value={m.attack} onCommit={(attack) => set("mic", { attack })} />
+          <CommitSlider label={(v) => `Relajación ${v.toFixed(2)} s`} toValue={(u) => Math.round(u * 200) / 100} fromValue={(v) => v / 2} value={m.release} onCommit={(release) => set("mic", { release })} />
+        </View>
+        <CommitSlider label={(v) => `Umbral de golpe ${v.toFixed(2)}`} value={m.hitThreshold} onCommit={(hitThreshold) => set("mic", { hitThreshold })} />
+      </View>
+    );
+  }
 
   if (source === "lfo") {
     const lfo = sources.lfo;
@@ -201,6 +256,18 @@ const styles = StyleSheet.create({
   bar: { backgroundColor: colors.inkText },
   tempo: { flexDirection: "row", alignItems: "center", gap: 10 },
   bpm: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.title },
-  btn: { minWidth: 44, minHeight: 36, alignItems: "center", justifyContent: "center", borderColor: colors.inkLineStrong, borderWidth: 1 },
+  meter: { height: 8, borderRadius: 4, backgroundColor: colors.inkRaised, overflow: "hidden" },
+  meterFill: { height: 8, backgroundColor: colors.inkText },
+  meterMark: { position: "absolute", top: 0, width: 2, height: 8, backgroundColor: colors.inkMute },
+  micRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  btn: {
+    minWidth: 44,
+    minHeight: 36,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderColor: colors.inkLineStrong,
+    borderWidth: 1,
+  },
   btnText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label },
 });

@@ -17,6 +17,8 @@ import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine
 import { useSlowFrames } from "../../editor/useSlowFrames";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
+import { useMicMeter } from "../../platform/useMicMeter";
+import { calibrateFloor } from "../../modulation/micEnvelope";
 import { shareFile } from "../../platform/photos";
 import { pickSynthFxFile, shareSynthFxFile } from "../../platform/synthfxFile";
 import { applySynthFx, createSynthFx, parseSynthFx, serializeSynthFx, synthFxFileName } from "../../project/synthfx";
@@ -126,6 +128,23 @@ function ProjectView({ project }: { project: Project }) {
     paused: !focused,
   });
   const content = croppedSize(media.width, media.height, project.scene.crop.rect);
+
+  // SEN-02: el micrófono solo se activa si hay rutas de MIC (o su editor está abierto) y
+  // el editor está a la vista; se apaga al salir.
+  const [micVisible, setMicVisible] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
+  const hasMicRoute = project.scene.routes.some((r) => r.source === "mic" && r.amount !== 0);
+  const mic = useMicMeter(focused && (hasMicRoute || micVisible || calibrating), project.scene.sources.mic);
+  const calibrate = async () => {
+    if (calibrating) return;
+    setCalibrating(true);
+    const samples = await mic.sample();
+    setCalibrating(false);
+    sceneStore.getState().commit("calibrar micrófono", (scene) => {
+      scene.sources.mic = calibrateFloor(samples, scene.sources.mic);
+    });
+    setNotice(samples.length > 0 ? "MICRÓFONO CALIBRADO" : "SIN LECTURAS · REVISA EL PERMISO");
+  };
 
   // EDT-01: PINCEL activo al abrir (en clips no aplica, BRU-09).
   const [activeTool, setActiveTool] = useState<"brush" | "effects">(isClip ? "effects" : "brush");
@@ -338,6 +357,7 @@ function ProjectView({ project }: { project: Project }) {
         {image ? (
           <EditorCanvas
             image={isClip ? video.currentFrame : image}
+            mic={{ level: mic.level, hits: mic.hits }}
             rotation={isClip ? video.rotation : 0}
             sourceSize={isClip ? video.size : undefined}
             contentWidth={content.width}
@@ -460,6 +480,8 @@ function ProjectView({ project }: { project: Project }) {
                   : null
               }
               routes={project.scene.routes}
+              mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
+              onMicVisible={setMicVisible}
               onRouteSource={setRouteSource}
               onRouteAmount={(layerId, axis, amount) =>
                 sceneStore.getState().commit("cantidad de modulación", (scene) => {

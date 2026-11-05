@@ -44,9 +44,14 @@ export function brushScreenSize(size: number, displayedWidth: number) {
   return (MIN_SIZE + size * (MAX_SIZE - MIN_SIZE)) * displayedWidth;
 }
 
+/** Un golpe del micrófono mantiene el ADSR encendido este tiempo antes de soltarlo. */
+const MIC_HIT_GATE_S = 0.12;
+
 type Props = {
   /** Foto o base generativa; en clips, el cuadro actual del video (SP-05). */
   image: SkImage | SharedValue<SkImage | null>;
+  /** Micrófono (SEN-02): nivel 0..1 y contador de golpes, escritos desde JS. */
+  mic?: { level: SharedValue<number>; hits: SharedValue<number> };
   /** Giro de los cuadros del video y su tamaño sin rotar. */
   rotation?: 0 | 90 | 180 | 270;
   sourceSize?: { width: number; height: number };
@@ -140,6 +145,19 @@ export function EditorCanvas(props: Props) {
   // ADSR: se dispara al apoyar cualquier dedo sobre la imagen y se suelta al levantarlo.
   const gateOn = useSharedValue<number | null>(null);
   const gateOff = useSharedValue<number | null>(null);
+  // Micrófono: el nivel lo escribe JS; un golpe nuevo (contador) dispara el ADSR (3.5).
+  const noMic = useSharedValue(0);
+  const micLevel = props.mic?.level ?? noMic;
+  const micHits = props.mic?.hits ?? noMic;
+  const seenHits = useSharedValue(0);
+  useFrameCallback(() => {
+    const h = micHits.get();
+    if (h === seenHits.get()) return;
+    seenHits.set(h);
+    const t = time.get();
+    gateOn.set(t);
+    gateOff.set(t + MIC_HIT_GATE_S);
+  });
   const chainLayers = chain.map((n) => ({ id: n.layerId, params: n.base }));
   const frame = useDerivedValue<FrameInputs>(() => {
     const t = time.get();
@@ -153,7 +171,7 @@ export function EditorCanvas(props: Props) {
       gateOnAt: gateOn.get(),
       gateOffAt: gateOff.get(),
       orientation: { x: 0, y: 0 },
-      mic: 0,
+      mic: micLevel.get(),
       track: null,
     };
     return { time: t, params: evaluate(chainLayers, routes, sources, t, inputs, seed) };
