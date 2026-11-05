@@ -25,6 +25,7 @@ import { pickSynthFxFile, shareSynthFxFile } from "../../platform/synthfxFile";
 import { applySynthFx, createSynthFx, parseSynthFx, serializeSynthFx, synthFxFileName } from "../../project/synthfx";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
+import { settingsStore } from "../../state/appSettings";
 import { createGenerativeProject, createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
 import { exportGif, exportJpeg } from "../../state/exportActions";
 import { confirmLeave, saveActiveProject } from "../../state/leaveGuard";
@@ -366,13 +367,18 @@ function ProjectView({ project }: { project: Project }) {
     onResetXY: resetLayer,
   };
 
-  // 3.12: entrada por el menú ⋯; el submodo se elige al entrar.
+  // Menú ⋯: modo escenario (3.12; el submodo se elige al entrar) y reabrir el onboarding (UI-02).
   const openMore = () =>
-    Alert.alert("Modo escenario", "Lienzo a pantalla completa, brillo al máximo. Para salir mantén 2 s la esquina superior izquierda.", [
-      { text: "Interactivo", onPress: () => setStage("interactive") },
-      { text: "Bloqueado", onPress: () => setStage("locked") },
-      { text: "Cancelar", style: "cancel" },
-    ]);
+    Alert.alert(
+      "Más opciones",
+      "Modo escenario: lienzo a pantalla completa y brillo al máximo. Para salir mantén 2 s la esquina superior izquierda.",
+      [
+        { text: "Escenario · interactivo", onPress: () => setStage("interactive") },
+        { text: "Escenario · bloqueado", onPress: () => setStage("locked") },
+        { text: "Ver introducción", onPress: () => settingsStore.getState().update({ onboardingSeen: false }) },
+        { text: "Cancelar", style: "cancel" },
+      ],
+    );
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>

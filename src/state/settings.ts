@@ -10,9 +10,11 @@ export type AppSettings = {
   cameraAspect: CameraAspect;
   /** El aviso `MANTÉN PARA GRABAR` se muestra hasta grabar el primer clip. */
   holdHintSeen: boolean;
+  /** UI-02: el onboarding se muestra en el primer arranque y se puede reabrir. */
+  onboardingSeen: boolean;
 };
 
-export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false };
+export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false, onboardingSeen: false };
 
 /** Lee los ajustes guardados; cualquier campo inválido o ausente toma su valor por defecto. */
 export function parseSettings(raw: unknown): AppSettings {
@@ -22,6 +24,7 @@ export function parseSettings(raw: unknown): AppSettings {
       ? (o.cameraAspect as CameraAspect)
       : DEFAULT_SETTINGS.cameraAspect,
     holdHintSeen: typeof o.holdHintSeen === "boolean" ? o.holdHintSeen : DEFAULT_SETTINGS.holdHintSeen,
+    onboardingSeen: typeof o.onboardingSeen === "boolean" ? o.onboardingSeen : DEFAULT_SETTINGS.onboardingSeen,
   };
 }
 
@@ -38,9 +41,9 @@ export function createSettingsStore(io: { load: () => unknown; save: (settings: 
     ...initial,
     update(patch) {
       set(patch);
-      const { cameraAspect, holdHintSeen } = get();
+      const { cameraAspect, holdHintSeen, onboardingSeen } = get();
       try {
-        io.save({ cameraAspect, holdHintSeen });
+        io.save({ cameraAspect, holdHintSeen, onboardingSeen });
       } catch {
         // No guardar un ajuste no debe romper la app; se reintenta en el próximo cambio.
       }
