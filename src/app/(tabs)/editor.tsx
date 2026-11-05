@@ -426,159 +426,161 @@ function ProjectView({ project }: { project: Project }) {
             onMore={openMore}
           />
         </Animated.View>
-        <View style={styles.canvasArea}>
-          {image ? (
-            !stage && (
-              <EditorCanvas
-                {...canvasProps}
-                working={working}
-                brush={
-                  activeTool === "brush" && !readOnly
-                    ? { tool: brushTool, size: brushSize, spacing: brushSpacing, sceneSeed: project.scene.seed }
-                    : null
-                }
-                showSizePreview={sizePreview}
-                onCommitStroke={(stamps) =>
-                  sceneStore.getState().commit("trazo", (scene) => {
-                    const index = scene.paint.strokes.length;
-                    scene.paint.strokes.push({
-                      id: `s${Date.now().toString(36)}-${index}`,
-                      strokeSeed: stampSeed(scene.seed, index, 0),
-                      stamps,
-                    });
-                  })
-                }
-              />
-            )
-          ) : (
-            <View style={styles.noImage}>
-              <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
-            </View>
-          )}
-          {showCostWarning && (
-            <Text style={styles.warning}>RENDIMIENTO BAJO · {layers.length} CAPAS</Text>
-          )}
-          {notice && <Text style={styles.notice}>{notice}</Text>}
-        </View>
-
-        {openPanel && (
-          <PanelSheet popover={regular}>
-            {openPanel === "brush" ? (
-              <BrushPanel
-                tool={brushTool}
-                size={brushSize}
-                spacing={brushSpacing}
-                strokes={strokes.length}
-                maxStrokes={MAX_STROKES}
-                onTool={setBrushTool}
-                onSize={setBrushSize}
-                onSpacing={setBrushSpacing}
-                onPreview={setSizePreview}
-              />
-            ) : openPanel === "effects" ? (
-              <EffectsPanel
-                layers={layers}
-                selectedLayerId={selected?.id ?? null}
-                warning={
-                  hasFastLuminanceRoute(layers, project.scene.routes, project.scene.sources)
-                    ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA"
-                    : null
-                }
-                renderThumb={(layer) => <EffectThumb image={image} layer={layer} seed={project.scene.seed} size={THUMB_SIZE} />}
-                onTile={onTile}
-                onRemove={removeLayer}
-                onReset={resetLayer}
-                onBlend={(layerId, blend) =>
-                  sceneStore.getState().commit("modo de mezcla", (scene) => {
-                    const layer = scene.layers.find((l) => l.id === layerId);
-                    if (layer?.kind === "generator") layer.blend = blend;
-                  })
-                }
-                onSeed={(layerId) =>
-                  sceneStore.getState().commit("semilla", (scene) => {
-                    const layer = scene.layers.find((l) => l.id === layerId);
-                    if (layer?.kind === "generator") layer.seed = Math.floor(Math.random() * 1000);
-                  })
-                }
-                onParamStart={(layerId) => {
-                  const layer = layers.find((l) => l.id === layerId);
-                  paramStart.current = layer ? { ...layer.params } : null;
-                }}
-                onParam={(layerId, axis, value) => {
-                  const base = paramPending.current?.params ?? sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId)?.params;
-                  if (!base) return;
-                  paramPending.current = { layerId, params: { ...base, [axis]: value } };
-                  if (!paramTimer.current) paramTimer.current = setTimeout(flushParam, 60);
-                }}
-                onParamEnd={(layerId) => {
-                  flushParam();
-                  const start = paramStart.current;
-                  const layer = sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId);
-                  paramStart.current = null;
-                  if (!start || !layer || (start.x === layer.params.x && start.y === layer.params.y)) return;
-                  const final = { ...layer.params };
-                  // Se vuelve al valor inicial sin historial y se confirma el final como un solo cambio.
-                  setParams(layerId, start, null);
-                  setParams(layerId, final, "ajustar efecto");
-                }}
-                onModulate={() => setOverlays((stack) => toggleOverlay(stack, "mod"))}
-              />
-            ) : openPanel === "mod" ? (
-              <ModPanel
-                layer={
-                  selected
-                    ? {
-                        id: selected.id,
-                        label: selected.kind === "effect" ? EFFECT_BY_ID[selected.effect].label : GENERATOR_BY_ID[selected.generator].label,
-                      }
-                    : null
-                }
-                routes={project.scene.routes}
-                mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
-                onMicVisible={setMicVisible}
-                onRouteSource={setRouteSource}
-                onRouteAmount={(layerId, axis, amount) =>
-                  sceneStore.getState().commit("cantidad de modulación", (scene) => {
-                    const r = scene.routes.find((x) => x.target.layerId === layerId && x.target.param === axis);
-                    if (r) r.amount = amount;
-                  })
-                }
-                sources={project.scene.sources}
-                onSources={(next) =>
-                  sceneStore.getState().commit("ajustar fuente", (scene) => {
-                    scene.sources = next;
-                  })
-                }
-                onTempo={(bpm) =>
-                  sceneStore.getState().adjust((scene) => {
-                    scene.sources.tempo.bpm = bpm;
-                  })
-                }
-              />
-            ) : openPanel === "export" ? (
-              <ExportPanel
-                name={project.name}
-                readOnly={readOnly}
-                status={saveStatus}
-                draft={isDraft}
-                onRename={(name) => sceneStore.getState().rename(name)}
-                unavailable={{
-
-                  gif: isClip ? "SOLO FOTOS" : undefined,
-                  project: readOnly ? "SOLO LECTURA" : undefined,
-                  share: lastExport ? undefined : "EXPORTA PRIMERO",
-                  gesture: "M7",
-                }}
-                job={job}
-                onAction={(a) => void onExportAction(a)}
-              />
-            ) : openPanel === "presets" ? (
-              <PresetsPanel readOnly={readOnly} busy={fxBusy} onImport={importRecipe} onShare={shareRecipe} />
+        <View style={regular ? styles.workRow : styles.workCol}>
+          <View style={styles.canvasArea}>
+            {image ? (
+              !stage && (
+                <EditorCanvas
+                  {...canvasProps}
+                  working={working}
+                  brush={
+                    activeTool === "brush" && !readOnly
+                      ? { tool: brushTool, size: brushSize, spacing: brushSpacing, sceneSeed: project.scene.seed }
+                      : null
+                  }
+                  showSizePreview={sizePreview}
+                  onCommitStroke={(stamps) =>
+                    sceneStore.getState().commit("trazo", (scene) => {
+                      const index = scene.paint.strokes.length;
+                      scene.paint.strokes.push({
+                        id: `s${Date.now().toString(36)}-${index}`,
+                        strokeSeed: stampSeed(scene.seed, index, 0),
+                        stamps,
+                      });
+                    })
+                  }
+                />
+              )
             ) : (
-              <PendingPanel title={PANEL_TITLES[openPanel]} showTestChange={false} />
+              <View style={styles.noImage}>
+                <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
+              </View>
             )}
-          </PanelSheet>
-        )}
+            {showCostWarning && (
+              <Text style={styles.warning}>RENDIMIENTO BAJO · {layers.length} CAPAS</Text>
+            )}
+            {notice && <Text style={styles.notice}>{notice}</Text>}
+          </View>
+
+          {openPanel && (
+            <PanelSheet side={regular}>
+              {openPanel === "brush" ? (
+                <BrushPanel
+                  tool={brushTool}
+                  size={brushSize}
+                  spacing={brushSpacing}
+                  strokes={strokes.length}
+                  maxStrokes={MAX_STROKES}
+                  onTool={setBrushTool}
+                  onSize={setBrushSize}
+                  onSpacing={setBrushSpacing}
+                  onPreview={setSizePreview}
+                />
+              ) : openPanel === "effects" ? (
+                <EffectsPanel
+                  layers={layers}
+                  selectedLayerId={selected?.id ?? null}
+                  warning={
+                    hasFastLuminanceRoute(layers, project.scene.routes, project.scene.sources)
+                      ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA"
+                      : null
+                  }
+                  renderThumb={(layer) => <EffectThumb image={image} layer={layer} seed={project.scene.seed} size={THUMB_SIZE} />}
+                  onTile={onTile}
+                  onRemove={removeLayer}
+                  onReset={resetLayer}
+                  onBlend={(layerId, blend) =>
+                    sceneStore.getState().commit("modo de mezcla", (scene) => {
+                      const layer = scene.layers.find((l) => l.id === layerId);
+                      if (layer?.kind === "generator") layer.blend = blend;
+                    })
+                  }
+                  onSeed={(layerId) =>
+                    sceneStore.getState().commit("semilla", (scene) => {
+                      const layer = scene.layers.find((l) => l.id === layerId);
+                      if (layer?.kind === "generator") layer.seed = Math.floor(Math.random() * 1000);
+                    })
+                  }
+                  onParamStart={(layerId) => {
+                    const layer = layers.find((l) => l.id === layerId);
+                    paramStart.current = layer ? { ...layer.params } : null;
+                  }}
+                  onParam={(layerId, axis, value) => {
+                    const base = paramPending.current?.params ?? sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId)?.params;
+                    if (!base) return;
+                    paramPending.current = { layerId, params: { ...base, [axis]: value } };
+                    if (!paramTimer.current) paramTimer.current = setTimeout(flushParam, 60);
+                  }}
+                  onParamEnd={(layerId) => {
+                    flushParam();
+                    const start = paramStart.current;
+                    const layer = sceneStore.getState().project?.scene.layers.find((l) => l.id === layerId);
+                    paramStart.current = null;
+                    if (!start || !layer || (start.x === layer.params.x && start.y === layer.params.y)) return;
+                    const final = { ...layer.params };
+                    // Se vuelve al valor inicial sin historial y se confirma el final como un solo cambio.
+                    setParams(layerId, start, null);
+                    setParams(layerId, final, "ajustar efecto");
+                  }}
+                  onModulate={() => setOverlays((stack) => toggleOverlay(stack, "mod"))}
+                />
+              ) : openPanel === "mod" ? (
+                <ModPanel
+                  layer={
+                    selected
+                      ? {
+                          id: selected.id,
+                          label: selected.kind === "effect" ? EFFECT_BY_ID[selected.effect].label : GENERATOR_BY_ID[selected.generator].label,
+                        }
+                      : null
+                  }
+                  routes={project.scene.routes}
+                  mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
+                  onMicVisible={setMicVisible}
+                  onRouteSource={setRouteSource}
+                  onRouteAmount={(layerId, axis, amount) =>
+                    sceneStore.getState().commit("cantidad de modulación", (scene) => {
+                      const r = scene.routes.find((x) => x.target.layerId === layerId && x.target.param === axis);
+                      if (r) r.amount = amount;
+                    })
+                  }
+                  sources={project.scene.sources}
+                  onSources={(next) =>
+                    sceneStore.getState().commit("ajustar fuente", (scene) => {
+                      scene.sources = next;
+                    })
+                  }
+                  onTempo={(bpm) =>
+                    sceneStore.getState().adjust((scene) => {
+                      scene.sources.tempo.bpm = bpm;
+                    })
+                  }
+                />
+              ) : openPanel === "export" ? (
+                <ExportPanel
+                  name={project.name}
+                  readOnly={readOnly}
+                  status={saveStatus}
+                  draft={isDraft}
+                  onRename={(name) => sceneStore.getState().rename(name)}
+                  unavailable={{
+
+                    gif: isClip ? "SOLO FOTOS" : undefined,
+                    project: readOnly ? "SOLO LECTURA" : undefined,
+                    share: lastExport ? undefined : "EXPORTA PRIMERO",
+                    gesture: "M7",
+                  }}
+                  job={job}
+                  onAction={(a) => void onExportAction(a)}
+                />
+              ) : openPanel === "presets" ? (
+                <PresetsPanel readOnly={readOnly} busy={fxBusy} onImport={importRecipe} onShare={shareRecipe} />
+              ) : (
+                <PendingPanel title={PANEL_TITLES[openPanel]} showTestChange={false} />
+              )}
+            </PanelSheet>
+          )}
+        </View>
 
         {stage && image && (
           <StageView
@@ -627,6 +629,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
   rootRail: { flexDirection: "row" },
   main: { flex: 1 },
+  workCol: { flex: 1 },
+  workRow: { flex: 1, flexDirection: "row" },
   canvasArea: { flex: 1, marginHorizontal: 18, marginBottom: 8 },
   noImage: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface, borderRadius: 12 },
   label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },

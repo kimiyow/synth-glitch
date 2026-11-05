@@ -9,8 +9,11 @@ import { useLayout } from "../useLayout";
  * Los deslizadores bloquean el desplazamiento de la hoja mientras se arrastran: si no, la
  * hoja (que en iOS rebota aunque el contenido quepa) se queda con el toque y el control salta.
  */
-/** Ancho de los paneles en popover (4.4). */
-export const POPOVER_WIDTH = 340;
+/**
+ * Ancho del panel lateral en iPad. El SDD (4.4) pedía popovers de 340 pt, pero quedaban
+ * chicos y encima del lienzo: el panel se acopla a la derecha y el lienzo le deja sitio.
+ */
+export const SIDE_PANEL_WIDTH = 400;
 
 export const SheetScrollLock = createContext<(locked: boolean) => void>(() => {});
 
@@ -22,24 +25,24 @@ export function Sheet({
   title,
   children,
   maxHeight = 300,
-  popover = false,
+  side = false,
 }: {
   title?: string;
   children: ReactNode;
   maxHeight?: number;
-  /** iPad (4.4): ventana flotante de 340 pt sobre el lienzo, junto al riel. */
-  popover?: boolean;
+  /** iPad: panel lateral fijo a la derecha, de toda la altura, sin tapar el lienzo. */
+  side?: boolean;
 }) {
   const [locked, setLocked] = useState(false);
   const lock = useMemo(() => (on: boolean) => setLocked(on), []);
   const { regular, panelWidth } = useLayout();
   return (
-    <View style={[styles.root, popover ? styles.popover : regular && [styles.floating, { width: panelWidth }]]}>
+    <View style={[styles.root, side ? styles.side : regular && [styles.floating, { width: panelWidth }]]}>
       <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-      <View style={styles.handle} />
+      {!side && <View style={styles.handle} />}
       {title && <Text style={styles.title}>{title}</Text>}
       <ScrollView
-        style={{ maxHeight }}
+        style={side ? styles.sideScroll : { maxHeight }}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical={false}
@@ -62,14 +65,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingBottom: space.md,
   },
-  popover: {
-    position: "absolute",
-    left: space.md,
-    bottom: space.md,
-    width: POPOVER_WIDTH,
+  sideScroll: { flexGrow: 0, flexShrink: 1 },
+  side: {
+    width: SIDE_PANEL_WIDTH,
+    alignSelf: "flex-start",
+    maxHeight: "100%",
+    marginRight: space.md,
+    marginBottom: space.md,
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.inkLineStrong,
+    borderColor: colors.inkLine,
+    paddingTop: space.sm,
   },
   floating: {
     alignSelf: "center",
