@@ -42,6 +42,10 @@
           "photosPermission": "SynthVJ necesita acceder a Fotos para importar tus imágenes y clips.",
           "savePhotosPermission": "SynthVJ guarda en Fotos las imágenes y GIF que exportas."
         }
+      ],
+      [
+        "expo-audio",
+        { "microphonePermission": "SynthVJ usa el micrófono solo para que el sonido mueva los efectos (fuente MIC). No graba ni guarda audio." }
       ]
     ],
     "experiments": {
