@@ -1,8 +1,10 @@
 import type { ComponentType } from "react";
 
 import { EffectsLab } from "./lab/EffectsLab";
+import { EnduranceLab } from "./lab/EnduranceLab";
 import { ProjectLab } from "./lab/ProjectLab";
 import { StackBench } from "./lab/StackBench";
+import { StageEnduranceLab } from "./lab/StageEnduranceLab";
 import { Sp01Uniforms } from "./spikes/Sp01Uniforms";
 import { Sp02SkiaApi } from "./spikes/Sp02SkiaApi";
 import { Sp03Stamps } from "./spikes/Sp03Stamps";
@@ -19,6 +21,18 @@ export type LabTest = {
 };
 
 export const LAB_TESTS: LabTest[] = [
+  {
+    id: "nfr-10",
+    title: "NFR-10 · 50 CICLOS",
+    description: "Foto de 12 MP → efectos y trazo → JPG completo → salir, 50 veces; tiempo y memoria",
+    Component: EnduranceLab,
+  },
+  {
+    id: "nfr-15",
+    title: "NFR-15 · 30 MIN DE ESCENARIO",
+    description: "Escena de 3 capas con LFO a pantalla encendida; FPS mínimo y promedio por minuto",
+    Component: StageEnduranceLab,
+  },
   {
     id: "sp-07",
     title: "SP-07 · MICRÓFONO",
