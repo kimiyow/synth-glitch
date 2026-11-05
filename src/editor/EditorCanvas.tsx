@@ -2,7 +2,7 @@ import { Canvas, Group, type SkImage } from "@shopify/react-native-skia";
 import { useEffect, useState } from "react";
 import type { DerivedValue, SharedValue } from "react-native-reanimated";
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, type GestureType } from "react-native-gesture-handler";
 import Animated, {
   isSharedValue,
   useAnimatedStyle,
@@ -50,6 +50,8 @@ const MIC_HIT_GATE_S = 0.12;
 type Props = {
   /** Foto o base generativa; en clips, el cuadro actual del video (SP-05). */
   image: SkImage | SharedValue<SkImage | null>;
+  /** Gesto adicional simultáneo (modo escenario: blackout con dos dedos). */
+  extraGesture?: GestureType;
   /** Micrófono (SEN-02): nivel 0..1 y contador de golpes, escritos desde JS. */
   mic?: { level: SharedValue<number>; hits: SharedValue<number> };
   /** Giro de los cuadros del video y su tamaño sin rotar. */
@@ -295,7 +297,8 @@ export function EditorCanvas(props: Props) {
       props.onCommitStroke?.(stamps);
     });
 
-  const gestures = Gesture.Simultaneous(pinch, gate, xyPan, xyCommit, brushPan, brushCommit, doubleTap);
+  const toolGestures = [pinch, gate, xyPan, xyCommit, brushPan, brushCommit, doubleTap];
+  const gestures = Gesture.Simultaneous(...toolGestures, ...(props.extraGesture ? [props.extraGesture] : []));
   const sceneImage: SkImage | DerivedValue<SkImage | null> = paintable && paint.ready ? paint.shown : image;
   const rotation = props.rotation ?? 0;
 

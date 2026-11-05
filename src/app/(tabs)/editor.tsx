@@ -1,12 +1,13 @@
 import { useImage, useVideo } from "@shopify/react-native-skia";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
 import { EditorCanvas } from "../../editor/EditorCanvas";
 import { EffectThumb } from "../../editor/EffectThumb";
+import { StageView, type StageMode } from "../../editor/StageView";
 import { blankImage, generatorLayer } from "../../editor/renderPreviews";
 import { MAX_STROKES, stampSeed, type BrushTool } from "../../paint/strokeInterpolate";
 import { BrushPanel } from "../../ui/editor/BrushPanel";
@@ -235,6 +236,7 @@ function ProjectView({ project }: { project: Project }) {
   const previewTime = () => (clockStart.current === null ? 0 : (Date.now() - clockStart.current) / 1000);
 
   const [job, setJob] = useState<ExportJob | null>(null);
+  const [stage, setStage] = useState<StageMode | null>(null);
   const [lastExport, setLastExport] = useState<string | null>(null);
   const gifCancel = useRef(false);
   const onExportAction = async (action: ExportAction) => {
@@ -337,6 +339,41 @@ function ProjectView({ project }: { project: Project }) {
     else sceneStore.getState().adjust(recipe);
   };
 
+  // Props del lienzo que comparten el editor y el modo escenario (mismo árbol, mismos valores).
+  const canvasProps = {
+    // Solo se usa cuando la imagen ya cargó (ambos lienzos van dentro de `image && …`).
+    image: isClip ? video.currentFrame : image!,
+    mic: { level: mic.level, hits: mic.hits },
+    rotation: isClip ? video.rotation : (0 as const),
+    sourceSize: isClip ? video.size : undefined,
+    contentWidth: content.width,
+    contentHeight: content.height,
+    layers: project.scene.layers,
+    routes: project.scene.routes,
+    sources: project.scene.sources,
+    seed: project.scene.seed,
+    crop: project.scene.crop.rect,
+    paintable: !isClip,
+    strokes,
+    mediaWidth: media.width,
+    mediaHeight: media.height,
+    xyLayerId: activeTool === "effects" && !readOnly ? (selected?.id ?? null) : null,
+    onCommitXY: (id: string, x: number, y: number) =>
+      sceneStore.getState().commit("ajustar efecto", (scene) => {
+        const layer = scene.layers.find((l) => l.id === id);
+        if (layer) layer.params = { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
+      }),
+    onResetXY: resetLayer,
+  };
+
+  // 3.12: entrada por el menú ⋯; el submodo se elige al entrar.
+  const openMore = () =>
+    Alert.alert("Modo escenario", "Lienzo a pantalla completa, brillo al máximo. Para salir mantén 2 s la esquina superior izquierda.", [
+      { text: "Interactivo", onPress: () => setStage("interactive") },
+      { text: "Bloqueado", onPress: () => setStage("locked") },
+      { text: "Cancelar", style: "cancel" },
+    ]);
+
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <EditorTopBar
@@ -352,50 +389,31 @@ function ProjectView({ project }: { project: Project }) {
         onUndo={() => sceneStore.getState().undo()}
         onRedo={() => sceneStore.getState().redo()}
         onExport={() => setOverlays((stack) => toggleOverlay(stack, "export"))}
+        onMore={openMore}
       />
       <View style={styles.canvasArea}>
         {image ? (
-          <EditorCanvas
-            image={isClip ? video.currentFrame : image}
-            mic={{ level: mic.level, hits: mic.hits }}
-            rotation={isClip ? video.rotation : 0}
-            sourceSize={isClip ? video.size : undefined}
-            contentWidth={content.width}
-            contentHeight={content.height}
-            layers={project.scene.layers}
-            routes={project.scene.routes}
-            sources={project.scene.sources}
-            seed={project.scene.seed}
-            crop={project.scene.crop.rect}
-            paintable={!isClip}
-            brush={
-              activeTool === "brush" && !readOnly
-                ? { tool: brushTool, size: brushSize, spacing: brushSpacing, sceneSeed: project.scene.seed }
-                : null
-            }
-            strokes={strokes}
-            mediaWidth={media.width}
-            mediaHeight={media.height}
-            showSizePreview={sizePreview}
-            onCommitStroke={(stamps) =>
-              sceneStore.getState().commit("trazo", (scene) => {
-                const index = scene.paint.strokes.length;
-                scene.paint.strokes.push({
-                  id: `s${Date.now().toString(36)}-${index}`,
-                  strokeSeed: stampSeed(scene.seed, index, 0),
-                  stamps,
-                });
-              })
-            }
-            xyLayerId={activeTool === "effects" && !readOnly ? (selected?.id ?? null) : null}
-            onCommitXY={(id, x, y) =>
-              sceneStore.getState().commit("ajustar efecto", (scene) => {
-                const layer = scene.layers.find((l) => l.id === id);
-                if (layer) layer.params = { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
-              })
-            }
-            onResetXY={resetLayer}
-          />
+          !stage && (
+            <EditorCanvas
+              {...canvasProps}
+              brush={
+                activeTool === "brush" && !readOnly
+                  ? { tool: brushTool, size: brushSize, spacing: brushSpacing, sceneSeed: project.scene.seed }
+                  : null
+              }
+              showSizePreview={sizePreview}
+              onCommitStroke={(stamps) =>
+                sceneStore.getState().commit("trazo", (scene) => {
+                  const index = scene.paint.strokes.length;
+                  scene.paint.strokes.push({
+                    id: `s${Date.now().toString(36)}-${index}`,
+                    strokeSeed: stampSeed(scene.seed, index, 0),
+                    stamps,
+                  });
+                })
+              }
+            />
+          )
         ) : (
           <View style={styles.noImage}>
             <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
@@ -524,6 +542,15 @@ function ProjectView({ project }: { project: Project }) {
             <PendingPanel title={PANEL_TITLES[openPanel]} showTestChange={false} />
           )}
         </PanelSheet>
+      )}
+
+      {stage && image && (
+        <StageView
+          mode={stage}
+          // En escenario el gesto X/Y actúa sobre el efecto seleccionado aunque la herramienta sea el pincel.
+          canvas={{ ...canvasProps, xyLayerId: readOnly ? null : (selected?.id ?? null) }}
+          onExit={() => setStage(null)}
+        />
       )}
 
       <EditorToolbar

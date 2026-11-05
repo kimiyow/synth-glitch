@@ -13,10 +13,12 @@ type Props = {
   onUndo: () => void;
   onRedo: () => void;
   onExport: () => void;
+  /** Menú ⋯ (modo escenario, 3.12). */
+  onMore: () => void;
 };
 
 /** Barra superior: volver · deshacer/rehacer (50 % si no aplican, EDT-04) · exportar con punto de cambios sin guardar. */
-export function EditorTopBar({ canUndo, canRedo, unsaved, exportOpen, onBack, onUndo, onRedo, onExport }: Props) {
+export function EditorTopBar({ canUndo, canRedo, unsaved, exportOpen, onBack, onUndo, onRedo, onExport, onMore }: Props) {
   return (
     <View style={styles.root}>
       <IconButton icon="chevron.left" label="Volver" onPress={onBack} />
@@ -24,7 +26,10 @@ export function EditorTopBar({ canUndo, canRedo, unsaved, exportOpen, onBack, on
         <IconButton icon="arrow.uturn.backward" label="Deshacer" disabled={!canUndo} onPress={onUndo} />
         <IconButton icon="arrow.uturn.forward" label="Rehacer" disabled={!canRedo} onPress={onRedo} />
       </View>
-      <IconButton icon="square.and.arrow.up" label="Exportar" active={exportOpen} dot={unsaved} onPress={onExport} />
+      <View style={styles.center}>
+        <IconButton icon="ellipsis" label="Más opciones" onPress={onMore} />
+        <IconButton icon="square.and.arrow.up" label="Exportar" active={exportOpen} dot={unsaved} onPress={onExport} />
+      </View>
     </View>
   );
 }
