@@ -22,14 +22,22 @@ type Props = {
   openPanel: string | null;
   disabled: Partial<Record<ToolButtonId, boolean>>;
   onPress: (id: ToolButtonId) => void;
+  /** iPad (4.4): riel vertical a la izquierda en lugar de la barra inferior. */
+  rail?: boolean;
 };
 
 /** Barra de herramientas modular: sustituye a las pestañas mientras hay un proyecto abierto. */
-export function EditorToolbar({ activeTool, openPanel, disabled, onPress }: Props) {
+export function EditorToolbar({ activeTool, openPanel, disabled, onPress, rail = false }: Props) {
   const insets = useSafeAreaInsets();
   const { sideInset } = useLayout();
   return (
-    <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 8), paddingHorizontal: sideInset }]}>
+    <View
+      style={
+        rail
+          ? [styles.rail, { paddingBottom: insets.bottom, paddingLeft: Math.max(insets.left, 8) }]
+          : [styles.root, { paddingBottom: Math.max(insets.bottom, 8), paddingHorizontal: sideInset }]
+      }
+    >
       {BUTTONS.map(({ id, label, icon }) => (
         <ToolModule
           key={id}
@@ -45,6 +53,15 @@ export function EditorToolbar({ activeTool, openPanel, disabled, onPress }: Prop
 }
 
 const styles = StyleSheet.create({
+  rail: {
+    paddingTop: 64,
+    paddingRight: 8,
+    gap: 18,
+    alignItems: "center",
+    backgroundColor: colors.ink,
+    borderRightColor: colors.inkLine,
+    borderRightWidth: StyleSheet.hairlineWidth,
+  },
   root: {
     flexDirection: "row",
     justifyContent: "space-around",
