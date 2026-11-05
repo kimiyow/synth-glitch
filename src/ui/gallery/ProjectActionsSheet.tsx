@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useLayout } from "../useLayout";
+import { ALL_ORIENTATIONS, useLayout } from "../useLayout";
 import { colors, geometry, radius, type } from "../tokens";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -55,7 +55,13 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
   };
 
   return (
-    <Modal visible={project !== null} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={project !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      supportedOrientations={[...ALL_ORIENTATIONS]}
+    >
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <Pressable accessibilityLabel="Cerrar" style={styles.backdrop} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: insets.bottom + geometry.compactMargin }, regular && { width: panelWidth, alignSelf: "center" }]}>

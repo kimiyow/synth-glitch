@@ -18,7 +18,7 @@ import { selectFeedback } from "../platform/haptics";
 import { Button } from "./kit/Button";
 import { Icon } from "./kit/Icon";
 import { colors, radius, space, type } from "./tokens";
-import { CONTENT_MAX_WIDTH } from "./useLayout";
+import { ALL_ORIENTATIONS, CONTENT_MAX_WIDTH } from "./useLayout";
 
 type Page = { icons: SFSymbol[]; title: string; body: string };
 
@@ -61,7 +61,13 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <Modal visible animationType="fade" presentationStyle="fullScreen" onRequestClose={onDone}>
+    <Modal
+      visible
+      animationType="fade"
+      presentationStyle="fullScreen"
+      onRequestClose={onDone}
+      supportedOrientations={[...ALL_ORIENTATIONS]}
+    >
       <SafeAreaView style={styles.root}>
         <View style={styles.top}>
           <Pressable accessibilityRole="button" accessibilityLabel="Omitir la introducción" onPress={onDone} hitSlop={12}>

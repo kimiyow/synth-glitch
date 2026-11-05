@@ -16,6 +16,7 @@ import { DEV_TOOLS_ENABLED } from "../dev/devTools";
 import { FULL_SCALE, stepRenderScale } from "../engine/renderScale";
 import { useStageScreen } from "../platform/screen";
 import { colors, type } from "../ui/tokens";
+import { ALL_ORIENTATIONS } from "../ui/useLayout";
 import { EditorCanvas } from "./EditorCanvas";
 
 /** 3.12: interactivo = el gesto X/Y del efecto seleccionado sigue activo; bloqueado = se ignora todo. */
@@ -86,7 +87,7 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
   const shield = mode === "locked" || blackout;
 
   return (
-    <Modal visible animationType="fade" presentationStyle="fullScreen" supportedOrientations={["portrait"]}>
+    <Modal visible animationType="fade" presentationStyle="fullScreen" supportedOrientations={[...ALL_ORIENTATIONS]}>
       <GestureHandlerRootView style={styles.root}>
         <StatusBar hidden />
         {!blackout && (

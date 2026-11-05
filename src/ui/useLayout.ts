@@ -20,3 +20,9 @@ export function useLayout() {
     sideInset: regular ? Math.max(0, (width - PANEL_MAX_WIDTH) / 2) : 0,
   };
 }
+
+/**
+ * Orientaciones para `Modal`: en iOS su valor por defecto es solo vertical, lo que obligaría
+ * a girar el iPad. El iPhone ya está bloqueado en vertical desde la raíz.
+ */
+export const ALL_ORIENTATIONS = ["portrait", "portrait-upside-down", "landscape-left", "landscape-right"] as const;

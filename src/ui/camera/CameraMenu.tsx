@@ -2,6 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CAMERA_ASPECTS, type CameraAspect } from "../../state/settings";
+import { ALL_ORIENTATIONS } from "../useLayout";
 import { colors, geometry, radius, type } from "../tokens";
 
 type Props = {
@@ -15,7 +16,7 @@ type Props = {
 export function CameraMenu({ visible, aspect, onSelect, onClose }: Props) {
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} supportedOrientations={[...ALL_ORIENTATIONS]}>
       <Pressable accessibilityLabel="Cerrar menú" style={styles.backdrop} onPress={onClose} />
       <View style={[styles.menu, { top: insets.top + geometry.target }]}>
         <Text style={styles.heading}>RELACIÓN</Text>
