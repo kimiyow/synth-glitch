@@ -50,6 +50,8 @@ const MIC_HIT_GATE_S = 0.12;
 type Props = {
   /** Foto o base generativa; en clips, el cuadro actual del video (SP-05). */
   image: SkImage | SharedValue<SkImage | null>;
+  /** EDT-05: 1 mientras hay un dedo sobre la imagen (lo escribe el hilo de UI). */
+  working?: SharedValue<number>;
   /** Gesto adicional simultáneo (modo escenario: blackout con dos dedos). */
   extraGesture?: GestureType;
   /** Micrófono (SEN-02): nivel 0..1 y contador de golpes, escritos desde JS. */
@@ -151,6 +153,7 @@ export function EditorCanvas(props: Props) {
   const noMic = useSharedValue(0);
   const micLevel = props.mic?.level ?? noMic;
   const micHits = props.mic?.hits ?? noMic;
+  const working = props.working;
   const seenHits = useSharedValue(0);
   useFrameCallback(() => {
     const h = micHits.get();
@@ -184,9 +187,11 @@ export function EditorCanvas(props: Props) {
     .onBegin(() => {
       gateOn.set(time.get());
       gateOff.set(null);
+      working?.set(1);
     })
     .onFinalize(() => {
       gateOff.set(time.get());
+      working?.set(0);
     });
 
   // FX-04: arrastre relativo de 1 dedo (derecha = +X, arriba = +Y), un ancho de lienzo = rango completo.

@@ -2,6 +2,7 @@ import { useImage, useVideo } from "@shopify/react-native-skia";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
@@ -95,6 +96,9 @@ function EmptyEditor() {
     />
   );
 }
+
+/** EDT-05: opacidad de las barras mientras el dedo trabaja sobre la imagen. */
+const CHROME_DIM = 0.3;
 
 const PANEL_TITLES: Record<PanelId, string> = {
   brush: "Pincel · M6",
@@ -340,6 +344,13 @@ function ProjectView({ project }: { project: Project }) {
     else sceneStore.getState().adjust(recipe);
   };
 
+  // EDT-05: las barras se atenúan mientras el dedo trabaja sobre la imagen y reaparecen
+  // 400 ms después de soltar. El lienzo escribe `working` desde el hilo de UI.
+  const working = useSharedValue(0);
+  const chromeStyle = useAnimatedStyle(() => ({
+    opacity: working.get() ? withTiming(CHROME_DIM, { duration: 150 }) : withDelay(400, withTiming(1, { duration: 200 })),
+  }));
+
   // Props del lienzo que comparten el editor y el modo escenario (mismo árbol, mismos valores).
   const canvasProps = {
     // Solo se usa cuando la imagen ya cargó (ambos lienzos van dentro de `image && …`).
@@ -382,26 +393,29 @@ function ProjectView({ project }: { project: Project }) {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <EditorTopBar
-        canUndo={canUndo && !readOnly}
-        canRedo={canRedo && !readOnly}
-        unsaved={!readOnly && (isDraft || saveStatus.state !== "saved")}
-        exportOpen={openPanel === "export"}
-        onBack={() => {
-          void confirmLeave().then((leave) => {
-            if (leave) sceneStore.getState().close();
-          });
-        }}
-        onUndo={() => sceneStore.getState().undo()}
-        onRedo={() => sceneStore.getState().redo()}
-        onExport={() => setOverlays((stack) => toggleOverlay(stack, "export"))}
-        onMore={openMore}
-      />
+      <Animated.View style={chromeStyle}>
+        <EditorTopBar
+          canUndo={canUndo && !readOnly}
+          canRedo={canRedo && !readOnly}
+          unsaved={!readOnly && (isDraft || saveStatus.state !== "saved")}
+          exportOpen={openPanel === "export"}
+          onBack={() => {
+            void confirmLeave().then((leave) => {
+              if (leave) sceneStore.getState().close();
+            });
+          }}
+          onUndo={() => sceneStore.getState().undo()}
+          onRedo={() => sceneStore.getState().redo()}
+          onExport={() => setOverlays((stack) => toggleOverlay(stack, "export"))}
+          onMore={openMore}
+        />
+      </Animated.View>
       <View style={styles.canvasArea}>
         {image ? (
           !stage && (
             <EditorCanvas
               {...canvasProps}
+              working={working}
               brush={
                 activeTool === "brush" && !readOnly
                   ? { tool: brushTool, size: brushSize, spacing: brushSpacing, sceneSeed: project.scene.seed }
@@ -559,12 +573,14 @@ function ProjectView({ project }: { project: Project }) {
         />
       )}
 
-      <EditorToolbar
-        activeTool={activeTool}
-        openPanel={openPanel}
-        disabled={{ brush: isClip, gyro: true }}
-        onPress={onToolPress}
-      />
+      <Animated.View style={chromeStyle}>
+        <EditorToolbar
+          activeTool={activeTool}
+          openPanel={openPanel}
+          disabled={{ brush: isClip, gyro: true }}
+          onPress={onToolPress}
+        />
+      </Animated.View>
     </SafeAreaView>
   );
 }
