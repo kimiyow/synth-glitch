@@ -24,6 +24,9 @@ export type StageMode = "interactive" | "locked";
 /** Mantener pulsado este tiempo el punto de salida. */
 export const STAGE_EXIT_HOLD_MS = 2000;
 const EXIT_SIZE = 64;
+/** Límites del doble toque con dos dedos (blackout): movimiento máximo y tiempo por toque. */
+const BLACKOUT_TAP_SLOP = 12;
+const BLACKOUT_TAP_MS = 300;
 const RING = 30;
 
 type CanvasProps = Omit<ComponentProps<typeof EditorCanvas>, "brush" | "extraGesture" | "onCommitStroke" | "showSizePreview">;
@@ -42,9 +45,15 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
   const scale = useRenderScale(!blackout);
   const { width, height } = useWindowDimensions();
 
+  // Un pellizco también apoya dos dedos: sin estos límites, dos pellizcos seguidos
+  // contaban como doble toque y la pantalla se ponía negra. Si los dedos se mueven o
+  // tardan, ya no es un toque.
   const blackoutTap = Gesture.Tap()
     .numberOfTaps(2)
     .minPointers(2)
+    .maxDistance(BLACKOUT_TAP_SLOP)
+    .maxDuration(BLACKOUT_TAP_MS)
+    .maxDelay(BLACKOUT_TAP_MS)
     .runOnJS(true)
     .onEnd((_e, success) => {
       if (success) toggleBlackout();
