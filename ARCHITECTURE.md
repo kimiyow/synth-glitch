@@ -26,10 +26,7 @@ El código está en capas. Cada capa solo importa de las que están **debajo** d
 | `src/platform/` | **Adaptadores de Expo.** Fotos, selector de medios, micrófono, pantalla, hápticos, archivos de ajustes. | `photos.ts`, `useMicMeter.ts` |
 | `src/domain/` | **Contrato de datos (puro).** Los tipos del SDD 6.1: `Scene`, `Layer`, `Route`, `Project`… Todas las capas hablan con estos tipos. No importa nada. | `types.ts` |
 
-Fuera de las capas:
-
-- `src/dev/`: PerfHud, laboratorios de prueba y spikes. Solo en desarrollo.
-- `src/legacy/`: código anterior al SDD v2, solo de referencia; se borra al cerrar M10.
+Fuera de las capas, `src/dev/`: PerfHud, laboratorios de prueba y spikes. Solo en desarrollo.
 
 ### Cómo fluye una edición
 
@@ -42,7 +39,6 @@ gesto (canvas) → modulación (modulation) → uniforms del shader (engine) →
 ### Reglas que comprueba el lint
 
 - `domain`, `engine` y `modulation` son puros: sin React, Expo ni Zustand (Skia sí).
-- Nada importa desde `src/legacy/`.
 - En el hilo de UI (worklets y callbacks de gestos) no se toca el store ni `setState`.
 
 ## Principios clave
@@ -59,6 +55,7 @@ gesto (canvas) → modulación (modulation) → uniforms del shader (engine) →
 | 2026-11-03 | SDK 58 en lugar de 57 (ADR-01 actualizado en el SDD) |
 | 2026-11-03 | Rutas en `src/app/(tabs)/` en lugar de `app/(tabs)/` |
 | 2026-11-03 | El código anterior se mueve a `src/legacy/` como referencia en lugar de reutilizarse |
+| 2026-11-10 | Se borra `src/legacy/`: ya nada lo usaba |
 
 ## Flujo de trabajo
 
