@@ -1,4 +1,4 @@
-import type { CropAspect } from "../state/types";
+import type { CropAspect } from "../domain/types";
 
 /** [x, y, ancho, alto] normalizados a la imagen original. */
 export type CropRect = [number, number, number, number];

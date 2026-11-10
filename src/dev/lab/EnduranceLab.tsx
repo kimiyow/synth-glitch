@@ -3,13 +3,13 @@ import { File, Paths } from "expo-file-system";
 import { useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
-import { exportLongSide, renderSceneJpeg, sceneFrameAt } from "../../editor/renderPreviews";
+import { exportLongSide, renderSceneJpeg, sceneFrameAt } from "../../render/renderPreviews";
 import { EFFECTS, GENERATORS } from "../../engine/registry";
 import { STAMP_DEFAULTS, stampSeed } from "../../paint/strokeInterpolate";
 import { createProject } from "../../project/schema";
 import { createProjectFiles, newProjectId } from "../../project/storage";
 import { projectFs, sceneStore } from "../../state/activeScene";
-import type { Layer, Stamp, StampEffect } from "../../state/types";
+import type { Layer, Stamp, StampEffect } from "../../domain/types";
 import { LabChip, labStyles } from "./labUi";
 import { makeTestImage } from "./testImage";
 

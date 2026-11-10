@@ -1,4 +1,4 @@
-import type { Layer, Route, SourceConfig } from "../state/types";
+import type { Layer, Route, SourceConfig } from "../domain/types";
 import { curve01, curveSigned } from "./curves";
 import { adsrValue, lfoValue, seqValue, shValue } from "./sources";
 import { beatPhase } from "./tempo";

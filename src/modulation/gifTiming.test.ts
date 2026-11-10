@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import type { Layer, Route } from "../state/types";
+import type { Layer, Route } from "../domain/types";
 import { gifDurationS, gifFrameCount } from "./gifTiming";
 import { DEFAULT_SOURCES } from "./sources";
 

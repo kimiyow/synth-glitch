@@ -6,8 +6,8 @@ import { cancelAnimation, Easing, useSharedValue, withTiming } from "react-nativ
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useSettings, settingsStore } from "../../state/appSettings";
-import { createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
-import { confirmLeave } from "../../state/leaveGuard";
+import { createProjectFromClip, createProjectFromPhoto } from "../../actions/captureActions";
+import { confirmLeave } from "../../actions/leaveGuard";
 import { AppHeader } from "../../ui/AppHeader";
 import { IconButton } from "../../ui/kit/IconButton";
 import { AspectMask } from "../../ui/camera/AspectMask";

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { runOnUI, useSharedValue } from "react-native-reanimated";
 
 import { drawOriginal, drawStamp, paintBufferSize, replayStrokes } from "../paint/brushEngine";
-import type { Stamp, Stroke } from "../state/types";
+import type { Stamp, Stroke } from "../domain/types";
 
 type Checkpoint = { count: number; lastId: string; image: SkImage };
 const CHECKPOINT_EVERY = 10;

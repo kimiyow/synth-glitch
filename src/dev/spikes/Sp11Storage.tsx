@@ -10,7 +10,7 @@ import {
   saveProject,
   TEMP_FILE,
 } from "../../project/storage";
-import type { Project, Stroke } from "../../state/types";
+import type { Project, Stroke } from "../../domain/types";
 import { LabChip, labStyles } from "../lab/labUi";
 
 type Line = { ok: boolean; text: string };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import type { EffectId } from "../state/types";
+import type { EffectId } from "../domain/types";
 import { UNIFORM_NAMES } from "./effects/contract";
 import { GENERATOR_UNIFORM_NAMES } from "./generators/contract";
 import { EFFECTS, EFFECT_BY_ID, GENERATORS } from "./registry";

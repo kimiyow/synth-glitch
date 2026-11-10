@@ -7,7 +7,7 @@ import {
   renameProject,
   type ProjectSummary,
 } from "../project/storage";
-import { projectFs, sceneStore } from "./activeScene";
+import { projectFs, sceneStore } from "../state/activeScene";
 
 /** Casos de uso de la Galería (PRJ-03). Coordinan el store activo y los archivos. */
 

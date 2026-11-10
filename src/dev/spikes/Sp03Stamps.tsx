@@ -16,7 +16,7 @@ import { runOnUI, useSharedValue } from "react-native-reanimated";
 
 import { STAMP_SKSL } from "../../engine/stamps/stamps";
 import { advanceStroke, STAMP_DEFAULTS, stampSeed, type StrokeCursor } from "../../paint/strokeInterpolate";
-import type { StampEffect } from "../../state/types";
+import type { StampEffect } from "../../domain/types";
 import { LabChip, labStyles } from "../lab/labUi";
 import { makeTestImage, TEST_IMAGE_SIZE } from "../lab/testImage";
 

@@ -1,4 +1,4 @@
-import type { Project } from "../state/types";
+import type { Project } from "../domain/types";
 import { loadProject, type LoadResult } from "./migrate";
 import type { ProjectFs } from "./projectFs";
 

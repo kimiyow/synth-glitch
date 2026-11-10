@@ -1,6 +1,6 @@
 import { createStore } from "zustand/vanilla";
 
-import type { CropAspect } from "./types";
+import type { CropAspect } from "../domain/types";
 
 export type CameraAspect = Exclude<CropAspect, "free">;
 export const CAMERA_ASPECTS: readonly CameraAspect[] = ["9:16", "1:1", "4:5"];

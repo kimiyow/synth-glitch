@@ -1,12 +1,12 @@
 import { Skia, type SkImage } from "@shopify/react-native-skia";
 import { getThumbnailAsync } from "expo-video-thumbnails";
 
-import { PREVIEW_LONG_SIDE, renderGeneratorJpeg, renderSceneJpeg, THUMB_LONG_SIDE } from "../editor/renderPreviews";
+import { PREVIEW_LONG_SIDE, renderGeneratorJpeg, renderSceneJpeg, THUMB_LONG_SIDE } from "../render/renderPreviews";
 import { cropRectFor } from "../engine/crop";
 import { createProject } from "../project/schema";
 import { createProjectFiles, newProjectId } from "../project/storage";
-import { projectFs, sceneStore } from "./activeScene";
-import type { CropAspect, GeneratorId, Project } from "./types";
+import { projectFs, sceneStore } from "../state/activeScene";
+import type { CropAspect, GeneratorId, Project } from "../domain/types";
 
 type Result = { ok: true; project: Project } | { ok: false; error: string };
 

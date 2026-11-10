@@ -9,7 +9,7 @@ import {
 } from "@shopify/react-native-skia";
 
 import { STAMP_SKSL } from "../engine/stamps/stamps";
-import type { Stamp, StampEffect, Stroke } from "../state/types";
+import type { Stamp, StampEffect, Stroke } from "../domain/types";
 
 /** Resolución del buffer de pintura: lado largo de preview (3.4). */
 export const PAINT_LONG_SIDE = 2048;

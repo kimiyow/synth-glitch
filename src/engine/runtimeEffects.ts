@@ -1,6 +1,6 @@
 import { Skia, type SkRuntimeEffect } from "@shopify/react-native-skia";
 
-import type { EffectId, GeneratorId } from "../state/types";
+import type { EffectId, GeneratorId } from "../domain/types";
 import { EFFECT_BY_ID, GENERATOR_BY_ID } from "./registry";
 
 const cache = new Map<string, SkRuntimeEffect | null>();

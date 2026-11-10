@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import type { Route, SourceConfig, SourceId } from "../../state/types";
+import type { Route, SourceConfig, SourceId } from "../../domain/types";
 import { ChipRow } from "../ChipRow";
 import { colors, space, type } from "../tokens";
 import { RouteRow } from "./RouteRow";

@@ -4,7 +4,7 @@ import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent,
 import { dbToUnit } from "../../modulation/micEnvelope";
 import { DIVISIONS, LFO_SHAPES, MAX_BPM, MIN_BPM, SEQ_DIRECTIONS } from "../../modulation/sources";
 import { tapTempo } from "../../modulation/tempo";
-import type { SourceConfig } from "../../state/types";
+import type { SourceConfig } from "../../domain/types";
 import { ChipRow } from "../ChipRow";
 import { Slider } from "../Slider";
 import { colors, type } from "../tokens";

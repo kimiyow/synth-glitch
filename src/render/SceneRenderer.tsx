@@ -5,7 +5,7 @@ import { isSharedValue, useDerivedValue, type DerivedValue } from "react-native-
 import { cropViewport, FULL_CROP, type CropRect } from "../engine/crop";
 import { buildLayerChain, nodeUniforms, type ChainNode, type FrameInputs } from "../engine/renderGraph";
 import { getEffectRuntime, getGeneratorRuntime } from "../engine/runtimeEffects";
-import type { Layer } from "../state/types";
+import type { Layer } from "../domain/types";
 
 type Props = {
   /** Original o buffer de pintura (valor compartido en el editor). */

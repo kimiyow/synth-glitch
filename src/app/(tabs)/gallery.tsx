@@ -5,14 +5,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { ProjectSummary } from "../../project/storage";
 import { sceneStore, useScene } from "../../state/activeScene";
-import { confirmLeave } from "../../state/leaveGuard";
+import { confirmLeave } from "../../actions/leaveGuard";
 import {
   deleteProjectById,
   duplicateProjectById,
   listAllProjects,
   openProjectById,
   renameProjectById,
-} from "../../state/projectActions";
+} from "../../actions/projectActions";
 import { ProjectActionsSheet } from "../../ui/gallery/ProjectActionsSheet";
 import { ProjectCard } from "../../ui/gallery/ProjectCard";
 import { colors, type } from "../../ui/tokens";

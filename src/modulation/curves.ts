@@ -1,4 +1,4 @@
-import type { RouteCurve } from "../state/types";
+import type { RouteCurve } from "../domain/types";
 
 /** Curva sobre 0..1 (3.5). */
 export function curve01(c: RouteCurve, u: number): number {

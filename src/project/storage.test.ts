@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import type { Project } from "../state/types";
+import type { Project } from "../domain/types";
 import type { ProjectFs } from "./projectFs";
 import { createProject, SCHEMA_VERSION } from "./schema";
 import {

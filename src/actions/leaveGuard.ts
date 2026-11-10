@@ -1,10 +1,10 @@
 import { Alert } from "react-native";
 
-import { PREVIEW_LONG_SIDE, renderSceneJpeg, THUMB_LONG_SIDE } from "../editor/renderPreviews";
+import { PREVIEW_LONG_SIDE, renderSceneJpeg, THUMB_LONG_SIDE } from "../render/renderPreviews";
 import { writeImages } from "../project/storage";
-import { projectFs, sceneStore } from "./activeScene";
+import { projectFs, sceneStore } from "../state/activeScene";
 import { loadOriginal } from "./exportActions";
-import { hasUnsavedWork } from "./sceneStore";
+import { hasUnsavedWork } from "../state/sceneStore";
 
 type Result = { ok: true } | { ok: false; error: string };
 

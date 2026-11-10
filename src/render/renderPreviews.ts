@@ -6,7 +6,7 @@ import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate, NO_INPUTS } from "../modulation/evaluate";
 import { renderPainted } from "../paint/brushEngine";
 import { GENERATOR_BY_ID } from "../engine/registry";
-import type { GeneratorId, Layer, Scene } from "../state/types";
+import type { GeneratorId, Layer, Scene } from "../domain/types";
 import { SceneRenderer } from "./SceneRenderer";
 
 export const PREVIEW_LONG_SIDE = 2048;

@@ -2,7 +2,7 @@ import { produce, type Draft } from "immer";
 import { createStore } from "zustand/vanilla";
 
 import { normalizeName } from "../project/storage";
-import type { Project, Scene } from "./types";
+import type { Project, Scene } from "../domain/types";
 import { change, EMPTY_HISTORY, redo, undo, type UndoHistory } from "./undo";
 
 /**

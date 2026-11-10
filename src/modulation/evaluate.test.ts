@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { assert, constantFrom, double, property } from "fast-check";
 
-import type { Route } from "../state/types";
+import type { Route } from "../domain/types";
 import { evaluate, NO_INPUTS } from "./evaluate";
 import { adsrValue, DEFAULT_SOURCES as S, lfoValue, LFO_SHAPES, parseSources, seqIndex } from "./sources";
 import { tapTempo } from "./tempo";

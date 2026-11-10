@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import type { SourceId } from "../../state/types";
+import type { SourceId } from "../../domain/types";
 import { ChipRow, type Chip } from "../ChipRow";
 import { Slider } from "../Slider";
 import { colors, type } from "../tokens";

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "@jest/globals";
 
 import { createProject } from "../project/schema";
-import type { Project } from "./types";
+import type { Project } from "../domain/types";
 import { createSceneStore, hasUnsavedWork } from "./sceneStore";
 
 const T0 = new Date(Date.UTC(2026, 10, 3, 10));

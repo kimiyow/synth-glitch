@@ -11,7 +11,7 @@ const LEGACY_IMPORTS = {
 const PURE_MODULE_IMPORTS = {
   // Skia (@shopify/react-native-skia) sí está permitido.
   regex: "^(react|react-native|expo|zustand)(/.*)?$|^(react-native-|expo-)[^/]+(/.*)?$|^@expo/",
-  message: "engine/ y modulation/ son puros: sin React, Expo ni el store.",
+  message: "domain/, engine/ y modulation/ son puros: sin React, Expo ni el store.",
 };
 
 // Funciones que se ejecutan en el hilo de UI: worklets explícitos y callbacks de gestos.
@@ -58,7 +58,7 @@ module.exports = defineConfig([
     },
   },
   {
-    files: ["src/engine/**", "src/modulation/**"],
+    files: ["src/domain/**", "src/engine/**", "src/modulation/**"],
     rules: {
       "no-restricted-imports": [
         "error",

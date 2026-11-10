@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import type { Project } from "../state/types";
+import type { Project } from "../domain/types";
 import { createProject, defaultProjectName, MAX_STROKES, SCHEMA_VERSION, validateProject } from "./schema";
 
 const NOW = new Date(2026, 10, 3, 14, 5);

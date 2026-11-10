@@ -11,7 +11,7 @@ import type {
   Scene,
   Stamp,
   StampEffect,
-} from "../state/types";
+} from "../domain/types";
 
 /** Versión actual de `project.json` (SDD 3.7). */
 export const SCHEMA_VERSION = 1;

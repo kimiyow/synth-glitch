@@ -1,4 +1,4 @@
-import type { BlendMode, EffectId, GeneratorId } from "../state/types";
+import type { BlendMode, EffectId, GeneratorId } from "../domain/types";
 import { CHROMATIC_SKSL } from "./effects/chromatic.sksl";
 import { CRT_SKSL } from "./effects/crt.sksl";
 import { DATAMOSH_SKSL } from "./effects/datamosh.sksl";

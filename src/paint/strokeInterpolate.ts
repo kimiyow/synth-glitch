@@ -1,4 +1,4 @@
-import type { StampEffect } from "../state/types";
+import type { StampEffect } from "../domain/types";
 
 /** Chip del panel Pincel: un efecto de sello o BORRAR (S9). */
 export type BrushTool = StampEffect | "erase";

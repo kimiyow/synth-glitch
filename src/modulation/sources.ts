@@ -1,4 +1,4 @@
-import type { LfoShape, SeqDirection, SourceConfig } from "../state/types";
+import type { LfoShape, SeqDirection, SourceConfig } from "../domain/types";
 
 /** Valores por defecto de las fuentes (parámetros diseñados, principio 5). */
 export const DEFAULT_SOURCES: SourceConfig = {

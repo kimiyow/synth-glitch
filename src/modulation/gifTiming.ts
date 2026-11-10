@@ -1,4 +1,4 @@
-import type { Layer, Route, SourceConfig } from "../state/types";
+import type { Layer, Route, SourceConfig } from "../domain/types";
 import { cycleHz } from "./sources";
 
 /** GIF de 3.11: 12 fps, hasta 4 s (48 cuadros); 3 s si nada marca un periodo. */

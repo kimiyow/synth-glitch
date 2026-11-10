@@ -1,4 +1,4 @@
-import type { EffectId, Layer, Route, SourceConfig } from "../state/types";
+import type { EffectId, Layer, Route, SourceConfig } from "../domain/types";
 import { cycleHz } from "./sources";
 
 /** Parámetros que cambian la luminancia de una zona amplia (3.5). */

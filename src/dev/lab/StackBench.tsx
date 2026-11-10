@@ -4,11 +4,11 @@ import { ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 
-import { SceneRenderer } from "../../editor/SceneRenderer";
+import { SceneRenderer } from "../../render/SceneRenderer";
 import { COST_WARNING_THRESHOLD, estimateLayerCost, isCostHigh } from "../../engine/layerCost";
 import { EFFECTS } from "../../engine/registry";
 import type { FrameInputs } from "../../engine/renderGraph";
-import type { Layer } from "../../state/types";
+import type { Layer } from "../../domain/types";
 import { LabChip, labStyles } from "./labUi";
 import { useTestImage } from "./testImage";
 import { useLabClock } from "./useLabClock";

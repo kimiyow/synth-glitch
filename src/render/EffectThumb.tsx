@@ -2,7 +2,7 @@ import { Canvas, type SkImage } from "@shopify/react-native-skia";
 import { memo } from "react";
 
 import type { FrameInputs } from "../engine/renderGraph";
-import type { Layer } from "../state/types";
+import type { Layer } from "../domain/types";
 import { SceneRenderer } from "./SceneRenderer";
 
 /** Cuadro fijo: las miniaturas no se animan, así 10 lienzos pequeños no cuestan por cuadro. */

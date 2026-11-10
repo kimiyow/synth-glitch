@@ -4,9 +4,9 @@ import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useDerivedValue } from "react-native-reanimated";
 
-import { SceneRenderer } from "../../editor/SceneRenderer";
+import { SceneRenderer } from "../../render/SceneRenderer";
 import type { FrameInputs } from "../../engine/renderGraph";
-import type { Layer } from "../../state/types";
+import type { Layer } from "../../domain/types";
 import { geometry } from "../../ui/tokens";
 import { LabChip, labStyles } from "../lab/labUi";
 import { useLabClock } from "../lab/useLabClock";

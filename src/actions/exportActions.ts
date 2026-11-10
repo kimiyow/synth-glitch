@@ -2,12 +2,12 @@ import { Skia, type SkImage } from "@shopify/react-native-skia";
 import { getThumbnailAsync } from "expo-video-thumbnails";
 import { applyPalette, GIFEncoder, quantize } from "gifenc";
 
-import { createFrameRenderer, exportLongSide, renderSceneJpeg, sceneFrameAt } from "../editor/renderPreviews";
+import { createFrameRenderer, exportLongSide, renderSceneJpeg, sceneFrameAt } from "../render/renderPreviews";
 import { GIF_FPS, gifDurationS, gifFrameCount } from "../modulation/gifTiming";
 import { saveToPhotos, writeExportFile } from "../platform/photos";
 import { synthFxFileName } from "../project/synthfx";
-import { projectFs } from "./activeScene";
-import type { Project } from "./types";
+import { projectFs } from "../state/activeScene";
+import type { Project } from "../domain/types";
 
 export type ExportResult = { ok: true; uri: string; ms: number } | { ok: false; error: string };
 

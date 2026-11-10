@@ -1,4 +1,4 @@
-import type { SourceConfig } from "../state/types";
+import type { SourceConfig } from "../domain/types";
 
 /**
  * Envolvente del micrófono (SEN-02, 3.5): nivel en dB → 0..1 entre piso y techo

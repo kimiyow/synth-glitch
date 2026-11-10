@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine/registry";
 import { selectFeedback } from "../../platform/haptics";
-import type { BlendMode, EffectId, GeneratorId, Layer } from "../../state/types";
+import type { BlendMode, EffectId, GeneratorId, Layer } from "../../domain/types";
 import { ChipRow, type Chip } from "../ChipRow";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";

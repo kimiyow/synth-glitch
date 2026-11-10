@@ -1,4 +1,4 @@
-import type { Layer } from "../state/types";
+import type { Layer } from "../domain/types";
 import { EFFECT_BY_ID } from "./registry";
 
 /** Tope técnico de seguridad de la pila (FX-02). */

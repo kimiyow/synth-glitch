@@ -1,6 +1,6 @@
 import { parseSources } from "../modulation/sources";
 import { MAX_LAYERS } from "../engine/layerCost";
-import type { Scene, SynthFx } from "../state/types";
+import type { Scene, SynthFx } from "../domain/types";
 import { Invalid, parseLayer, parseRoute, type ValidationResult } from "./schema";
 
 /**

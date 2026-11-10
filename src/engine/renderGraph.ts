@@ -1,4 +1,4 @@
-import type { EffectId, GeneratorId, Layer } from "../state/types";
+import type { EffectId, GeneratorId, Layer } from "../domain/types";
 import { MAX_LAYERS } from "./layerCost";
 import { BLEND_INDEX } from "./registry";
 

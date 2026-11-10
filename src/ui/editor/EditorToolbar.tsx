@@ -2,7 +2,7 @@ import type { SFSymbol } from "expo-symbols";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { ToolButtonId } from "../../editor/panels";
+import type { ToolButtonId } from "./panels";
 import { ToolModule } from "../kit/ToolModule";
 import { colors } from "../tokens";
 import { useLayout } from "../useLayout";

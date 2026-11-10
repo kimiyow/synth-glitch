@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { array, assert, boolean, constantFrom, property, record } from "fast-check";
 
-import type { EffectId, Layer } from "../state/types";
+import type { EffectId, Layer } from "../domain/types";
 import {
   canAddLayer,
   COST_WARNING_THRESHOLD,

@@ -1,4 +1,4 @@
-import type { StampEffect } from "../../state/types";
+import type { StampEffect } from "../../domain/types";
 
 /**
  * Shaders de sello (6.2, 6.5). Cada sello lee del buffer acumulado (`image`) y solo se

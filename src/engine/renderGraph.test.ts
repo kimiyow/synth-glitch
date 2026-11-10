@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import type { EffectId, Layer } from "../state/types";
+import type { EffectId, Layer } from "../domain/types";
 import { MAX_LAYERS } from "./layerCost";
 import { buildLayerChain, nodeUniforms } from "./renderGraph";
 

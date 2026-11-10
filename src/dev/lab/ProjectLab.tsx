@@ -2,12 +2,12 @@ import { ImageFormat } from "@shopify/react-native-skia";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
-import { PREVIEW_LONG_SIDE, renderSceneJpeg, THUMB_LONG_SIDE } from "../../editor/renderPreviews";
+import { PREVIEW_LONG_SIDE, renderSceneJpeg, THUMB_LONG_SIDE } from "../../render/renderPreviews";
 import { EFFECTS } from "../../engine/registry";
 import { createProject } from "../../project/schema";
 import { createProjectFiles, newProjectId } from "../../project/storage";
 import { projectFs } from "../../state/activeScene";
-import type { Layer } from "../../state/types";
+import type { Layer } from "../../domain/types";
 import { LabChip, labStyles } from "./labUi";
 import { makeTestImage, TEST_IMAGE_SIZE } from "./testImage";
 

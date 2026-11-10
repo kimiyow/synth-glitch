@@ -1,4 +1,4 @@
-import type { Project } from "../state/types";
+import type { Project } from "../domain/types";
 import { SCHEMA_VERSION, validateProject } from "./schema";
 
 /** Una función por versión: `migrations[n]` convierte un JSON de la versión n a la n + 1. */

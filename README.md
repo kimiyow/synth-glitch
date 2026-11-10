@@ -52,18 +52,21 @@ En modo desarrollo (o con `EXPO_PUBLIC_DEV_TOOLS=1 npx expo start --no-dev --min
 
 ```
 src/app/         rutas de Expo Router: Cámara, Editor, Galería
-src/ui/          pantallas, paneles y componentes (no conoce Skia)
-src/editor/      lienzo, render de la escena, modo escenario
+src/ui/          componentes visuales, paneles y tokens de diseño
+src/canvas/      lienzo Skia en vivo: editor y modo escenario
+src/actions/     casos de uso: capturar, exportar, guardar, salir
+src/state/       stores de la escena y los ajustes, deshacer
+src/render/      dibujar una escena: vista previa, miniaturas, exportación
 src/engine/      render graph, shaders SkSL, registro de efectos (puro)
 src/modulation/  fuentes, rutas, envolvente del micrófono (puro)
 src/paint/       motor del pincel de sellos
 src/project/     esquema, migraciones, almacenamiento, .synthfx
-src/state/       store de la escena, deshacer, casos de uso
-src/platform/    adaptadores de Expo: cámara, audio, fotos, pantalla
+src/platform/    adaptadores de Expo: fotos, audio, pantalla, hápticos
+src/domain/      tipos de datos compartidos (contrato del SDD 6.1)
 src/dev/         HUD y testLab (solo desarrollo)
 ```
 
-Las decisiones de arquitectura están en [`ARCHITECTURE.md`](ARCHITECTURE.md).
+Cada capa solo importa de las que están debajo. Qué hace cada una y cómo fluye una edición está en [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Ramas
 

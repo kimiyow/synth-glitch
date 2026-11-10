@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useDerivedValue, useFrameCallback, useSharedValue } from "react-native-reanimated";
 
-import { SceneRenderer } from "../../editor/SceneRenderer";
+import { SceneRenderer } from "../../render/SceneRenderer";
 import type { FrameInputs } from "../../engine/renderGraph";
 import { evaluate, NO_INPUTS } from "../../modulation/evaluate";
 import { DEFAULT_SOURCES } from "../../modulation/sources";
-import type { Layer, Route } from "../../state/types";
+import type { Layer, Route } from "../../domain/types";
 import { geometry } from "../../ui/tokens";
 import { LabChip, labStyles } from "./labUi";
 import { useTestImage } from "./testImage";

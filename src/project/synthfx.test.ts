@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import type { Scene } from "../state/types";
+import type { Scene } from "../domain/types";
 import { createScene } from "./schema";
 import { applySynthFx, createSynthFx, parseSynthFx, serializeSynthFx, synthFxFileName } from "./synthfx";
 

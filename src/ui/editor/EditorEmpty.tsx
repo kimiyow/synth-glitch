@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { GENERATORS } from "../../engine/registry";
 import { selectFeedback } from "../../platform/haptics";
-import type { GeneratorId } from "../../state/types";
+import type { GeneratorId } from "../../domain/types";
 import { AppHeader } from "../AppHeader";
 import { Button } from "../kit/Button";
 import { Icon } from "../kit/Icon";

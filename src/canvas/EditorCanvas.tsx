@@ -26,9 +26,9 @@ import {
   type BrushTool,
   type StrokeCursor,
 } from "../paint/strokeInterpolate";
-import type { Layer, Route, SourceConfig, Stamp, Stroke } from "../state/types";
+import type { Layer, Route, SourceConfig, Stamp, Stroke } from "../domain/types";
 import { colors, type } from "../ui/tokens";
-import { SceneRenderer } from "./SceneRenderer";
+import { SceneRenderer } from "../render/SceneRenderer";
 import { usePaintBuffer } from "./usePaintBuffer";
 import { clampAxis, clampZoom, fitContain, screenToImage } from "./viewTransform";
 

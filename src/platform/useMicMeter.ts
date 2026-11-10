@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSharedValue, type SharedValue } from "react-native-reanimated";
 
 import { MIC_SILENT, stepMic, type MicEnvelope } from "../modulation/micEnvelope";
-import type { SourceConfig } from "../state/types";
+import type { SourceConfig } from "../domain/types";
 
 /** 3.5: se sondea el grabador cada 50 ms. */
 export const MIC_POLL_MS = 50;

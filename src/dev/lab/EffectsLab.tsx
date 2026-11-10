@@ -4,10 +4,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 
-import { SceneRenderer } from "../../editor/SceneRenderer";
+import { SceneRenderer } from "../../render/SceneRenderer";
 import { EFFECTS, GENERATORS } from "../../engine/registry";
 import type { FrameInputs } from "../../engine/renderGraph";
-import type { Layer } from "../../state/types";
+import type { Layer } from "../../domain/types";
 import { colors, geometry, type } from "../../ui/tokens";
 import { LabChip, labStyles } from "./labUi";
 import { useTestImage } from "./testImage";

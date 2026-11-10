@@ -6,17 +6,17 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } fro
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DEV_TOOLS_ENABLED } from "../../dev/devTools";
-import { EditorCanvas } from "../../editor/EditorCanvas";
-import { EffectThumb } from "../../editor/EffectThumb";
-import { StageView, type StageMode } from "../../editor/StageView";
-import { blankImage, generatorLayer } from "../../editor/renderPreviews";
+import { EditorCanvas } from "../../canvas/EditorCanvas";
+import { EffectThumb } from "../../render/EffectThumb";
+import { StageView, type StageMode } from "../../canvas/StageView";
+import { blankImage, generatorLayer } from "../../render/renderPreviews";
 import { MAX_STROKES, stampSeed, type BrushTool } from "../../paint/strokeInterpolate";
 import { BrushPanel } from "../../ui/editor/BrushPanel";
-import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../editor/panels";
+import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../ui/editor/panels";
 import { croppedSize } from "../../engine/crop";
 import { canAddLayer, isCostHigh, MAX_LAYERS } from "../../engine/layerCost";
 import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine/registry";
-import { useSlowFrames } from "../../editor/useSlowFrames";
+import { useSlowFrames } from "../../canvas/useSlowFrames";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
 import { useMicMeter } from "../../platform/useMicMeter";
@@ -27,10 +27,10 @@ import { applySynthFx, createSynthFx, parseSynthFx, serializeSynthFx, synthFxFil
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
 import { settingsStore } from "../../state/appSettings";
-import { createGenerativeProject, createProjectFromClip, createProjectFromPhoto } from "../../state/captureActions";
-import { exportGif, exportJpeg } from "../../state/exportActions";
-import { confirmLeave, saveActiveProject } from "../../state/leaveGuard";
-import type { GeneratorId, Layer, Project, SourceId } from "../../state/types";
+import { createGenerativeProject, createProjectFromClip, createProjectFromPhoto } from "../../actions/captureActions";
+import { exportGif, exportJpeg } from "../../actions/exportActions";
+import { confirmLeave, saveActiveProject } from "../../actions/leaveGuard";
+import type { GeneratorId, Layer, Project, SourceId } from "../../domain/types";
 import { EditorEmpty, GEN_THUMB, type GenerativeAspect } from "../../ui/editor/EditorEmpty";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
 import { EffectsPanel, THUMB_SIZE, type TileRef } from "../../ui/editor/EffectsPanel";
