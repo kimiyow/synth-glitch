@@ -5,8 +5,9 @@ import { applyPalette, GIFEncoder, quantize } from "gifenc";
 import { createFrameRenderer, exportLongSide, renderSceneJpeg, sceneFrameAt } from "../render/renderPreviews";
 import { GIF_FPS, gifDurationS, gifFrameCount } from "../modulation/gifTiming";
 import { saveToPhotos, writeExportFile } from "../platform/photos";
-import { synthFxFileName } from "../project/synthfx";
-import { projectFs } from "../state/activeScene";
+import { pickSynthFxFile, shareSynthFxFile } from "../platform/synthfxFile";
+import { applySynthFx, createSynthFx, parseSynthFx, serializeSynthFx, synthFxFileName } from "../project/synthfx";
+import { projectFs, sceneStore } from "../state/activeScene";
 import type { Project } from "../domain/types";
 
 export type ExportResult = { ok: true; uri: string; ms: number } | { ok: false; error: string };
@@ -92,4 +93,22 @@ export async function exportGif(
     if (error instanceof ExportCancelled) return { ok: false, cancelled: true };
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
+}
+
+export type RecipeImport = { ok: true; name: string; lastLayerId: string | null } | { ok: false; error: string } | { ok: "cancelled" };
+
+// receta .synthfx: el usuario elige un archivo y se aplica a la escena como un solo cambio
+export async function importRecipe(): Promise<RecipeImport> {
+  const picked = await pickSynthFxFile();
+  if (picked.kind === "rejected") return { ok: false, error: picked.message };
+  if (picked.kind !== "picked") return { ok: "cancelled" };
+  const parsed = parseSynthFx(picked.text);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+  sceneStore.getState().commit("importar receta", (scene) => applySynthFx(scene, parsed.value));
+  return { ok: true, name: parsed.value.name, lastLayerId: parsed.value.layers.at(-1)?.id ?? null };
+}
+
+// comparte la receta de la escena por la hoja de compartir
+export function shareRecipe(project: Project): Promise<void> {
+  return shareSynthFxFile(synthFxFileName(project.name), serializeSynthFx(createSynthFx(project.name, project.scene)));
 }

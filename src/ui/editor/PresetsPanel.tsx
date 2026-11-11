@@ -17,9 +17,9 @@ type Module = { id: string; icon: SFSymbol; label: string; milestone: string | n
 const MODULES: Module[] = [
   { id: "import", icon: "square.and.arrow.down", label: "Importar .synthfx", milestone: null },
   { id: "share", icon: "square.and.arrow.up", label: "Compartir .synthfx", milestone: null },
-  { id: "save", icon: "square.stack.3d.up", label: "Guardar escena", milestone: "M7" },
-  { id: "mutate", icon: "wand.and.rays", label: "Mutar", milestone: "M7" },
-  { id: "random", icon: "dice", label: "Aleatorizar", milestone: "M7" },
+  { id: "save", icon: "square.stack.3d.up", label: "Guardar escena", milestone: "PRÓXIMAMENTE" },
+  { id: "mutate", icon: "wand.and.rays", label: "Mutar", milestone: "PRÓXIMAMENTE" },
+  { id: "random", icon: "dice", label: "Aleatorizar", milestone: "PRÓXIMAMENTE" },
 ];
 
 // panel Presets, importar y compartir la receta .synthfx
