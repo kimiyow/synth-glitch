@@ -6,33 +6,31 @@ import { useSharedValue, type SharedValue } from "react-native-reanimated";
 import { MIC_SILENT, stepMic, type MicEnvelope } from "../modulation/micEnvelope";
 import type { SourceConfig } from "../domain/types";
 
-/** 3.5: se sondea el grabador cada 50 ms. */
+// se sondea el grabador cada 50 ms
 export const MIC_POLL_MS = 50;
-/** El grabador escribe un archivo mientras mide: se rota y se borra cada 60 s (3.5). */
+// el grabador escribe un archivo mientras mide: se rota y se borra cada 60 s
 export const MIC_ROTATE_MS = 60_000;
-/** Duración de la calibración con la sala en silencio. */
+// duración de la calibración con la sala en silencio
 export const CALIBRATION_MS = 2000;
 
 export type MicState = "off" | "starting" | "on" | "denied" | "error";
 
 export type MicMeter = {
   state: MicState;
-  /** Nivel 0..1 para la modulación (hilo de UI lo lee por cuadro; JS lo escribe). */
+  // nivel 0..1 para la modulación (hilo de UI lo lee por cuadro; JS lo escribe)
   level: SharedValue<number>;
-  /** Contador de golpes: el lienzo dispara el ADSR cuando cambia (sin llamar a JS desde UI). */
+  // contador de golpes: el lienzo dispara el ADSR cuando cambia (sin llamar a JS desde UI)
   hits: SharedValue<number>;
-  /** Último nivel en dB, para el medidor del panel (se actualiza cada ~200 ms). */
+  // último nivel en dB, para el medidor del panel (se actualiza cada ~200 ms)
   db: number | null;
-  /** Intervalo medio real entre lecturas (SP-07), en ms. */
+  // intervalo medio real entre lecturas, en ms
   pollMs: number | null;
-  /** Escucha 2 s y devuelve las lecturas en dB (calibración del piso). */
+  // escucha 2 s y devuelve las lecturas en dB (calibración del piso)
   sample(ms?: number): Promise<number[]>;
 };
 
-/**
- * Micrófono como fuente (SEN-02, ADR-11): `expo-audio` con medición; solo activo con
- * `active` (hay rutas de MIC o se está calibrando, y el editor está a la vista).
- */
+// micrófono como fuente: expo-audio con medición; solo activo con active (hay rutas de MIC o se
+// está calibrando, y el editor está a la vista)
 export function useMicMeter(active: boolean, cfg: SourceConfig["mic"]): MicMeter {
   const recorder = useAudioRecorder({ ...RecordingPresets.LOW_QUALITY, isMeteringEnabled: true });
   const level = useSharedValue(0);
@@ -63,7 +61,7 @@ export function useMicMeter(active: boolean, cfg: SourceConfig["mic"]): MicMeter
           if (f.exists) f.delete();
         }
       } catch {
-        // Un temporal que no se pudo borrar lo limpia el sistema (caché).
+        // un temporal que no se pudo borrar lo limpia el sistema (caché)
       }
     };
 
@@ -98,7 +96,7 @@ export function useMicMeter(active: boolean, cfg: SourceConfig["mic"]): MicMeter
         }
       }, MIC_POLL_MS);
 
-      // Rotación: se detiene, se borra el archivo y se vuelve a grabar.
+      // rotación: se detiene, se borra el archivo y se vuelve a grabar
       rotate = setInterval(() => {
         void (async () => {
           const old = recorder.uri;
@@ -127,7 +125,7 @@ export function useMicMeter(active: boolean, cfg: SourceConfig["mic"]): MicMeter
           removeFile(old);
           await setAudioModeAsync({ allowsRecording: false });
         } catch {
-          // Si el grabador ya estaba detenido no hay nada que limpiar.
+          // si el grabador ya estaba detenido no hay nada que limpiar
         }
       })();
     };

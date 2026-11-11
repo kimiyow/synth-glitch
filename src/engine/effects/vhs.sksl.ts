@@ -1,6 +1,6 @@
 import { EFFECT_HEADER } from "./contract";
 
-// Anexo A. x: jitter = x · 3 % del ancho; y: banda de tracking = y · 25 % del alto.
+// x: jitter = x · 3 % del ancho; y: banda de tracking = y · 25 % del alto
 export const VHS_SKSL = `${EFFECT_HEADER}
 float hash(float2 p) { return fract(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453); }
 half4 main(float2 xy) {

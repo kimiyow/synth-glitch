@@ -5,22 +5,15 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, radius, space, type } from "../tokens";
 import { useLayout } from "../useLayout";
 
-/**
- * Los deslizadores bloquean el desplazamiento de la hoja mientras se arrastran: si no, la
- * hoja (que en iOS rebota aunque el contenido quepa) se queda con el toque y el control salta.
- */
-/**
- * Ancho del panel lateral en iPad. El SDD (4.4) pedía popovers de 340 pt, pero quedaban
- * chicos y encima del lienzo: el panel se acopla a la derecha y el lienzo le deja sitio.
- */
+// los deslizadores bloquean el desplazamiento de la hoja mientras se arrastran: si no, la hoja (que
+// en iOS rebota aunque el contenido quepa) se queda con el toque y el control salta ancho del panel
+// lateral en iPad. Los popovers de 340 pt quedaban chicos y encima del lienzo: el panel se acopla a
+// la derecha y el lienzo le deja sitio
 export const SIDE_PANEL_WIDTH = 400;
 
 export const SheetScrollLock = createContext<(locked: boolean) => void>(() => {});
 
-/**
- * Hoja inferior con esquinas redondeadas y fondo translúcido. Solo se cierra con su
- * propio botón (decisión de producto, sustituye a S8).
- */
+// hoja inferior con esquinas redondeadas y fondo translúcido. Solo se cierra con su propio botón
 export function Sheet({
   title,
   children,
@@ -30,7 +23,7 @@ export function Sheet({
   title?: string;
   children: ReactNode;
   maxHeight?: number;
-  /** iPad: panel lateral fijo a la derecha, de toda la altura, sin tapar el lienzo. */
+  // iPad: panel lateral fijo a la derecha, de toda la altura, sin tapar el lienzo
   side?: boolean;
 }) {
   const [locked, setLocked] = useState(false);
@@ -59,7 +52,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    // Con 0.9, el peor caso (blanco detrás) queda ≈ #2A2A2A: #9A9A9A sobre él ≈ 5:1 (NFR-13).
+    // con 0.9, el peor caso (blanco detrás) queda ≈ #2A2A2A: #9A9A9A sobre él ≈ 5:1
     backgroundColor: "rgba(18,18,18,0.9)",
     borderTopColor: colors.inkLine,
     borderTopWidth: StyleSheet.hairlineWidth,

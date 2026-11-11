@@ -1,12 +1,12 @@
 import type { Layer, Route, SourceConfig } from "../domain/types";
 import { cycleHz } from "./sources";
 
-/** GIF de 3.11: 12 fps, hasta 4 s (48 cuadros); 3 s si nada marca un periodo. */
+// GIF: 12 fps, hasta 4 s (48 cuadros); 3 s si nada marca un periodo
 export const GIF_FPS = 12;
 export const GIF_MAX_S = 4;
 export const GIF_DEFAULT_S = 3;
 
-/** Periodo (s) de la fuente de una ruta, o null si no es periódica (ADSR, en vivo). */
+// periodo (s) de la fuente de una ruta, o null si no es periódica (ADSR, en vivo)
 function routePeriod(route: Route, s: SourceConfig): number | null {
   const beat = 60 / s.tempo.bpm;
   switch (route.source) {
@@ -25,10 +25,8 @@ function routePeriod(route: Route, s: SourceConfig): number | null {
   }
 }
 
-/**
- * Duración del GIF (3.11): el periodo más largo de las fuentes periódicas activas (si es
- * corto se repite hasta durar al menos 1 s, para un bucle sin salto) o 3 s; nunca más de 4 s.
- */
+// duración del GIF: el periodo más largo de las fuentes periódicas activas (si es corto se repite
+// hasta durar al menos 1 s, para un bucle sin salto) o 3 s; nunca más de 4 s
 export function gifDurationS(layers: readonly Layer[], routes: readonly Route[], sources: SourceConfig): number {
   const visible = new Set(layers.filter((l) => l.visible).map((l) => l.id));
   let period = 0;

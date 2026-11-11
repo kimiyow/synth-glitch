@@ -10,16 +10,16 @@ type Props = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  /** Resaltado invertido (blanco con icono negro). */
+  // resaltado invertido (blanco con icono negro)
   active?: boolean;
-  /** Sin fondo (p. ej. sobre la cámara). */
+  // sin fondo (p. ej. sobre la cámara)
   bare?: boolean;
-  /** Punto indicador (p. ej. autoguardado). */
+  // punto indicador (p. ej. autoguardado)
   dot?: boolean;
   size?: number;
 };
 
-/** Botón circular de icono (barra superior, cabeceras). EDT-04: deshabilitado al 50 %. */
+// botón circular de icono (barra superior, cabeceras). Deshabilitado al 50 %
 export function IconButton({ icon, label, onPress, disabled = false, active = false, bare = false, dot = false, size = 40 }: Props) {
   return (
     <Pressable

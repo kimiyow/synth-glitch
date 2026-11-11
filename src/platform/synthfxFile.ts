@@ -4,10 +4,8 @@ import { shareAsync } from "expo-sharing";
 
 import { SYNTHFX_MAX_BYTES } from "../project/synthfx";
 
-/**
- * Adaptadores de `.synthfx` (SEN-05): hoja de compartir y selector de documentos.
- * Sin mimeType ni UTI: en iOS añadirían otra extensión (`escena.synthfx.json`).
- */
+// adaptadores de .synthfx: hoja de compartir y selector de documentos. Sin mimeType ni UTI: en iOS
+// añadirían otra extensión (escena.synthfx.json)
 export async function shareSynthFxFile(fileName: string, text: string): Promise<void> {
   const file = new File(Paths.cache, fileName);
   if (file.exists) file.delete();
@@ -18,7 +16,7 @@ export async function shareSynthFxFile(fileName: string, text: string): Promise<
 
 export type PickedSynthFx = { kind: "canceled" } | { kind: "rejected"; message: string } | { kind: "picked"; text: string };
 
-/** Abre el selector de documentos; el tamaño se revisa antes de leer (NFR-12). */
+// abre el selector de documentos; el tamaño se revisa antes de leer
 export async function pickSynthFxFile(): Promise<PickedSynthFx> {
   const result = await getDocumentAsync({ type: "*/*", copyToCacheDirectory: true });
   if (result.canceled) return { kind: "canceled" };

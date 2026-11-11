@@ -13,11 +13,11 @@ import { geometry } from "../../ui/tokens";
 import { LabChip, labStyles } from "./labUi";
 import { useTestImage } from "./testImage";
 
-/** NFR-15: 30 min con ≥ 45 FPS. */
+// 30 min con ≥ 45 FPS
 export const STAGE_TEST_MIN = 30;
 export const STAGE_MIN_FPS = 45;
 
-/** Escena típica de escenario: 3 capas y una ruta LFO, dentro del umbral de costo. */
+// escena típica de escenario: 3 capas y una ruta LFO, dentro del umbral de costo
 const LAYERS: Layer[] = [
   { kind: "effect", id: "chr", effect: "chromatic", params: { x: 0.3, y: 0 }, visible: true },
   { kind: "effect", id: "vhs", effect: "vhs", params: { x: 0.3, y: 0.4 }, visible: true },
@@ -30,10 +30,8 @@ const SOURCES = { ...DEFAULT_SOURCES, lfo: { ...DEFAULT_SOURCES.lfo, depth: 1, s
 
 type Minute = { minute: number; minFps: number; avgFps: number };
 
-/**
- * NFR-15 / CA-27: 30 min de escenario a pantalla encendida, midiendo FPS por segundo en el
- * hilo de UI (solo números en valores compartidos) y anotando el mínimo y el promedio por minuto.
- */
+// 30 min de escenario a pantalla encendida, midiendo FPS por segundo en el hilo de UI (solo números
+// en valores compartidos) y anotando el mínimo y el promedio por minuto
 export function StageEnduranceLab() {
   const image = useTestImage();
   const [running, setRunning] = useState(false);

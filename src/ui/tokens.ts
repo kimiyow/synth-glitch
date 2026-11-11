@@ -1,9 +1,7 @@
 import { StyleSheet } from "react-native";
 
-/**
- * Identidad (4.4): blanco y negro, sin color de acento (S4). Lo activo se resalta
- * invirtiendo: pastilla blanca con texto negro.
- */
+// identidad: blanco y negro, sin color de acento. Lo activo se resalta invirtiendo: pastilla blanca
+// con texto negro
 export const colors = {
   ink: "#000000",
   inkSurface: "#121212",

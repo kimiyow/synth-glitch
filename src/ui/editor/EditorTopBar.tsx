@@ -6,18 +6,19 @@ import { space } from "../tokens";
 type Props = {
   canUndo: boolean;
   canRedo: boolean;
-  /** Hay cambios sin guardar (punto sobre Exportar). */
+  // hay cambios sin guardar (punto sobre Exportar)
   unsaved: boolean;
   exportOpen: boolean;
   onBack: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onExport: () => void;
-  /** Menú ⋯ (modo escenario, 3.12). */
+  // menú ⋯ (modo escenario)
   onMore: () => void;
 };
 
-/** Barra superior: volver · deshacer/rehacer (50 % si no aplican, EDT-04) · exportar con punto de cambios sin guardar. */
+// barra superior: volver · deshacer/rehacer (50 % si no aplican) · exportar con punto de cambios
+// sin guardar
 export function EditorTopBar({ canUndo, canRedo, unsaved, exportOpen, onBack, onUndo, onRedo, onExport, onMore }: Props) {
   return (
     <View style={styles.root}>

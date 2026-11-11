@@ -1,21 +1,19 @@
 import type { Project } from "../domain/types";
 import { SCHEMA_VERSION, validateProject } from "./schema";
 
-/** Una función por versión: `migrations[n]` convierte un JSON de la versión n a la n + 1. */
+// una función por versión: migrations[n] convierte un JSON de la versión n a la n + 1
 export type Migrations = Readonly<Record<number, (raw: Record<string, unknown>) => Record<string, unknown>>>;
 
-/** Vacío mientras solo exista la versión 1. */
+// vacío mientras solo exista la versión 1
 export const MIGRATIONS: Migrations = {};
 
 export type LoadResult =
   | { ok: true; project: Project; readOnly: boolean; migratedFrom: number | null }
   | { ok: false; error: string };
 
-/**
- * Lleva un `project.json` ya parseado a la versión actual (PRJ-05).
- * - Versión antigua: se migra paso a paso y luego se valida.
- * - Versión futura: se intenta leer tal cual y se abre en solo lectura.
- */
+// lleva un project.json ya parseado a la versión actual.
+// - Versión antigua: se migra paso a paso y luego se valida.
+// - Versión futura: se intenta leer tal cual y se abre en solo lectura
 export function loadProject(
   raw: unknown,
   migrations: Migrations = MIGRATIONS,

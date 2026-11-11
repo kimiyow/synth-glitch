@@ -18,7 +18,7 @@ type Result = { ok: true } | { ok: false; error: string };
 type Mode = "actions" | "rename" | "delete";
 
 type Props = {
-  /** null = cerrada. */
+  // null = cerrada
   project: { id: string; name: string; readOnly: boolean } | null;
   onClose: () => void;
   onRename: (id: string, name: string) => Result;
@@ -26,10 +26,8 @@ type Props = {
   onDelete: (id: string) => Result;
 };
 
-/**
- * Hoja inferior de acciones de un proyecto. Renombrar y confirmar la eliminación se
- * muestran encima, en la misma hoja; tocar fuera o CANCELAR cierra.
- */
+// hoja inferior de acciones de un proyecto. Renombrar y confirmar la eliminación se muestran
+// encima, en la misma hoja; tocar fuera o CANCELAR cierra
 export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, onDelete }: Props) {
   const insets = useSafeAreaInsets();
   const { regular, panelWidth } = useLayout();
@@ -38,7 +36,7 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
   const [error, setError] = useState<string | null>(null);
   const [shownFor, setShownFor] = useState<string | null>(null);
 
-  // Cada vez que se abre, la hoja empieza en las acciones.
+  // cada vez que se abre, la hoja empieza en las acciones
   if (!project && shownFor !== null) setShownFor(null);
   if (project && project.id !== shownFor) {
     setShownFor(project.id);

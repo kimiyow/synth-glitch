@@ -7,12 +7,12 @@ import { colors, space, type } from "./tokens";
 type Props = {
   title: string;
   reason: string;
-  /** false si el sistema ya no deja volver a preguntar: se ofrece abrir Ajustes (CAM-01). */
+  // false si el sistema ya no deja volver a preguntar: se ofrece abrir Ajustes
   canAskAgain: boolean;
   onAllow: () => void;
 };
 
-/** Pantalla explicativa de permisos en superficie Papel (blanca). */
+// pantalla explicativa de permisos en superficie Papel (blanca)
 export function PermissionScreen({ title, reason, canAskAgain, onAllow }: Props) {
   return (
     <SafeAreaView style={styles.root}>

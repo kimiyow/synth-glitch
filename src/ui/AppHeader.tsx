@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { colors, geometry, type } from "./tokens";
 
-/** Cabecera del Figma: wordmark `Synth VJ` centrado y una acción opcional a la derecha. */
+// cabecera del Figma: wordmark Synth VJ centrado y una acción opcional a la derecha
 export function AppHeader({ right }: { right?: ReactNode }) {
   return (
     <View style={styles.root}>

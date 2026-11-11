@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text } from "react-native";
 import { selectFeedback } from "../../platform/haptics";
 import { colors, radius, type } from "../tokens";
 
-/** Chip en forma de pastilla; seleccionado = invertido (blanco con texto negro). */
+// chip en forma de pastilla; seleccionado = invertido (blanco con texto negro)
 export function Pill({
   label,
   selected = false,
@@ -20,7 +20,7 @@ export function Pill({
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
-      // 30 pt visibles + 7 arriba y abajo = 44 pt de zona táctil (NFR-13).
+      // 30 pt visibles + 7 arriba y abajo = 44 pt de zona táctil
       hitSlop={{ top: 7, bottom: 7 }}
       onPress={() => {
         selectFeedback();

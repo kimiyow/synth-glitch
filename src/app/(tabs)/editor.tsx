@@ -48,10 +48,8 @@ export default function EditorScreen() {
   return <ProjectView project={project} />;
 }
 
-/**
- * CAM-05: importar foto o video; las importaciones no se recortan (aspecto libre).
- * CAM-06: crear sin imagen, con un cuadro fijo del generador como base.
- */
+// importar foto o video; las importaciones no se recortan (aspecto libre). crear sin imagen, con un
+// cuadro fijo del generador como base
 function EmptyEditor() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -82,7 +80,7 @@ function EmptyEditor() {
     setBusy(false);
   };
 
-  // Una capa estable por generador para que las miniaturas no se redibujen en cada render.
+  // una capa estable por generador para que las miniaturas no se redibujen en cada render
   const thumbs = useMemo(() => Object.fromEntries(GENERATORS.map((g) => [g.id, generatorLayer(g.id)])), []);
 
   return (
@@ -98,7 +96,7 @@ function EmptyEditor() {
   );
 }
 
-/** EDT-05: opacidad de las barras mientras el dedo trabaja sobre la imagen. */
+// opacidad de las barras mientras el dedo trabaja sobre la imagen
 const CHROME_DIM = 0.3;
 
 const PANEL_TITLES: Record<PanelId, string> = {
@@ -117,8 +115,8 @@ function ProjectView({ project }: { project: Project }) {
   const canUndo = useScene((s) => s.history.past.length > 0);
   const canRedo = useScene((s) => s.history.future.length > 0);
   const { media } = project.scene;
-  // Clips (SP-05): el video se reproduce en bucle y sin sonido con sus capas encima; se pausa
-  // fuera de la pestaña. Su preview.jpg (primer cuadro limpio) sirve para las fichas de efectos.
+  // clips: el video se reproduce en bucle y sin sonido con sus capas encima; se pausa fuera de la
+  // pestaña. Su preview.jpg (primer cuadro limpio) sirve para las fichas de efectos
   const isClip = media.kind === "clip";
   const imageFile = isClip ? PREVIEW_FILE : media.file;
   const image = useImage(imageFile ? projectFs.uri(project.id, imageFile) : null);
@@ -136,8 +134,8 @@ function ProjectView({ project }: { project: Project }) {
   });
   const content = croppedSize(media.width, media.height, project.scene.crop.rect);
 
-  // SEN-02: el micrófono solo se activa si hay rutas de MIC (o su editor está abierto) y
-  // el editor está a la vista; se apaga al salir.
+  // el micrófono solo se activa si hay rutas de MIC (o su editor está abierto) y el editor está a
+  // la vista; se apaga al salir
   const [micVisible, setMicVisible] = useState(false);
   const [calibrating, setCalibrating] = useState(false);
   const hasMicRoute = project.scene.routes.some((r) => r.source === "mic" && r.amount !== 0);
@@ -153,7 +151,7 @@ function ProjectView({ project }: { project: Project }) {
     setNotice(samples.length > 0 ? "MICRÓFONO CALIBRADO" : "SIN LECTURAS · REVISA EL PERMISO");
   };
 
-  // EDT-01: PINCEL activo al abrir (en clips no aplica, BRU-09).
+  // PINCEL activo al abrir (en clips no aplica)
   const [activeTool, setActiveTool] = useState<"brush" | "effects">(isClip ? "effects" : "brush");
   const [overlays, setOverlays] = useState<OverlayStack>([]);
   const [notice, setNotice] = useState<string | null>(null);
@@ -183,7 +181,7 @@ function ProjectView({ project }: { project: Project }) {
     setOverlays((stack) => toggleOverlay(stack, id));
   };
 
-  // MOD-03: una ruta por eje desde el panel; DEDO quita la ruta.
+  // una ruta por eje desde el panel; DEDO quita la ruta
   const setRouteSource = (layerId: string, axis: "x" | "y", source: SourceId) =>
     sceneStore.getState().commit("ruta de modulación", (scene) => {
       const prev = scene.routes.find((r) => r.target.layerId === layerId && r.target.param === axis);
@@ -196,13 +194,13 @@ function ProjectView({ project }: { project: Project }) {
         target: { layerId, param: axis },
         amount: prev?.amount ?? 0.5,
         curve: "lin",
-        // El secuenciador fija el valor de cada paso; el resto se suma al gesto.
+        // el secuenciador fija el valor de cada paso; el resto se suma al gesto
         mode: source === "seq" ? "replace" : "add",
       });
     });
 
-  // Fichas: apagada → enciende y selecciona; encendida → selecciona. El panel abre el detalle
-  // y desde ahí se quita (estilo Picsart; sustituye a "tocar la seleccionada la apaga" de 4.2).
+  // fichas: apagada → enciende y selecciona; encendida → selecciona. El panel abre el detalle y
+  // desde ahí se quita (estilo Picsart)
   const onTile = (tile: TileRef) => {
     if (readOnly) return;
     const name = tile.kind === "effect" ? tile.effect : tile.generator;
@@ -212,7 +210,7 @@ function ProjectView({ project }: { project: Project }) {
     if (!layer) {
       if (!canAddLayer(layers)) return setNotice(`MÁXIMO ${MAX_LAYERS} CAPAS`);
       const id = `${name}-${Date.now().toString(36)}`;
-      // Sobre una foto, `screen` deja ver la imagen; `replace` la taparía por completo.
+      // sobre una foto, screen deja ver la imagen; replace la taparía por completo
       const next: Layer =
         tile.kind === "effect"
           ? { kind: "effect", id, effect: tile.effect, params: { ...EFFECT_BY_ID[tile.effect].defaults }, visible: true }
@@ -233,8 +231,8 @@ function ProjectView({ project }: { project: Project }) {
     }
   };
 
-  // Reloj del preview: el lienzo cuenta el tiempo desde que se monta (con la imagen lista);
-  // la exportación usa el mismo instante para coincidir con lo que se ve (NFR-09).
+  // reloj del preview: el lienzo cuenta el tiempo desde que se monta (con la imagen lista); la
+  // exportación usa el mismo instante para coincidir con lo que se ve
   const clockStart = useRef<number | null>(null);
   useEffect(() => {
     if (image) clockStart.current = Date.now();
@@ -279,7 +277,7 @@ function ProjectView({ project }: { project: Project }) {
     }
   };
 
-  // SEN-05: receta .synthfx por la hoja de compartir y el selector de documentos.
+  // receta .synthfx por la hoja de compartir y el selector de documentos
   const [fxBusy, setFxBusy] = useState(false);
   const importRecipe = async () => {
     setFxBusy(true);
@@ -324,8 +322,8 @@ function ProjectView({ project }: { project: Project }) {
       if (layer?.kind === "generator") layer.params = { ...GENERATOR_BY_ID[layer.generator].defaults };
     });
 
-  // Deslizador de parámetro: vista previa sin historial mientras se arrastra y un solo
-  // cambio deshacible al soltar (3.8: un movimiento completo de deslizador).
+  // deslizador de parámetro: vista previa sin historial mientras se arrastra y un solo cambio
+  // deshacible al soltar (un movimiento completo de deslizador)
   const paramStart = useRef<{ x: number; y: number } | null>(null);
   const paramPending = useRef<{ layerId: string; params: { x: number; y: number } } | null>(null);
   const paramTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -345,17 +343,17 @@ function ProjectView({ project }: { project: Project }) {
     else sceneStore.getState().adjust(recipe);
   };
 
-  // EDT-05: las barras se atenúan mientras el dedo trabaja sobre la imagen y reaparecen
-  // 400 ms después de soltar. El lienzo escribe `working` desde el hilo de UI.
+  // las barras se atenúan mientras el dedo trabaja sobre la imagen y reaparecen 400 ms después de
+  // soltar. El lienzo escribe working desde el hilo de UI
   const working = useSharedValue(0);
   const { regular } = useLayout();
   const chromeStyle = useAnimatedStyle(() => ({
     opacity: working.get() ? withTiming(CHROME_DIM, { duration: 150 }) : withDelay(400, withTiming(1, { duration: 200 })),
   }));
 
-  // Props del lienzo que comparten el editor y el modo escenario (mismo árbol, mismos valores).
+  // props del lienzo que comparten el editor y el modo escenario (mismo árbol, mismos valores)
   const canvasProps = {
-    // Solo se usa cuando la imagen ya cargó (ambos lienzos van dentro de `image && …`).
+    // solo se usa cuando la imagen ya cargó (ambos lienzos van dentro de image && …)
     image: isClip ? video.currentFrame : image!,
     mic: { level: mic.level, hits: mic.hits },
     rotation: isClip ? video.rotation : (0 as const),
@@ -380,7 +378,7 @@ function ProjectView({ project }: { project: Project }) {
     onResetXY: resetLayer,
   };
 
-  // Menú ⋯: modo escenario (3.12; el submodo se elige al entrar) y reabrir el onboarding (UI-02).
+  // menú ⋯: modo escenario (el submodo se elige al entrar) y reabrir el onboarding
   const openMore = () =>
     Alert.alert(
       "Más opciones",
@@ -518,7 +516,8 @@ function ProjectView({ project }: { project: Project }) {
                     paramStart.current = null;
                     if (!start || !layer || (start.x === layer.params.x && start.y === layer.params.y)) return;
                     const final = { ...layer.params };
-                    // Se vuelve al valor inicial sin historial y se confirma el final como un solo cambio.
+                    // se vuelve al valor inicial sin historial y se confirma el final como un solo
+                    // cambio
                     setParams(layerId, start, null);
                     setParams(layerId, final, "ajustar efecto");
                   }}
@@ -585,7 +584,8 @@ function ProjectView({ project }: { project: Project }) {
         {stage && image && (
           <StageView
             mode={stage}
-            // En escenario el gesto X/Y actúa sobre el efecto seleccionado aunque la herramienta sea el pincel.
+            // en escenario el gesto X/Y actúa sobre el efecto seleccionado aunque la herramienta
+            // sea el pincel
             canvas={{ ...canvasProps, xyLayerId: readOnly ? null : (selected?.id ?? null) }}
             onExit={() => setStage(null)}
           />
@@ -610,7 +610,8 @@ function PendingPanel({ title, showTestChange }: { title: string; showTestChange
   );
 }
 
-/** Solo desarrollo: cambia el efecto de la última capa (o añade una) para probar autoguardado y deshacer. */
+// solo desarrollo: cambia el efecto de la última capa (o añade una) para probar autoguardado y
+// deshacer
 function testChange() {
   sceneStore.getState().commit("cambio de prueba", (scene) => {
     const effect = EFFECTS[Math.floor(Math.random() * EFFECTS.length)];

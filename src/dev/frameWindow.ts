@@ -1,7 +1,5 @@
-/**
- * Acumulador de tiempos de cuadro para el HUD. Funciones puras y marcadas como
- * worklet para usarse en el hilo de UI y en el de JS.
- */
+// acumulador de tiempos de cuadro para el HUD. Funciones puras y marcadas como worklet para usarse
+// en el hilo de UI y en el de JS
 export type FrameWindow = {
   start: number;
   frames: number;
@@ -32,7 +30,7 @@ export function addFrame(window: FrameWindow, frameMs: number): FrameWindow {
   };
 }
 
-/** Devuelve el resumen si la ventana ya cubre `windowMs`; si no, `null`. */
+// devuelve el resumen si la ventana ya cubre windowMs; si no, null
 export function summarizeIfDue(
   window: FrameWindow,
   now: number,

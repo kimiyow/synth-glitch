@@ -6,17 +6,17 @@ export type CameraAspect = Exclude<CropAspect, "free">;
 export const CAMERA_ASPECTS: readonly CameraAspect[] = ["9:16", "1:1", "4:5"];
 
 export type AppSettings = {
-  /** Última relación elegida en la cámara (CAM-04: se recuerda). */
+  // última relación elegida en la cámara (se recuerda)
   cameraAspect: CameraAspect;
-  /** El aviso `MANTÉN PARA GRABAR` se muestra hasta grabar el primer clip. */
+  // el aviso MANTÉN PARA GRABAR se muestra hasta grabar el primer clip
   holdHintSeen: boolean;
-  /** UI-02: el onboarding se muestra en el primer arranque y se puede reabrir. */
+  // el onboarding se muestra en el primer arranque y se puede reabrir
   onboardingSeen: boolean;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false, onboardingSeen: false };
 
-/** Lee los ajustes guardados; cualquier campo inválido o ausente toma su valor por defecto. */
+// lee los ajustes guardados; cualquier campo inválido o ausente toma su valor por defecto
 export function parseSettings(raw: unknown): AppSettings {
   const o = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
   return {
@@ -35,7 +35,7 @@ export function createSettingsStore(io: { load: () => unknown; save: (settings: 
   try {
     initial = parseSettings(io.load());
   } catch {
-    // Archivo ausente o dañado: valores por defecto.
+    // archivo ausente o dañado: valores por defecto
   }
   return createStore<SettingsState>()((set, get) => ({
     ...initial,
@@ -45,7 +45,7 @@ export function createSettingsStore(io: { load: () => unknown; save: (settings: 
       try {
         io.save({ cameraAspect, holdHintSeen, onboardingSeen });
       } catch {
-        // No guardar un ajuste no debe romper la app; se reintenta en el próximo cambio.
+        // no guardar un ajuste no debe romper la app; se reintenta en el próximo cambio
       }
     },
   }));

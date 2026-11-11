@@ -2,7 +2,7 @@ import { Directory, File, Paths } from "expo-file-system";
 
 import type { ProjectFs } from "./projectFs";
 
-/** `documentDirectory/projects/` (SDD 3.7) sobre expo-file-system. */
+// documentDirectory/projects/ sobre expo-file-system
 export function createExpoProjectFs(rootName = "projects"): ProjectFs {
   const root = () => {
     const dir = new Directory(Paths.document, rootName);

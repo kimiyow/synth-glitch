@@ -4,7 +4,7 @@ import { Pill } from "./kit/Pill";
 
 export type Chip<T extends string | number> = { id: T; label: string; disabled?: boolean };
 
-/** Fila horizontal de pastillas; la seleccionada va invertida. */
+// fila horizontal de pastillas; la seleccionada va invertida
 export function ChipRow<T extends string | number>({
   chips,
   value,

@@ -1,13 +1,10 @@
-/**
- * Contratos de datos del SDD v2, sección 6.1. Son la fuente de verdad:
- * no se cambian sin actualizar el SDD. Este archivo no importa nada.
- */
+// tipos de datos que comparte toda la app. Este archivo no importa nada
 
 export type EffectId = "chromatic" | "scanlines" | "datamosh" | "vhs" | "pixelate" | "wave" | "crt";
 export type GeneratorId = "noise" | "bars" | "voronoi";
 export type StampEffect = "datamosh" | "chromatic" | "pixel" | "smear";
 
-/** x, y, size normalizados al ancho de la imagen. */
+// x, y, size normalizados al ancho de la imagen
 export type Stamp = {
   x: number;
   y: number;
@@ -18,7 +15,7 @@ export type Stamp = {
   seed: number;
 };
 export type Stroke = { id: string; stamps: Stamp[]; strokeSeed: number };
-/** Máximo 400 trazos. */
+// máximo 400 trazos
 export type PaintLayer = { strokes: Stroke[] };
 
 export type BlendMode = "replace" | "screen" | "multiply" | "difference";
@@ -37,7 +34,7 @@ export type GeneratorLayer = {
   params: { x: number; y: number };
   visible: boolean;
   blend: BlendMode;
-  /** Semilla propia de la capa (0-999), sumada a la del proyecto. Añadida en M8; opcional. */
+  // semilla propia de la capa (0-999), sumada a la del proyecto. Es opcional
   seed?: number;
 };
 export type Layer = EffectLayer | GeneratorLayer;
@@ -54,10 +51,8 @@ export type Route = {
   mode: "add" | "replace";
 };
 
-/**
- * Configuración de las fuentes (3.5). El SDD no fijaba su forma; definida en M7.
- * Una instancia de cada tipo por escena (sourceIndex = 0). Divisiones en pulsos (beats).
- */
+// configuración de las fuentes. Una instancia de cada tipo por escena (sourceIndex = 0). Divisiones
+// en pulsos (beats)
 export type LfoShape = "sine" | "triangle" | "square" | "saw" | "random";
 export type SeqDirection = "forward" | "backward" | "pingpong" | "random";
 export type SourceConfig = {
@@ -70,14 +65,14 @@ export type SourceConfig = {
   mic: { floor: number; ceiling: number; attack: number; release: number; hitThreshold: number };
 };
 
-/** Pares [x, y] intercalados. */
+// pares [x, y] intercalados
 export type GestureTrack = { durationMs: number; rateHz: 30; samples: number[] };
 
 export type CropAspect = "9:16" | "1:1" | "4:5" | "free";
 
 export type Scene = {
   media: { kind: "photo" | "clip" | "generative"; file?: string; width: number; height: number };
-  /** rect normalizado [x, y, ancho, alto]. */
+  // rect normalizado [x, y, ancho, alto]
   crop: { aspect: CropAspect; rect: [number, number, number, number] };
   paint: PaintLayer;
   layers: Layer[];
@@ -105,7 +100,7 @@ export type ScenePreset = {
   sources: SourceConfig;
 };
 
-/** Receta compartible: sin pintura ni SkSL propio (ADR-12). */
+// receta compartible: sin pintura ni SkSL propio
 export type SynthFx = {
   synthfx: 1;
   name: string;

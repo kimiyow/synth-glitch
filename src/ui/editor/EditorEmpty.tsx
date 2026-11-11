@@ -21,14 +21,14 @@ type Props = {
   message: string | null;
   onImport: () => void;
   onCamera: () => void;
-  /** CAM-06: crea un proyecto generativo con el aspecto y el generador elegidos. */
+  // crea un proyecto generativo con el aspecto y el generador elegidos
   onCreate: (aspect: GenerativeAspect, generator: GeneratorId) => void;
-  /** Miniatura de un generador (vive en editor/, que sí conoce Skia). */
+  // miniatura de un generador (vive en editor/, que sí conoce Skia)
   renderGeneratorThumb: (generator: GeneratorId) => ReactNode;
   onDismissMessage: () => void;
 };
 
-/** Editor sin proyecto: importar desde Fotos, ir a la cámara o crear sin imagen. */
+// editor sin proyecto: importar desde Fotos, ir a la cámara o crear sin imagen
 export function EditorEmpty(props: Props) {
   const { busy, message, onImport, onCamera, onDismissMessage } = props;
   const [creating, setCreating] = useState(false);

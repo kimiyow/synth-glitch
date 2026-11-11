@@ -22,10 +22,7 @@ const MODULES: Module[] = [
   { id: "random", icon: "dice", label: "Aleatorizar", milestone: "M7" },
 ];
 
-/**
- * Panel Presets (4.2), versión mínima de M8: importar y compartir la receta `.synthfx`
- * (SEN-05). Presets de escena, MUTAR y ALEATORIZAR llegan con M7.
- */
+// panel Presets, importar y compartir la receta .synthfx
 export function PresetsPanel({ readOnly, busy, onImport, onShare }: Props) {
   return (
     <View style={styles.root}>

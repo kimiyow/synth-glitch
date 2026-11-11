@@ -18,7 +18,7 @@ describe("loadProject", () => {
   });
 
   it("aplica las migraciones en orden desde una versión antigua", () => {
-    // Simula una app en versión 3 que lee un archivo de la versión 1.
+    // simula una app en versión 3 que lee un archivo de la versión 1
     const calls: number[] = [];
     const migrations: Migrations = {
       1: (raw) => (calls.push(1), { ...raw, title: raw.name }),

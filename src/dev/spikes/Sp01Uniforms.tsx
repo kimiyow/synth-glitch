@@ -21,10 +21,8 @@ import { SPIKE_SOURCE, SPIKE_WAVE } from "./spikeShaders";
 const LAYER_OPTIONS = [1, 3, 5, 8] as const;
 const EXPORT_SIZE = { width: 4000, height: 3000 }; // 12 MP
 
-/**
- * SP-01: uniforms desde valores compartidos a ≥ 55 FPS y drawAsImage a 12 MP.
- * Arrastra sobre el lienzo y mira el HUD (UI fps). Todo el camino es hilo de UI.
- */
+// uniforms desde valores compartidos a ≥ 55 FPS y drawAsImage a 12 MP. Arrastra sobre el lienzo y
+// mira el HUD (UI fps). Todo el camino es hilo de UI
 export function Sp01Uniforms() {
   const { width } = useWindowDimensions();
   const canvasW = width;
@@ -162,7 +160,7 @@ function LiveLayer({
   py: SharedValue<number>;
   children: ReactNode;
 }) {
-  // Cada capa recibe una fracción distinta para que no se anulen entre sí.
+  // cada capa recibe una fracción distinta para que no se anulen entre sí
   const scale = 1 / (index + 1);
   const uniforms = useDerivedValue(() => ({
     resolution,

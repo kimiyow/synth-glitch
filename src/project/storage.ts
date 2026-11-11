@@ -8,11 +8,9 @@ export const PREVIEW_FILE = "preview.jpg"; // lado largo 2048 px
 export const THUMB_FILE = "thumb.jpg"; // lado largo 400 px
 export const MAX_NAME_LENGTH = 40;
 
-/**
- * Escritura atómica (PRJ-06): se escribe el temporal completo y luego se mueve
- * sobre `project.json`. Aunque el `move` no fuera atómico, `readProject`
- * recupera desde el temporal, así que un corte deja la versión vieja o la nueva.
- */
+// escritura atómica: se escribe el temporal completo y luego se mueve sobre project.json. Aunque el
+// move no fuera atómico, readProject recupera desde el temporal, así que un corte deja la versión
+// vieja o la nueva
 export function saveProject(fs: ProjectFs, project: Project): void {
   fs.createDir(project.id);
   fs.remove(project.id, TEMP_FILE);
@@ -20,15 +18,15 @@ export function saveProject(fs: ProjectFs, project: Project): void {
   fs.move(project.id, TEMP_FILE, PROJECT_FILE);
 }
 
-/** Lee y migra un proyecto. Un temporal válido es siempre la escritura más reciente. */
+// lee y migra un proyecto. Un temporal válido es siempre la escritura más reciente
 export function readProject(fs: ProjectFs, id: string): LoadResult {
   const fromTemp = tryLoad(fs, id, TEMP_FILE);
   if (fromTemp?.ok) {
-    // Termina la escritura interrumpida.
+    // termina la escritura interrumpida
     try {
       fs.move(id, TEMP_FILE, PROJECT_FILE);
     } catch {
-      // Se reintentará en la próxima lectura o guardado.
+      // se reintentará en la próxima lectura o guardado
     }
     return fromTemp;
   }
@@ -56,19 +54,19 @@ export type ProjectSummary = {
   error: string | null;
 };
 
-/** Un borrador es una carpeta con medio pero sin `project.json`: aún no se ha guardado. */
+// un borrador es una carpeta con medio pero sin project.json: aún no se ha guardado
 export function isDraft(fs: ProjectFs, id: string): boolean {
   return !fs.exists(id, PROJECT_FILE) && !fs.exists(id, TEMP_FILE);
 }
 
-/** Borra los borradores que quedaron de una sesión anterior (la app se cerró sin guardar). */
+// borra los borradores que quedaron de una sesión anterior (la app se cerró sin guardar)
 export function removeDrafts(fs: ProjectFs): void {
   for (const id of fs.listIds()) {
     if (isDraft(fs, id)) fs.removeDir(id);
   }
 }
 
-/** Galería: se lee cada carpeta; no hay un índice aparte (3.7). Más reciente primero. Sin borradores. */
+// galería: se lee cada carpeta; no hay un índice aparte. Más reciente primero. Sin borradores
 export function listProjects(fs: ProjectFs): ProjectSummary[] {
   const summaries = fs.listIds().filter((id) => !isDraft(fs, id)).map((id): ProjectSummary => {
     const thumbUri = fs.exists(id, THUMB_FILE) ? fs.uri(id, THUMB_FILE) : null;
@@ -96,10 +94,8 @@ export type FilesToWrite = {
   thumb?: Uint8Array;
 };
 
-/**
- * Crea la carpeta de un proyecto nuevo con su medio e imágenes. Con `draft`, no escribe
- * `project.json`: el proyecto solo existe cuando se guarda (guardado manual).
- */
+// crea la carpeta de un proyecto nuevo con su medio e imágenes. Con draft, no escribe project.json:
+// el proyecto solo existe cuando se guarda (guardado manual)
 export function createProjectFiles(fs: ProjectFs, project: Project, files: FilesToWrite, opts?: { draft?: boolean }): void {
   fs.createDir(project.id);
   try {
@@ -143,7 +139,7 @@ export function renameProject(fs: ProjectFs, id: string, name: string, now: Date
   return { ok: true, project };
 }
 
-/** Copia la carpeta completa (medio e imágenes) con id nuevo y nombre "<nombre> COPIA". */
+// copia la carpeta completa (medio e imágenes) con id nuevo y nombre "<nombre> COPIA"
 export function duplicateProject(fs: ProjectFs, id: string, newId: string, now: Date): OpResult {
   const loaded = readProject(fs, id);
   if (!loaded.ok) return loaded;
@@ -165,7 +161,7 @@ export function deleteProject(fs: ProjectFs, id: string): void {
   fs.removeDir(id);
 }
 
-/** Id corto, ordenable por fecha y sin colisiones prácticas. */
+// id corto, ordenable por fecha y sin colisiones prácticas
 export function newProjectId(now: Date, random: () => number = Math.random): string {
   return `${now.getTime().toString(36)}-${Math.floor(random() * 36 ** 6).toString(36).padStart(6, "0")}`;
 }

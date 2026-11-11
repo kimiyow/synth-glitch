@@ -40,10 +40,8 @@ const PAGES: Page[] = [
   },
 ];
 
-/**
- * Onboarding (UI-02): tres pantallas en el primer arranque, omisible y reabrible desde
- * el menú ⋯ del editor. Ilustraciones en blanco y negro con SF Symbols (4.4).
- */
+// onboarding: tres pantallas en el primer arranque, omisible y reabrible desde el menú ⋯ del
+// editor. Ilustraciones en blanco y negro con SF Symbols
 export function Onboarding({ onDone }: { onDone: () => void }) {
   const { width } = useWindowDimensions();
   const [page, setPage] = useState(0);

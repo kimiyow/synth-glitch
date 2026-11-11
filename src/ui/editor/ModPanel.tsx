@@ -26,20 +26,18 @@ type Props = {
   sources: SourceConfig;
   onSources: (next: SourceConfig) => void;
   onTempo: (bpm: number) => void;
-  /** Capa seleccionada en el panel Efectos; sin ella no hay rutas que editar. */
+  // capa seleccionada en el panel Efectos; sin ella no hay rutas que editar
   layer: { id: string; label: string } | null;
   routes: readonly Route[];
   onRouteSource: (layerId: string, axis: "x" | "y", source: SourceId) => void;
   onRouteAmount: (layerId: string, axis: "x" | "y", amount: number) => void;
   mic: MicView;
-  /** El editor de MIC está a la vista: el medidor necesita el micrófono encendido. */
+  // el editor de MIC está a la vista: el medidor necesita el micrófono encendido
   onMicVisible: (visible: boolean) => void;
 };
 
-/**
- * Panel MOD: una vista a la vez. RUTAS elige qué fuente mueve cada eje de la capa
- * seleccionada (MOD-03), un eje a la vez; FUENTES ajusta LFO, ADSR, S&H, SEQ y tempo.
- */
+// panel MOD: una vista a la vez. RUTAS elige qué fuente mueve cada eje de la capa seleccionada, un
+// eje a la vez; FUENTES ajusta LFO, ADSR, S&H, SEQ y tempo
 export function ModPanel({ sources, onSources, onTempo, layer, routes, onRouteSource, onRouteAmount, mic, onMicVisible }: Props) {
   const [view, setView] = useState<View_>("routes");
   const [axis, setAxis] = useState<"x" | "y">("x");

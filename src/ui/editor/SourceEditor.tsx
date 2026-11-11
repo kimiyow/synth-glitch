@@ -11,7 +11,7 @@ import { colors, type } from "../tokens";
 
 export type ModSourceId = "lfo" | "adsr" | "sh" | "seq" | "tempo" | "mic";
 
-/** Estado del micrófono para su editor (lo da el adaptador de plataforma). */
+// estado del micrófono para su editor (lo da el adaptador de plataforma)
 export type MicView = {
   state: "off" | "starting" | "on" | "denied" | "error";
   db: number | null;
@@ -22,9 +22,9 @@ export type MicView = {
 type Props = {
   source: ModSourceId;
   sources: SourceConfig;
-  /** Cambio confirmado de una fuente (deshacible). */
+  // cambio confirmado de una fuente (deshacible)
   onChange: (next: SourceConfig) => void;
-  /** Tempo: no entra al historial (3.8). */
+  // tempo: no entra al historial
   onTempo: (bpm: number) => void;
   mic?: MicView;
 };
@@ -33,7 +33,7 @@ const DIVISION_CHIPS = DIVISIONS.map((d) => ({ id: d, label: d < 1 ? `1/${1 / d}
 const SHAPE_LABEL = { sine: "SENO", triangle: "TRIÁNGULO", square: "CUADRADA", saw: "SIERRA", random: "ALEATORIA" };
 const DIR_LABEL = { forward: "ADELANTE", backward: "ATRÁS", pingpong: "IDA Y VUELTA", random: "ALEATORIO" };
 
-/** Ajustes de una fuente de modulación (categoría MOD del panel Efectos). */
+// ajustes de una fuente de modulación (categoría MOD del panel Efectos)
 export function SourceEditor({ source, sources, onChange, onTempo, mic }: Props) {
   const set = <K extends keyof SourceConfig>(key: K, patch: Partial<SourceConfig[K]>) =>
     onChange({ ...sources, [key]: { ...sources[key], ...patch } });
@@ -100,7 +100,7 @@ export function SourceEditor({ source, sources, onChange, onTempo, mic }: Props)
         ) : (
           <CommitSlider
             label={(v) => `Velocidad ${v.toFixed(2)} Hz`}
-            // Escala logarítmica de 0.05 a 10 Hz.
+            // escala logarítmica de 0.05 a 10 Hz
             toValue={(u) => Math.round(0.05 * Math.pow(200, u) * 100) / 100}
             fromValue={(hz) => Math.log(hz / 0.05) / Math.log(200)}
             value={lfo.rateHz}
@@ -155,7 +155,7 @@ export function SourceEditor({ source, sources, onChange, onTempo, mic }: Props)
   );
 }
 
-/** Deslizador que se confirma al soltar. */
+// deslizador que se confirma al soltar
 function CommitSlider({
   label,
   value,
@@ -184,7 +184,7 @@ function CommitSlider({
   );
 }
 
-/** Pasos del secuenciador: toca o arrastra sobre cada barra para fijar su altura. */
+// pasos del secuenciador: toca o arrastra sobre cada barra para fijar su altura
 function StepBars({ steps, onCommit }: { steps: number[]; onCommit: (steps: number[]) => void }) {
   const [draft, setDraft] = useState<number[] | null>(null);
   const size = useRef({ w: 1, h: 1 });

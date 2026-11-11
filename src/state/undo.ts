@@ -2,7 +2,7 @@ import { applyPatches, enablePatches, produceWithPatches, type Draft, type Patch
 
 enablePatches();
 
-/** ADR-10: deshacer por parches de Immer, solo en memoria. */
+// deshacer por parches de Immer, solo en memoria
 export const MAX_UNDO = 100;
 
 export type UndoEntry = { label: string; patches: Patch[]; inverse: Patch[] };
@@ -10,7 +10,7 @@ export type UndoHistory = { past: UndoEntry[]; future: UndoEntry[] };
 
 export const EMPTY_HISTORY: UndoHistory = { past: [], future: [] };
 
-/** Aplica un cambio confirmado. Sin diferencias no hay entrada. Un cambio nuevo vacía rehacer. */
+// aplica un cambio confirmado. Sin diferencias no hay entrada. Un cambio nuevo vacía rehacer
 export function change<T>(
   base: T,
   history: UndoHistory,

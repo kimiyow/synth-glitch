@@ -2,10 +2,8 @@ import * as ImagePicker from "expo-image-picker";
 
 import { MAX_IMPORTED_CLIP_DURATION_MS, resolvePickedAsset, type MediaPickerResult } from "./resolvePickedAsset";
 
-/**
- * Selector de Fotos (CAM-05). `Compatible` hace que iOS entregue JPEG/H.264 en lugar
- * de HEIC/HEVC. El selector del sistema no necesita permiso de lectura de la galería.
- */
+// selector de Fotos. Compatible hace que iOS entregue JPEG/H.264 en lugar de HEIC/HEVC. El selector
+// del sistema no necesita permiso de lectura de la galería
 export async function pickMediaFromLibrary(): Promise<MediaPickerResult> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ["images", "videos"],

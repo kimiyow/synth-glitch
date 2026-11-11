@@ -1,7 +1,7 @@
 import type { EffectId, Layer, Route, SourceConfig } from "../domain/types";
 import { cycleHz } from "./sources";
 
-/** Parámetros que cambian la luminancia de una zona amplia (3.5). */
+// parámetros que cambian la luminancia de una zona amplia
 const LUMINANCE_PARAMS: Partial<Record<EffectId, readonly ("x" | "y")[]>> = {
   scanlines: ["x", "y"],
   crt: ["y"],
@@ -19,10 +19,8 @@ function sourceHz(route: Route, s: SourceConfig): number {
   return 0;
 }
 
-/**
- * Guardarraíl fotosensible no bloqueante: true si hay que mostrar el aviso. El generador
- * `bars` alterna blanco y negro a 4-24 Hz en toda la imagen (6.4), así que siempre avisa.
- */
+// guardarraíl fotosensible no bloqueante: true si hay que mostrar el aviso. El generador bars
+// alterna blanco y negro a 4-24 Hz en toda la imagen, así que siempre avisa
 export function hasFastLuminanceRoute(layers: readonly Layer[], routes: readonly Route[], sources: SourceConfig): boolean {
   if (layers.some((l) => l.kind === "generator" && l.generator === "bars" && l.visible)) return true;
   return routes.some((r) => {

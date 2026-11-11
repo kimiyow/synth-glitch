@@ -22,7 +22,7 @@ const RGBA_INFO = {
   alphaType: AlphaType.Unpremul,
 };
 
-/** SP-02: drawAsImage, readPixels, encodeToBytes y superficies fuera de pantalla. */
+// drawAsImage, readPixels, encodeToBytes y superficies fuera de pantalla
 export function Sp02SkiaApi() {
   const [results, setResults] = useState<CheckResult[] | null>(null);
   const [running, setRunning] = useState(false);

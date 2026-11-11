@@ -12,7 +12,7 @@ import { Sp05Video } from "./spikes/Sp05Video";
 import { Sp07Mic } from "./spikes/Sp07Mic";
 import { Sp11Storage } from "./spikes/Sp11Storage";
 
-/** Una prueba de testLab: spike, golden image o banco de rendimiento. */
+// una prueba de testLab: spike, golden image o banco de rendimiento
 export type LabTest = {
   id: string;
   title: string;

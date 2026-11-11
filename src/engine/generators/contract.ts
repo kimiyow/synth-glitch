@@ -1,14 +1,12 @@
 import { EFFECT_HEADER } from "../effects/contract";
 
-/**
- * Cabecera común de los generadores (SDD 6.2 y GEN-02). Además del contrato de los
- * efectos, cada generador recibe `blend` y mezcla su salida con la capa de abajo:
- * 0 = replace, 1 = screen, 2 = multiply, 3 = difference. En `replace` no lee `image`.
- */
+// cabecera común de los generadores. Además del contrato de los efectos, cada generador recibe
+// blend y mezcla su salida con la capa de abajo: 0 = replace, 1 = screen, 2 = multiply, 3 =
+// difference. En replace no lee image
 export const GENERATOR_HEADER = `${EFFECT_HEADER}
 uniform float blend;
-// Hash de Dave Hoskins: reduce la magnitud antes de mezclar, así no pierde precisión en
-// float de 32 bits con coordenadas grandes o con el tiempo (el del Anexo 6.5 sí la pierde).
+// hash de Dave Hoskins: reduce la magnitud antes de mezclar, así no pierde precisión en float de 32
+// bits con coordenadas grandes o con el tiempo (el hash anterior sí la pierde)
 float hash21(float2 p) {
   float3 p3 = fract(float3(p.xyx) * 0.1031);
   p3 += dot(p3, p3.yzx + 33.33);

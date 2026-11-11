@@ -1,6 +1,6 @@
 import { GENERATOR_HEADER } from "./contract";
 
-// 6.4 y 6.5. x: escala = mix(2, 40, x); y: velocidad de evolución = mix(0, 1.5, y).
+// x: escala = mix(2, 40, x); y: velocidad de evolución = mix(0, 1.5, y)
 export const NOISE_SKSL = `${GENERATOR_HEADER}
 float vnoise(float2 p) {
   float2 i = floor(p); float2 f = fract(p); f = f * f * (3.0 - 2.0 * f);

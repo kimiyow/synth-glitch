@@ -1,7 +1,7 @@
 import { GENERATOR_HEADER } from "./contract";
 
-// 6.4. x: celdas = mix(4, 40, x) a lo alto; y: velocidad de movimiento = mix(0, 2, y).
-// Distancia al punto más cercano (F1), normalizada por celda.
+// x: celdas = mix(4, 40, x) a lo alto; y: velocidad de movimiento = mix(0, 2, y). Distancia al
+// punto más cercano (F1), normalizada por celda
 export const VORONOI_SKSL = `${GENERATOR_HEADER}
 half4 main(float2 xy) {
   float2 p = xy / resolution.y * mix(4.0, 40.0, param.x);

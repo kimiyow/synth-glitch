@@ -30,7 +30,7 @@ describe(".synthfx", () => {
     expect(target.routes).toEqual(scene.routes);
     expect(target.sources).toEqual(scene.sources);
     expect(target.seed).toBe(42);
-    // La pintura no viaja en la receta.
+    // la pintura no viaja en la receta
     expect(target.paint.strokes.map((s) => s.id)).toEqual(["t"]);
   });
 

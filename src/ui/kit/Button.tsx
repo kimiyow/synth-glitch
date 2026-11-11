@@ -7,7 +7,8 @@ import { Icon } from "./Icon";
 
 type Variant = "primary" | "secondary" | "ghost";
 
-/** Botón modular: primario = blanco con texto negro; secundario = superficie gris; fantasma = solo texto. */
+// botón modular: primario = blanco con texto negro; secundario = superficie gris; fantasma = solo
+// texto
 export function Button({
   label,
   onPress,
@@ -21,7 +22,7 @@ export function Button({
   icon?: SFSymbol;
   variant?: Variant;
   disabled?: boolean;
-  /** Sobre superficie Papel (blanca) el primario se invierte a negro. */
+  // sobre superficie Papel (blanca) el primario se invierte a negro
   surface?: "ink" | "paper";
 }) {
   const primaryOnPaper = variant === "primary" && surface === "paper";

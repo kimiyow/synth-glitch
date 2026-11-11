@@ -4,7 +4,7 @@ import type { AppSettings } from "../state/settings";
 
 const NAME = "settings.json";
 
-/** `documentDirectory/settings.json`, con la misma escritura temporal + renombrado que los proyectos. */
+// documentDirectory/settings.json, con la misma escritura temporal + renombrado que los proyectos
 export const settingsFile = {
   load(): unknown {
     const file = new File(Paths.document, NAME);

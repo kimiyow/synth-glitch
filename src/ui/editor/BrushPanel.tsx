@@ -17,7 +17,7 @@ const CHIPS: { id: BrushTool; label: string }[] = [
 
 type Props = {
   tool: BrushTool;
-  /** 0-1 de cada deslizador. */
+  // 0-1 de cada deslizador
   size: number;
   spacing: number;
   strokes: number;
@@ -25,11 +25,11 @@ type Props = {
   onTool: (tool: BrushTool) => void;
   onSize: (v: number) => void;
   onSpacing: (v: number) => void;
-  /** Mientras se ajusta un deslizador se muestra el cuadrado de vista previa (BRU-02). */
+  // mientras se ajusta un deslizador se muestra el cuadrado de vista previa
   onPreview: (visible: boolean) => void;
 };
 
-/** Panel Pincel del Figma: Tamaño Pincel, Distancia mínima y chips de efecto. */
+// panel Pincel del Figma: Tamaño Pincel, Distancia mínima y chips de efecto
 export function BrushPanel(props: Props) {
   const { tool, size, spacing, strokes, maxStrokes, onTool, onSize, onSpacing, onPreview } = props;
   return (

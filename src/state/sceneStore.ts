@@ -5,43 +5,39 @@ import { normalizeName } from "../project/storage";
 import type { Project, Scene } from "../domain/types";
 import { change, EMPTY_HISTORY, redo, undo, type UndoHistory } from "./undo";
 
-/**
- * Guardado manual (decisión de producto, sustituye a PRJ-02): nada se escribe en disco
- * hasta que se toca "Guardar proyecto". `unsaved` = hay cambios sin guardar.
- */
+// guardado manual: nada se escribe en disco hasta que se toca "Guardar proyecto". unsaved = hay
+// cambios sin guardar
 export type SaveStatus = { state: "saved" } | { state: "unsaved" } | { state: "error"; error: string };
 
 export type SceneState = {
-  /** Proyecto activo (ADR-06: vive en el store, no en la ruta). */
+  // proyecto activo (vive en el store, no en la ruta)
   project: Project | null;
   readOnly: boolean;
-  /**
-   * Proyecto recién creado que aún no se guarda: su carpeta tiene el medio pero no
-   * `project.json`, no sale en la Galería y se borra si se sale sin guardar.
-   */
+  // proyecto recién creado que aún no se guarda: su carpeta tiene el medio pero no project.json, no
+  // sale en la Galería y se borra si se sale sin guardar
   draft: boolean;
   saveStatus: SaveStatus;
-  /** Deshacer y rehacer de la escena (3.8); no incluye el nombre del proyecto. */
+  // deshacer y rehacer de la escena; no incluye el nombre del proyecto
   history: UndoHistory;
-  /** Abre un proyecto y descarta el anterior sin guardar (quien llama ya preguntó). */
+  // abre un proyecto y descarta el anterior sin guardar (quien llama ya preguntó)
   open(project: Project, readOnly: boolean, opts?: { draft?: boolean }): void;
-  /** Cierra sin guardar; un borrador se elimina. */
+  // cierra sin guardar; un borrador se elimina
   close(): void;
-  /** Un cambio confirmado de la escena (3.8): entra al historial y queda sin guardar. */
+  // un cambio confirmado de la escena: entra al historial y queda sin guardar
   commit(label: string, recipe: (draft: Draft<Scene>) => void): void;
-  /** Cambio que no entra al historial (p. ej. el tempo, 3.8) pero también queda sin guardar. */
+  // cambio que no entra al historial (p. ej. el tempo) pero también queda sin guardar
   adjust(recipe: (draft: Draft<Scene>) => void): void;
   undo(): void;
   redo(): void;
-  /** Devuelve false si el nombre queda vacío o el proyecto es de solo lectura. */
+  // devuelve false si el nombre queda vacío o el proyecto es de solo lectura
   rename(name: string): boolean;
-  /** "Guardar proyecto": escribe `project.json`. Devuelve false si falló. */
+  // "guardar proyecto": escribe project.json. Devuelve false si falló
   save(): boolean;
-  /** El proyecto activo se eliminó: se descarta sin guardar. */
+  // el proyecto activo se eliminó: se descarta sin guardar
   discard(): void;
 };
 
-/** True si salir ahora perdería trabajo: cambios sin guardar o un borrador nunca guardado. */
+// true si salir ahora perdería trabajo: cambios sin guardar o un borrador nunca guardado
 export function hasUnsavedWork(state: Pick<SceneState, "project" | "readOnly" | "draft" | "saveStatus">): boolean {
   if (!state.project || state.readOnly) return false;
   return state.draft || state.saveStatus.state !== "saved";
@@ -49,7 +45,7 @@ export function hasUnsavedWork(state: Pick<SceneState, "project" | "readOnly" | 
 
 export type SceneStoreDeps = {
   save: (project: Project) => void;
-  /** Borra la carpeta de un borrador que se abandona sin guardar. */
+  // borra la carpeta de un borrador que se abandona sin guardar
   removeDraft?: (id: string) => void;
   now?: () => Date;
 };
@@ -60,7 +56,7 @@ export function createSceneStore(deps: SceneStoreDeps) {
   return createStore<SceneState>()((set, get) => {
     const update = (project: Project) => set({ project, saveStatus: { state: "unsaved" } });
 
-    /** Al dejar el proyecto activo sin guardar, un borrador no debe quedar en disco. */
+    // al dejar el proyecto activo sin guardar, un borrador no debe quedar en disco
     const dropDraft = () => {
       const { project, draft } = get();
       if (project && draft) deps.removeDraft?.(project.id);

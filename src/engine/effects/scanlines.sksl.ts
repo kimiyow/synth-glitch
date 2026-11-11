@@ -1,6 +1,6 @@
 import { EFFECT_HEADER } from "./contract";
 
-// Anexo A. x: líneas = mix(80, 400, x); y: ruido = y · 0.35.
+// x: líneas = mix(80, 400, x); y: ruido = y · 0.35
 export const SCANLINES_SKSL = `${EFFECT_HEADER}
 float hash(float2 p) { return fract(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453); }
 half4 main(float2 xy) {

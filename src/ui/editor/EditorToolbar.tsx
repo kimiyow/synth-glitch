@@ -17,16 +17,16 @@ const BUTTONS: { id: ToolButtonId; label: string; icon: SFSymbol }[] = [
 ];
 
 type Props = {
-  /** Herramienta activa (se conserva al cerrar el panel). */
+  // herramienta activa (se conserva al cerrar el panel)
   activeTool: "brush" | "effects";
   openPanel: string | null;
   disabled: Partial<Record<ToolButtonId, boolean>>;
   onPress: (id: ToolButtonId) => void;
-  /** iPad (4.4): riel vertical a la izquierda en lugar de la barra inferior. */
+  // iPad: riel vertical a la izquierda en lugar de la barra inferior
   rail?: boolean;
 };
 
-/** Barra de herramientas modular: sustituye a las pestañas mientras hay un proyecto abierto. */
+// barra de herramientas modular: sustituye a las pestañas mientras hay un proyecto abierto
 export function EditorToolbar({ activeTool, openPanel, disabled, onPress, rail = false }: Props) {
   const insets = useSafeAreaInsets();
   const { sideInset } = useLayout();

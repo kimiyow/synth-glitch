@@ -1,6 +1,6 @@
 import type { RouteCurve } from "../domain/types";
 
-/** Curva sobre 0..1 (3.5). */
+// curva sobre 0..1
 export function curve01(c: RouteCurve, u: number): number {
   "worklet";
   const x = Math.min(1, Math.max(0, u));
@@ -10,7 +10,7 @@ export function curve01(c: RouteCurve, u: number): number {
   return x;
 }
 
-/** Curva para fuentes bipolares (-1..1): se aplica a la magnitud y conserva el signo. */
+// curva para fuentes bipolares (-1..1): se aplica a la magnitud y conserva el signo
 export function curveSigned(c: RouteCurve, v: number): number {
   "worklet";
   return Math.sign(v) * curve01(c, Math.abs(v));

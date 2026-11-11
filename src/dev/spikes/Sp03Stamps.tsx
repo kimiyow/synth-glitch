@@ -33,10 +33,8 @@ function nowMs() {
   return performance.now();
 }
 
-/**
- * SP-03: dibujo incremental de sellos en una superficie fuera de pantalla desde el hilo de UI.
- * Mide FPS (HUD) y el costo medio por sello (NFR-04: ≤ 2 ms).
- */
+// dibujo incremental de sellos en una superficie fuera de pantalla desde el hilo de UI. Mide FPS
+// (HUD) y el costo medio por sello (≤ 2 ms)
 export function Sp03Stamps() {
   const { width } = useWindowDimensions();
   const { width: bw, height: bh } = TEST_IMAGE_SIZE;
@@ -105,7 +103,7 @@ export function Sp03Stamps() {
     for (const p of r.stamps) {
       const x0 = p.x - sizePx / 2;
       const y0 = p.y - sizePx / 2;
-      // Instantánea previa (copia al escribir) de la zona que el sello puede leer.
+      // instantánea previa (copia al escribir) de la zona que el sello puede leer
       const pad = sizePx;
       const bx = Math.max(0, Math.floor(x0 - pad));
       const by = Math.max(0, Math.floor(y0 - pad));

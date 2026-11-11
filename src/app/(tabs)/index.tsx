@@ -18,11 +18,11 @@ import { colors, geometry, type } from "../../ui/tokens";
 
 const MAX_CLIP_S = 5;
 const VIEWFINDER_MARGIN = 18;
-/** Alto mínimo para el obturador (72 pt), el texto y los márgenes bajo el visor. */
+// alto mínimo para el obturador (72 pt), el texto y los márgenes bajo el visor
 const CONTROLS_MIN_HEIGHT = 150;
 const MIN_CLIP_MS = 1000;
 const DOUBLE_TAP_MS = 300;
-/** Si la cámara no avisa que está lista tras cambiar a modo video, se graba igual. */
+// si la cámara no avisa que está lista tras cambiar a modo video, se graba igual
 const MODE_SWITCH_TIMEOUT_MS = 600;
 
 export default function CameraScreen() {
@@ -40,15 +40,15 @@ export default function CameraScreen() {
       />
     );
   }
-  // La cámara se desmonta al salir de la pestaña (3.10).
+  // la cámara se desmonta al salir de la pestaña
   return focused ? <CameraCapture /> : <View style={styles.root} />;
 }
 
 function CameraCapture() {
   const { width } = useWindowDimensions();
-  // Figma: visor con márgenes de 18 pt y esquinas redondeadas; se mantiene 3:4 (sensor).
-  // En iPad el ancho daría un visor más alto que la pantalla: se limita por el alto
-  // disponible para que el obturador y su texto siempre quepan debajo.
+  // figma: visor con márgenes de 18 pt y esquinas redondeadas; se mantiene 3:4 (sensor). En iPad el
+  // ancho daría un visor más alto que la pantalla: se limita por el alto disponible para que el
+  // obturador y su texto siempre quepan debajo
   const [areaH, setAreaH] = useState(0);
   const byWidth = width - VIEWFINDER_MARGIN * 2;
   const maxH = areaH > 0 ? areaH - CONTROLS_MIN_HEIGHT : Infinity;
@@ -68,7 +68,7 @@ function CameraCapture() {
   const progress = useSharedValue(0);
   const lastViewTap = useRef(0);
   const holding = useRef(false);
-  // Ref además del estado: al soltar justo al empezar, el estado aún no se ha renderizado.
+  // ref además del estado: al soltar justo al empezar, el estado aún no se ha renderizado
   const isRecording = useRef(false);
   const readyWaiter = useRef<(() => void) | null>(null);
 
@@ -141,7 +141,7 @@ function CameraCapture() {
       return;
     }
     if (!holdHintSeen) settingsStore.getState().update({ holdHintSeen: true });
-    // El clip ya se grabó; si el usuario cancela para no perder su proyecto, se descarta.
+    // el clip ya se grabó; si el usuario cancela para no perder su proyecto, se descarta
     if (!(await confirmLeave())) return;
     setBusy(true);
     finish(await createProjectFromClip(uri, aspect));

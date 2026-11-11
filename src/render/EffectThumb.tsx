@@ -5,10 +5,10 @@ import type { FrameInputs } from "../engine/renderGraph";
 import type { Layer } from "../domain/types";
 import { SceneRenderer } from "./SceneRenderer";
 
-/** Cuadro fijo: las miniaturas no se animan, así 10 lienzos pequeños no cuestan por cuadro. */
+// cuadro fijo: las miniaturas no se animan, así 10 lienzos pequeños no cuestan por cuadro
 const STILL: FrameInputs = { time: 0.6, params: [] };
 
-/** Miniatura de una ficha del panel Efectos: la imagen del proyecto con esa sola capa. */
+// miniatura de una ficha del panel Efectos: la imagen del proyecto con esa sola capa
 export const EffectThumb = memo(function EffectThumb({
   image,
   layer,

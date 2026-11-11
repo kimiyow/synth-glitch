@@ -1,6 +1,6 @@
 import { GENERATOR_HEADER } from "./contract";
 
-// 6.4 y 6.5, estilo Ikeda. x: densidad = mix(24, 400, x); y: renovación = mix(4, 24, y) ciclos/s.
+// estilo Ikeda. x: densidad = mix(24, 400, x); y: renovación = mix(4, 24, y) ciclos/s
 export const BARS_SKSL = `${GENERATOR_HEADER}
 half4 main(float2 xy) {
   float cols = mix(24.0, 400.0, param.x);

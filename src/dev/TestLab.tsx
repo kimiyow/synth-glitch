@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, geometry, type } from "../ui/tokens";
 import { LAB_TESTS } from "./labTests";
 
-/** Pantalla de pruebas en el dispositivo (solo desarrollo). */
+// pantalla de pruebas en el dispositivo (solo desarrollo)
 export function TestLab() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const active = LAB_TESTS.find((t) => t.id === activeId) ?? null;

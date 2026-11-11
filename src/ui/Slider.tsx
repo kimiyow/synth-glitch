@@ -6,22 +6,22 @@ import { colors, type } from "./tokens";
 
 type Props = {
   label: string;
-  /** 0-1 */
+  // 0-1
   value: number;
   onChange: (value: number) => void;
   onSlidingStart?: () => void;
   onSlidingEnd?: () => void;
-  /** Texto del valor a la derecha (por defecto, porcentaje). */
+  // texto del valor a la derecha (por defecto, porcentaje)
   valueText?: string;
 };
 
 const THUMB = 18;
 
-/** Deslizador moderno: pista fina, perilla blanca y valor a la derecha (responder de RN). */
+// deslizador moderno: pista fina, perilla blanca y valor a la derecha (responder de RN)
 export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, valueText }: Props) {
   const [width, setWidth] = useState(1);
   const [active, setActive] = useState(false);
-  // La perilla sigue al dedo con su propio estado; el padre puede tardar en actualizar `value`.
+  // la perilla sigue al dedo con su propio estado; el padre puede tardar en actualizar value
   const [drag, setDrag] = useState<number | null>(null);
   const lockSheet = useContext(SheetScrollLock);
   const update = (e: GestureResponderEvent) => {
@@ -48,7 +48,7 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
         accessibilityRole="adjustable"
         accessibilityLabel={label}
         accessibilityValue={{ min: 0, max: 100, now: Math.round(v * 100), text: valueText }}
-        // VoiceOver: deslizar arriba o abajo sube o baja un 5 % (un cambio completo cada vez).
+        // VoiceOver: deslizar arriba o abajo sube o baja un 5 % (un cambio completo cada vez)
         accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
         onAccessibilityAction={(e) => {
           const step = e.nativeEvent.actionName === "increment" ? 0.05 : e.nativeEvent.actionName === "decrement" ? -0.05 : 0;

@@ -1,7 +1,5 @@
-/**
- * Filtro One Euro (3.5): poco retraso al moverse y sin temblor en reposo.
- * Estado explícito para usarlo en worklets sin clases.
- */
+// filtro One Euro: poco retraso al moverse y sin temblor en reposo. Estado explícito para usarlo en
+// worklets sin clases
 export type OneEuroState = { x: number; dx: number; t: number } | null;
 
 const alpha = (cutoff: number, dt: number) => {

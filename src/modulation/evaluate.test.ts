@@ -54,7 +54,7 @@ describe("evaluate", () => {
 describe("fuentes", () => {
   it("LFO en rango y sincronizado al tempo", () => {
     const lfo = { ...S.lfo, sync: true, division: 1, shape: "saw" as const };
-    // 120 BPM, 1 pulso por ciclo → 2 Hz: a 0.25 s está a media rampa.
+    // 120 BPM, 1 pulso por ciclo → 2 Hz: a 0.25 s está a media rampa
     expect(lfoValue(lfo, 120, 0.25, 0)).toBeCloseTo(0, 6);
   });
 

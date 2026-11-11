@@ -7,7 +7,8 @@ import { colors, type } from "../../ui/tokens";
 const TAB_BAR_STYLE = { backgroundColor: colors.ink, borderTopColor: colors.inkLine };
 
 export default function TabsLayout() {
-  // Figma: con un proyecto abierto, la barra de herramientas del Editor ocupa el lugar de las pestañas.
+  // figma: con un proyecto abierto, la barra de herramientas del Editor ocupa el lugar de las
+  // pestañas
   const projectOpen = useScene((s) => s.project !== null);
   return (
     <Tabs

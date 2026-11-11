@@ -1,8 +1,6 @@
-/**
- * Resolución dinámica (STG-02, 3.4): `renderScale` de 0.5 a 1 según el tiempo de cuadro.
- * Baja un paso si el promedio supera el presupuesto durante 1.5 s; sube un paso si va
- * holgado durante 5 s (la histéresis evita que oscile). Pura: la llama un sondeo en JS.
- */
+// resolución dinámica: renderScale de 0.5 a 1 según el tiempo de cuadro. Baja un paso si el
+// promedio supera el presupuesto durante 1.5 s; sube un paso si va holgado durante 5 s (la
+// histéresis evita que oscile). Pura: la llama un sondeo en JS
 export const RENDER_SCALE_STEPS = [0.5, 0.75, 1] as const;
 export const SLOW_FRAME_MS = 18;
 export const FAST_FRAME_MS = 14;

@@ -28,10 +28,8 @@ function buildLayers(count: number, order: OrderKey): Layer[] {
   });
 }
 
-/**
- * SP-04: FPS con 1, 2, 3, 5 y 8 capas reales (para calibrar el umbral de costo)
- * y comprobación de que exportar da lo mismo que el preview (principio 1).
- */
+// FPS con 1, 2, 3, 5 y 8 capas reales (para calibrar el umbral de costo) y comprobación de que
+// exportar da lo mismo que el preview
 export function StackBench() {
   const image = useTestImage();
   const { width } = useWindowDimensions();

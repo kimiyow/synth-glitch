@@ -17,7 +17,7 @@ const GAP = 8;
 
 type LabItem = { id: string; label: string; defaults: { x: number; y: number }; layers: Layer[] };
 
-/** Los 7 efectos y los 3 generadores (M8, en `replace`), cada uno solo y con sus valores por defecto. */
+// los 7 efectos y los 3 generadores (en replace), cada uno solo y con sus valores por defecto
 const ITEMS: LabItem[] = [
   ...EFFECTS.map((e): LabItem => ({
     id: e.id,
@@ -33,7 +33,7 @@ const ITEMS: LabItem[] = [
   })),
 ];
 
-/** M1 y M8: efectos y generadores con valores por defecto; toca uno para ajustar X/Y con el dedo. */
+// efectos y generadores con valores por defecto; toca uno para ajustar X/Y con el dedo
 export function EffectsLab() {
   const image = useTestImage();
   const [selected, setSelected] = useState<LabItem | null>(null);
@@ -76,7 +76,7 @@ function EffectDetail({ image, item, onBack }: { image: SkImage; item: LabItem; 
   const py = useSharedValue(defaults.y);
   const frame = useDerivedValue<FrameInputs>(() => ({ time: time.get(), params: [px.get(), py.get()] }));
 
-  // El texto X/Y se lee desde JS cada 250 ms; el hilo de UI no llama a JS (ver PerfHud).
+  // el texto X/Y se lee desde JS cada 250 ms; el hilo de UI no llama a JS (ver PerfHud)
   useEffect(() => {
     const id = setInterval(() => {
       const x = px.get();
@@ -86,7 +86,7 @@ function EffectDetail({ image, item, onBack }: { image: SkImage; item: LabItem; 
     return () => clearInterval(id);
   }, [px, py]);
 
-  // FX-04: 1 dedo ajusta X/Y (posición absoluta en el lienzo); doble toque reinicia.
+  // 1 dedo ajusta X/Y (posición absoluta en el lienzo); doble toque reinicia
   const pan = Gesture.Pan()
     .maxPointers(1)
     .onBegin((e) => {

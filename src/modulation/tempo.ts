@@ -1,6 +1,6 @@
 import { MAX_BPM, MIN_BPM } from "./sources";
 
-/** Fase del pulso 0..1 (fuente `tempo`). */
+// fase del pulso 0..1 (fuente tempo)
 export function beatPhase(bpm: number, t: number): number {
   "worklet";
   const b = (t * bpm) / 60;
@@ -9,10 +9,8 @@ export function beatPhase(bpm: number, t: number): number {
 
 const TAP_RESET_MS = 2000;
 
-/**
- * Tap tempo (MOD-02): promedia los últimos intervalos; una pausa de más de 2 s empieza
- * de nuevo. Devuelve los toques a conservar y el BPM (null hasta tener dos toques).
- */
+// tap tempo: promedia los últimos intervalos; una pausa de más de 2 s empieza de nuevo. Devuelve
+// los toques a conservar y el BPM (null hasta tener dos toques)
 export function tapTempo(taps: readonly number[], now: number): { taps: number[]; bpm: number | null } {
   const last = taps.at(-1);
   const kept = last !== undefined && now - last <= TAP_RESET_MS ? [...taps, now].slice(-5) : [now];

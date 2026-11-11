@@ -4,10 +4,8 @@ import { cropRectFor } from "../../engine/crop";
 import type { CameraAspect } from "../../state/settings";
 import { CornerMarks } from "../CornerMarks";
 
-/**
- * Máscara sobre el visor 3:4 (el sensor entrega 4:3): oscurece lo que queda fuera del
- * recorte elegido y marca sus esquinas. Usa el mismo cálculo que el proyecto.
- */
+// máscara sobre el visor 3:4 (el sensor entrega 4:3): oscurece lo que queda fuera del recorte
+// elegido y marca sus esquinas. Usa el mismo cálculo que el proyecto
 export function AspectMask({ width, height, aspect }: { width: number; height: number; aspect: CameraAspect }) {
   const [x, y, w, h] = cropRectFor(width, height, aspect);
   const box = { left: x * width, top: y * height, width: w * width, height: h * height };

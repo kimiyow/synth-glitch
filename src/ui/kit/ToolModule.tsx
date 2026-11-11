@@ -13,7 +13,7 @@ type Props = {
   onPress: () => void;
 };
 
-/** Módulo de herramienta (icono + etiqueta). Lo activo se invierte en una pastilla blanca. */
+// módulo de herramienta (icono + etiqueta). Lo activo se invierte en una pastilla blanca
 export function ToolModule({ icon, label, active, disabled = false, onPress }: Props) {
   return (
     <Pressable

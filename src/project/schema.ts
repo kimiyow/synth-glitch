@@ -13,9 +13,9 @@ import type {
   StampEffect,
 } from "../domain/types";
 
-/** Versión actual de `project.json` (SDD 3.7). */
+// versión actual de project.json
 export const SCHEMA_VERSION = 1;
-/** Límite de trazos por proyecto (3.6). */
+// límite de trazos por proyecto
 export const MAX_STROKES = 400;
 
 const EFFECT_IDS: readonly EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt"];
@@ -31,7 +31,7 @@ const MEDIA_KINDS = ["photo", "clip", "generative"] as const;
 
 const MONTHS = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
 
-/** Nombre por defecto (PRJ-01): fecha y hora local, p. ej. "3 NOV 14:32". */
+// nombre por defecto: fecha y hora local, p. ej. "3 NOV 14:32"
 export function defaultProjectName(date: Date): string {
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
@@ -67,7 +67,7 @@ export function createProject(args: { id: string; media: Scene["media"]; seed: n
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
-/** Error de validación del esquema; lo reutiliza `.synthfx`. */
+// error de validación del esquema; lo reutiliza .synthfx
 export class Invalid extends Error {}
 
 function fail(path: string, expected: string): never {
@@ -213,7 +213,7 @@ function scene(v: unknown, path: string): Scene {
   };
 }
 
-/** Valida un proyecto de la versión actual y devuelve una copia limpia (sin campos extra). */
+// valida un proyecto de la versión actual y devuelve una copia limpia (sin campos extra)
 export function validateProject(raw: unknown): ValidationResult<Project> {
   try {
     const o = obj(raw, "proyecto");

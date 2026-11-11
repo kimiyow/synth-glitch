@@ -3,13 +3,10 @@ import { MAX_LAYERS } from "../engine/layerCost";
 import type { Scene, SynthFx } from "../domain/types";
 import { Invalid, parseLayer, parseRoute, type ValidationResult } from "./schema";
 
-/**
- * `.synthfx` (SEN-05, ADR-12): receta declarativa de una escena (capas, rutas, fuentes y
- * semilla), sin pintura ni SkSL propio. Funciones puras: el archivo lo leen y escriben
- * los adaptadores de plataforma.
- */
+// synthfx: receta declarativa de una escena (capas, rutas, fuentes y semilla), sin pintura ni SkSL
+// propio. Funciones puras: el archivo lo leen y escriben los adaptadores de plataforma
 export const SYNTHFX_EXTENSION = "synthfx";
-/** NFR-12: un archivo mayor se rechaza antes de leerlo. */
+// un archivo mayor se rechaza antes de leerlo
 export const SYNTHFX_MAX_BYTES = 200 * 1024;
 
 export function createSynthFx(name: string, scene: Scene): SynthFx {
@@ -20,7 +17,7 @@ export function serializeSynthFx(fx: SynthFx): string {
   return JSON.stringify(fx, null, 2);
 }
 
-/** Nombre de archivo seguro a partir del nombre del proyecto. */
+// nombre de archivo seguro a partir del nombre del proyecto
 export function synthFxFileName(name: string): string {
   const base = name
     .normalize("NFD")
@@ -36,7 +33,7 @@ function byteLength(text: string): number {
   return new TextEncoder().encode(text).length;
 }
 
-/** Valida contra el esquema y los límites (NFR-12). Devuelve una copia limpia. */
+// valida contra el esquema y los límites. Devuelve una copia limpia
 export function parseSynthFx(text: string): ValidationResult<SynthFx> {
   if (byteLength(text) > SYNTHFX_MAX_BYTES) return { ok: false, error: "ARCHIVO DEMASIADO GRANDE · MÁXIMO 200 KB" };
   let raw: unknown;
@@ -68,7 +65,7 @@ export function parseSynthFx(text: string): ValidationResult<SynthFx> {
         name: o.name.slice(0, 40),
         layers,
         routes,
-        // Las fuentes se completan con valores por defecto y se recortan a sus rangos.
+        // las fuentes se completan con valores por defecto y se recortan a sus rangos
         sources: parseSources(o.sources),
         seed: Math.floor(Math.abs(o.seed)) % 2 ** 31,
       },
@@ -79,7 +76,7 @@ export function parseSynthFx(text: string): ValidationResult<SynthFx> {
   }
 }
 
-/** Aplica la receta a una escena: reemplaza capas, rutas, fuentes y semilla; conserva la pintura. */
+// aplica la receta a una escena: reemplaza capas, rutas, fuentes y semilla; conserva la pintura
 export function applySynthFx(scene: Scene, fx: SynthFx): void {
   scene.layers = fx.layers.map((l) => ({ ...l, params: { ...l.params } }));
   scene.routes = fx.routes.map((r) => ({ ...r, target: { ...r.target } }));

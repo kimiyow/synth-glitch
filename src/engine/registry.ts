@@ -12,18 +12,18 @@ import { VORONOI_SKSL } from "./generators/voronoi.sksl";
 
 export type EffectDef = {
   id: EffectId;
-  /** Texto de la ficha en el panel Efectos. */
+  // texto de la ficha en el panel Efectos
   label: string;
-  /** Valores por defecto de la tabla 6.3. */
+  // valores por defecto de los efectos
   defaults: { x: number; y: number };
-  /** Muestras de imagen por píxel (3.4), para layerCost. */
+  // muestras de imagen por píxel, para layerCost
   samples: number;
-  /** Qué controla cada eje (tabla 6.3), para los deslizadores del panel. */
+  // qué controla cada eje, para los deslizadores del panel
   axes: { x: string; y: string };
   sksl: string;
 };
 
-/** Orden de FX-01. */
+// orden de los efectos
 export const EFFECTS: readonly EffectDef[] = [
   { id: "chromatic", label: "CHROMATIC", defaults: { x: 0.3, y: 0.0 }, samples: 3, axes: { x: "Desplazamiento", y: "Ángulo" }, sksl: CHROMATIC_SKSL },
   { id: "scanlines", label: "SCANLINES", defaults: { x: 0.4, y: 0.2 }, samples: 1, axes: { x: "Líneas", y: "Ruido" }, sksl: SCANLINES_SKSL },
@@ -41,14 +41,14 @@ export const EFFECT_BY_ID: Readonly<Record<EffectId, EffectDef>> = Object.fromEn
 export type GeneratorDef = {
   id: GeneratorId;
   label: string;
-  /** El SDD no fija valores por defecto para los generadores (6.4); estos se eligieron en M8. */
+  // valores por defecto de los generadores
   defaults: { x: number; y: number };
-  /** Qué controla cada eje (tabla 6.4). */
+  // qué controla cada eje
   axes: { x: string; y: string };
   sksl: string;
 };
 
-/** Orden de GEN-01. */
+// orden de los generadores
 export const GENERATORS: readonly GeneratorDef[] = [
   { id: "noise", label: "NOISE", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Escala", y: "Velocidad" }, sksl: NOISE_SKSL },
   { id: "bars", label: "BARRAS", defaults: { x: 0.3, y: 0.2 }, axes: { x: "Densidad", y: "Velocidad" }, sksl: BARS_SKSL },
@@ -59,5 +59,5 @@ export const GENERATOR_BY_ID: Readonly<Record<GeneratorId, GeneratorDef>> = Obje
   GENERATORS.map((g) => [g.id, g]),
 ) as Record<GeneratorId, GeneratorDef>;
 
-/** Valor del uniform `blend` de los generadores (ver generators/contract.ts). */
+// valor del uniform blend de los generadores (ver generators/contract.ts)
 export const BLEND_INDEX: Readonly<Record<BlendMode, number>> = { replace: 0, screen: 1, multiply: 2, difference: 3 };

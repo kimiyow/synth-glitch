@@ -1,10 +1,7 @@
 import { EFFECT_HEADER } from "./contract";
 
-/**
- * Nuevo en M1 (SDD 6.3). x: curvatura de barril = x · 12 %;
- * y: intensidad de máscara de sombra y líneas. Viñeta suave fija.
- * 2 muestras por píxel (imagen + rojo desconvergido). Todo en fracciones.
- */
+// x: curvatura de barril = x · 12 %; y: intensidad de máscara de sombra y líneas. Viñeta suave
+// fija. 2 muestras por píxel (imagen + rojo desconvergido). Todo en fracciones
 export const CRT_SKSL = `${EFFECT_HEADER}
 half4 main(float2 xy) {
   float2 uv = xy / resolution;

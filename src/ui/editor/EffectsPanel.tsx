@@ -17,7 +17,7 @@ const CATEGORIES = [
 ] as const;
 type Category = (typeof CATEGORIES)[number]["id"];
 
-/** Ficha tocada: un efecto global o un generador (una capa de cada uno como máximo). */
+// ficha tocada: un efecto global o un generador (una capa de cada uno como máximo)
 export type TileRef = { kind: "effect"; effect: EffectId } | { kind: "generator"; generator: GeneratorId };
 
 const BLENDS: readonly Chip<BlendMode>[] = [
@@ -29,7 +29,8 @@ const BLENDS: readonly Chip<BlendMode>[] = [
 
 export const THUMB_SIZE = 64;
 
-/** Capa con valores por defecto, para la miniatura de una ficha apagada (una sola instancia por ficha). */
+// capa con valores por defecto, para la miniatura de una ficha apagada (una sola instancia por
+// ficha)
 const DEFAULT_LAYERS: Record<string, Layer> = Object.fromEntries([
   ...EFFECTS.map((e) => [e.id, { kind: "effect", id: e.id, effect: e.id, params: { ...e.defaults }, visible: true } satisfies Layer]),
   ...GENERATORS.map((g) => [
@@ -42,26 +43,24 @@ type Props = {
   layers: readonly Layer[];
   selectedLayerId: string | null;
   warning: string | null;
-  /** Dibuja la miniatura de una capa (vive en editor/, que sí conoce Skia). */
+  // dibuja la miniatura de una capa (vive en editor/, que sí conoce Skia)
   renderThumb: (layer: Layer) => ReactNode;
-  /** Enciende (si estaba apagada) y selecciona la capa de la ficha. */
+  // enciende (si estaba apagada) y selecciona la capa de la ficha
   onTile: (tile: TileRef) => void;
   onRemove: (layerId: string) => void;
   onReset: (layerId: string) => void;
   onBlend: (layerId: string, blend: BlendMode) => void;
   onSeed: (layerId: string) => void;
-  /** Deslizador: inicio, cada movimiento (vista previa) y fin (un cambio deshacible, 3.8). */
+  // deslizador: inicio, cada movimiento (vista previa) y fin (un cambio deshacible)
   onParamStart: (layerId: string) => void;
   onParam: (layerId: string, axis: "x" | "y", value: number) => void;
   onParamEnd: (layerId: string) => void;
   onModulate: () => void;
 };
 
-/**
- * Panel Efectos al estilo Picsart: una tira de miniaturas con el efecto aplicado a la
- * imagen; tocar una abre ese efecto con sus parámetros con nombre (tablas 6.3 y 6.4),
- * modo de mezcla y semilla para generadores (GEN-02). El gesto X/Y sobre la imagen sigue activo.
- */
+// panel Efectos al estilo Picsart: una tira de miniaturas con el efecto aplicado a la imagen; tocar
+// una abre ese efecto con sus parámetros con nombre, modo de mezcla y semilla para generadores. El
+// gesto X/Y sobre la imagen sigue activo
 export function EffectsPanel(props: Props) {
   const { layers, selectedLayerId, warning } = props;
   const [category, setCategory] = useState<Category>("image");

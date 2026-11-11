@@ -19,25 +19,23 @@ import { colors, type } from "../ui/tokens";
 import { ALL_ORIENTATIONS } from "../ui/useLayout";
 import { EditorCanvas } from "./EditorCanvas";
 
-/** 3.12: interactivo = el gesto X/Y del efecto seleccionado sigue activo; bloqueado = se ignora todo. */
+// interactivo = el gesto X/Y del efecto seleccionado sigue activo; bloqueado = se ignora todo
 export type StageMode = "interactive" | "locked";
 
-/** Mantener pulsado este tiempo el punto de salida. */
+// mantener pulsado este tiempo el punto de salida
 export const STAGE_EXIT_HOLD_MS = 2000;
 const EXIT_SIZE = 64;
-/** Límites del doble toque con dos dedos (blackout): movimiento máximo y tiempo por toque. */
+// límites del doble toque con dos dedos (blackout): movimiento máximo y tiempo por toque
 const BLACKOUT_TAP_SLOP = 12;
 const BLACKOUT_TAP_MS = 300;
 const RING = 30;
 
 type CanvasProps = Omit<ComponentProps<typeof EditorCanvas>, "brush" | "extraGesture" | "onCommitStroke" | "showSizePreview">;
 
-/**
- * Modo escenario (STG-01, 3.12): el lienzo a pantalla completa, sin barras ni paneles ni
- * barra de estado; pantalla encendida y brillo al máximo (se restaura al salir). Para salir
- * se mantiene 2 s el punto de la esquina superior izquierda; doble toque con dos dedos
- * alterna el blackout (la salida se detiene sin cerrar el modo).
- */
+// modo escenario: el lienzo a pantalla completa, sin barras ni paneles ni barra de estado; pantalla
+// encendida y brillo al máximo (se restaura al salir). Para salir se mantiene 2 s el punto de la
+// esquina superior izquierda; doble toque con dos dedos alterna el blackout (la salida se detiene
+// sin cerrar el modo)
 export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: CanvasProps; onExit: () => void }) {
   useStageScreen();
   const insets = useSafeAreaInsets();
@@ -46,9 +44,8 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
   const scale = useRenderScale(!blackout);
   const { width, height } = useWindowDimensions();
 
-  // Un pellizco también apoya dos dedos: sin estos límites, dos pellizcos seguidos
-  // contaban como doble toque y la pantalla se ponía negra. Si los dedos se mueven o
-  // tardan, ya no es un toque.
+  // un pellizco también apoya dos dedos: sin estos límites, dos pellizcos seguidos contaban como
+  // doble toque y la pantalla se ponía negra. Si los dedos se mueven o tardan, ya no es un toque
   const blackoutTap = Gesture.Tap()
     .numberOfTaps(2)
     .minPointers(2)
@@ -60,7 +57,7 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
       if (success) toggleBlackout();
     });
 
-  // Anillo de salida: se llena mientras se mantiene pulsado; al soltar antes, se vacía.
+  // anillo de salida: se llena mientras se mantiene pulsado; al soltar antes, se vacía
   const progress = useSharedValue(0);
   const exitHold = Gesture.LongPress()
     .minDuration(STAGE_EXIT_HOLD_MS)
@@ -83,7 +80,7 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
     opacity: 0.35 + progress.get() * 0.65,
   }));
 
-  // Bloqueado (o en blackout): una capa encima recibe todo y solo reconoce el blackout.
+  // bloqueado (o en blackout): una capa encima recibe todo y solo reconoce el blackout
   const shield = mode === "locked" || blackout;
 
   return (
@@ -91,8 +88,8 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
       <GestureHandlerRootView style={styles.root}>
         <StatusBar hidden />
         {!blackout && (
-          // STG-02: el lienzo se dibuja a `scale` del tamaño y iOS lo amplía; así se pintan
-          // menos píxeles de verdad (escalar dentro de Skia no ahorraría nada).
+          // el lienzo se dibuja a scale del tamaño y iOS lo amplía; así se pintan menos píxeles de
+          // verdad (escalar dentro de Skia no ahorraría nada)
           <View
             style={[
               styles.scaled,
@@ -123,10 +120,8 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
   );
 }
 
-/**
- * Tiempo de cuadro medido en el hilo de UI (promedio exponencial) y sondeado desde JS cada
- * 250 ms para decidir la escala (sin llamar a JS desde el hilo de UI).
- */
+// tiempo de cuadro medido en el hilo de UI (promedio exponencial) y sondeado desde JS cada 250 ms
+// para decidir la escala (sin llamar a JS desde el hilo de UI)
 function useRenderScale(active: boolean): number {
   const avg = useSharedValue(16.7);
   useFrameCallback((info) => {

@@ -12,7 +12,7 @@ type Props = {
   onClose: () => void;
 };
 
-/** Menú `⋯` de la cámara: relación de aspecto (CAM-04). Tocar fuera lo cierra. */
+// menú ⋯ de la cámara: relación de aspecto. Tocar fuera lo cierra
 export function CameraMenu({ visible, aspect, onSelect, onClose }: Props) {
   const insets = useSafeAreaInsets();
   return (

@@ -1,10 +1,8 @@
 import { Skia, type SkImage } from "@shopify/react-native-skia";
 import { useState } from "react";
 
-/**
- * Imagen de prueba determinista, sin archivos: degradado, cuadrícula, círculos
- * concéntricos y barras de color (útiles para ver chromatic, pixel y crt).
- */
+// imagen de prueba determinista, sin archivos: degradado, cuadrícula, círculos concéntricos y
+// barras de color (útiles para ver chromatic, pixel y crt)
 const TEST_IMAGE_SKSL = `
 uniform float2 resolution;
 half4 main(float2 xy) {
@@ -22,7 +20,7 @@ half4 main(float2 xy) {
 }
 `;
 
-/** 3:4 vertical, como el lienzo del laboratorio. */
+// 3:4 vertical, como el lienzo del laboratorio
 export const TEST_IMAGE_SIZE = { width: 1080, height: 1440 };
 
 let cached: SkImage | null = null;

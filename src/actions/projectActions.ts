@@ -9,7 +9,7 @@ import {
 } from "../project/storage";
 import { projectFs, sceneStore } from "../state/activeScene";
 
-/** Casos de uso de la Galería (PRJ-03). Coordinan el store activo y los archivos. */
+// casos de uso de la Galería. Coordinan el store activo y los archivos
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -27,7 +27,7 @@ export function openProjectById(id: string): Result {
 export function renameProjectById(id: string, name: string): Result {
   const store = sceneStore.getState();
   if (store.project?.id === id) {
-    // El nombre se guarda en disco sin guardar los demás cambios sin confirmar.
+    // el nombre se guarda en disco sin guardar los demás cambios sin confirmar
     if (!store.rename(name)) return { ok: false, error: "NO SE PUDO RENOMBRAR" };
   }
   const result = renameProject(projectFs, id, name, new Date());

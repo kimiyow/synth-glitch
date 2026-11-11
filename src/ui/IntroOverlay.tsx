@@ -19,10 +19,8 @@ const FADE_MS = 350;
 const TOTAL_MS = GLITCH_MS + TAGLINE_MS + HOLD_MS + FADE_MS;
 const BARS = 4;
 
-/**
- * Animación de entrada (UI-04, S5): un glitch breve en blanco y negro que termina en el
- * wordmark y el lema del Figma. Con Reducir movimiento solo hay un fundido.
- */
+// animación de entrada: un glitch breve en blanco y negro que termina en el wordmark y el lema del
+// Figma. Con Reducir movimiento solo hay un fundido
 export function IntroOverlay({ onDone }: { onDone: () => void }) {
   const reduceMotion = useReducedMotion();
   const glitching = useSharedValue(reduceMotion ? 0 : 1);
@@ -33,7 +31,7 @@ export function IntroOverlay({ onDone }: { onDone: () => void }) {
   const tagline = useSharedValue(reduceMotion ? 1 : 0);
   const overlay = useSharedValue(1);
 
-  // Solo números en valores compartidos (ver PerfHud).
+  // solo números en valores compartidos (ver PerfHud)
   useFrameCallback(() => {
     if (glitching.get() === 0) return;
     jitterA.set((Math.random() - 0.5) * 18);
@@ -61,7 +59,7 @@ export function IntroOverlay({ onDone }: { onDone: () => void }) {
       clearTimeout(settle);
       clearTimeout(done);
     };
-    // Solo al montar.
+    // solo al montar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

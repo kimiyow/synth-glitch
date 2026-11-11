@@ -1,6 +1,6 @@
 import { Skia, type SkRuntimeEffect } from "@shopify/react-native-skia";
 
-/** Imagen de prueba procedural (cuadrícula + degradado), sin archivos. */
+// imagen de prueba procedural (cuadrícula + degradado), sin archivos
 const SOURCE_SKSL = `
 uniform float2 resolution;
 uniform float time;
@@ -13,7 +13,7 @@ half4 main(float2 xy) {
 }
 `;
 
-/** Efecto `wave` del Anexo A (1 muestra por píxel) para apilar capas. */
+// efecto wave (1 muestra por píxel) para apilar capas
 const WAVE_SKSL = `
 uniform shader image;
 uniform float2 resolution;

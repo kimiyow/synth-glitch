@@ -3,18 +3,18 @@ import { curve01, curveSigned } from "./curves";
 import { adsrValue, lfoValue, seqValue, shValue } from "./sources";
 import { beatPhase } from "./tempo";
 
-/** Entradas en vivo del cuadro (no se guardan en el proyecto, 3.7). */
+// entradas en vivo del cuadro (no se guardan en el proyecto)
 export type ModInputs = {
-  /** Valor base del gesto X/Y por capa (si el dedo está ajustando); si no, layer.params. */
+  // valor base del gesto X/Y por capa (si el dedo está ajustando); si no, layer.params
   touch: Record<string, { x: number; y: number }>;
-  /** Dedo apoyado / levantado (s) para el ADSR. */
+  // dedo apoyado / levantado (s) para el ADSR
   gateOnAt: number | null;
   gateOffAt: number | null;
-  /** Inclinación filtrada y calibrada, -1..1. */
+  // inclinación filtrada y calibrada, -1..1
   orientation: { x: number; y: number };
-  /** Nivel del micrófono 0..1 (M9). */
+  // nivel del micrófono 0..1
   mic: number;
-  /** Pista gestual activa: muestras [x, y] intercaladas, duración e inicio de reproducción (s). */
+  // pista gestual activa: muestras [x, y] intercaladas, duración e inicio de reproducción (s)
   track: { samples: number[]; durationMs: number; startAt: number } | null;
 };
 
@@ -27,13 +27,13 @@ export const NO_INPUTS: ModInputs = {
   track: null,
 };
 
-/** Fuentes bipolares: en modo suma mueven el parámetro hacia ambos lados. */
+// fuentes bipolares: en modo suma mueven el parámetro hacia ambos lados
 function isBipolar(source: Route["source"]): boolean {
   "worklet";
   return source === "lfo" || source === "sh" || source === "orientation";
 }
 
-/** Valor de una fuente en `t` (s). */
+// valor de una fuente en t (s)
 export function sourceValue(
   route: Route,
   sources: SourceConfig,
@@ -74,10 +74,8 @@ export function sourceValue(
   }
 }
 
-/**
- * Valor efectivo de un eje (3.5): clamp(base ⊕ Σ amount · curve(fuente)).
- * Con alguna ruta en modo reemplazo, la base se sustituye por la suma de esas rutas.
- */
+// valor efectivo de un eje: clamp(base ⊕ Σ amount · curve(fuente)). Con alguna ruta en modo
+// reemplazo, la base se sustituye por la suma de esas rutas
 export function evaluateAxis(
   layerId: string,
   param: "x" | "y",
@@ -107,10 +105,8 @@ export function evaluateAxis(
   return Math.min(1, Math.max(0, (hasReplace ? replace : b) + add));
 }
 
-/**
- * `evaluate(escena, t, entradas)` (MOD-04): parámetros efectivos intercalados [x, y] de las
- * capas dadas, en orden. Función pura y worklet: mismo t, entradas y semilla → mismo resultado.
- */
+// evaluate(escena, t, entradas): parámetros efectivos intercalados [x, y] de las capas dadas, en
+// orden. Función pura y worklet: mismo t, entradas y semilla → mismo resultado
 export function evaluate(
   layers: readonly Pick<Layer, "id" | "params">[],
   routes: readonly Route[],

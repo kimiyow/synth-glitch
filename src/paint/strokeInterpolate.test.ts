@@ -10,7 +10,7 @@ it("coloca un sello al apoyar y luego uno cada `spacing`, sin huecos aunque el d
     placed.push(...r.stamps);
     cursor = r.cursor;
   }
-  // 0..10 en x (11 sellos) y luego 4 hacia abajo desde 10.
+  // 0..10 en x (11 sellos) y luego 4 hacia abajo desde 10
   expect(placed.length).toBe(15);
   for (let i = 1; i < placed.length; i++) {
     const d = Math.hypot(placed[i].x - placed[i - 1].x, placed[i].y - placed[i - 1].y);

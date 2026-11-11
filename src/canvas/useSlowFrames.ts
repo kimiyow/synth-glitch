@@ -3,13 +3,11 @@ import { useFrameCallback, useSharedValue } from "react-native-reanimated";
 
 const POLL_MS = 500;
 const SLOW_FRAME_MS = 18;
-/** 3 lecturas de 500 ms = 1.5 s seguidos (3.4). */
+// 3 lecturas de 500 ms = 1.5 s seguidos
 const SLOW_POLLS = 3;
 
-/**
- * Monitor de tiempo de cuadro (3.4): true si el promedio supera 18 ms durante 1.5 s.
- * Igual que el HUD: el hilo de UI solo suma números y JS los lee.
- */
+// monitor de tiempo de cuadro: true si el promedio supera 18 ms durante 1.5 s. Igual que el HUD: el
+// hilo de UI solo suma números y JS los lee
 export function useSlowFrames(): boolean {
   const frames = useSharedValue(0);
   const totalMs = useSharedValue(0);

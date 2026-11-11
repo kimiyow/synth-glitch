@@ -14,10 +14,8 @@ import { useLabClock } from "../lab/useLabClock";
 const VHS: Layer[] = [{ kind: "effect", id: "vhs", effect: "vhs", params: { x: 0.3, y: 0.4 }, visible: true }];
 const ROTATIONS = [0, 90, 180, 270] as const;
 
-/**
- * SP-05: ¿`useVideo` de Skia reproduce un clip con shader en Expo Go? Mide el giro que
- * reporta el video y permite forzarlo para confirmar a ojo cuál endereza la imagen.
- */
+// ¿useVideo de Skia reproduce un clip con shader en Expo Go? Mide el giro que reporta el video y
+// permite forzarlo para confirmar a ojo cuál endereza la imagen
 export function Sp05Video() {
   const [uri, setUri] = useState<string | null>(null);
   const [override, setOverride] = useState<(typeof ROTATIONS)[number] | null>(null);

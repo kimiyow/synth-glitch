@@ -22,16 +22,14 @@ function extensionOf(uri: string, fallback: string) {
   return match ? match[1].toLowerCase() : fallback;
 }
 
-/**
- * Crea un proyecto (PRJ-01) con el medio copiado, recorte no destructivo (CAM-04),
- * vista previa y miniatura, y lo deja abierto en el store.
- */
+// crea un proyecto con el medio copiado, recorte no destructivo, vista previa y miniatura, y lo
+// deja abierto en el store
 async function createFromMedia(args: {
   kind: "photo" | "clip" | "generative";
-  /** El medio se copia desde un archivo (foto, clip) o se escribe desde bytes (generativo). */
+  // el medio se copia desde un archivo (foto, clip) o se escribe desde bytes (generativo)
   source: { sourceUri: string } | { bytes: Uint8Array };
   fileName: string;
-  /** Imagen con la que se generan preview y miniatura (la foto o el primer cuadro del clip). */
+  // imagen con la que se generan preview y miniatura (la foto o el primer cuadro del clip)
   poster: SkImage;
   aspect: CropAspect;
   seed?: number;
@@ -51,7 +49,7 @@ async function createFromMedia(args: {
   };
   const preview = await renderSceneJpeg(args.poster, project.scene, PREVIEW_LONG_SIDE);
   const thumb = await renderSceneJpeg(args.poster, project.scene, THUMB_LONG_SIDE, 80);
-  // Borrador: no sale en la Galería hasta que se toca "Guardar proyecto".
+  // borrador: no sale en la Galería hasta que se toca "Guardar proyecto"
   createProjectFiles(projectFs, project, { media: { name: args.fileName, ...args.source }, preview, thumb }, { draft: true });
   sceneStore.getState().open(project, false, { draft: true });
   return { ok: true, project };
@@ -88,14 +86,14 @@ export function createProjectFromClip(uri: string, aspect: CropAspect): Promise<
   });
 }
 
-/** Resolución de un proyecto generativo por aspecto (lado largo ≤ 1920 px). */
+// resolución de un proyecto generativo por aspecto (lado largo ≤ 1920 px)
 export const GENERATIVE_SIZE: Record<Exclude<CropAspect, "free">, { width: number; height: number }> = {
   "9:16": { width: 1080, height: 1920 },
   "1:1": { width: 1440, height: 1440 },
   "4:5": { width: 1440, height: 1800 },
 };
 
-/** CAM-06: proyecto sin imagen; la base es un cuadro fijo del generador elegido. */
+// proyecto sin imagen; la base es un cuadro fijo del generador elegido
 export function createGenerativeProject(aspect: Exclude<CropAspect, "free">, generator: GeneratorId): Promise<Result> {
   return guard(async () => {
     const { width, height } = GENERATIVE_SIZE[aspect];

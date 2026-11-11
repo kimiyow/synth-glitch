@@ -1,11 +1,8 @@
 import type { StampEffect } from "../../domain/types";
 
-/**
- * Shaders de sello (6.2, 6.5). Cada sello lee del buffer acumulado (`image`) y solo se
- * dibuja dentro de `rect` (px: x0, y0, x1, y1). `sp` son los parámetros del efecto.
- * Todo desplazamiento es fracción del lado del sello (ADR-14). BORRAR no usa shader:
- * dibuja el original dentro del cuadrado.
- */
+// shaders de sello. Cada sello lee del buffer acumulado (image) y solo se dibuja dentro de rect
+// (px: x0, y0, x1, y1). sp son los parámetros del efecto. Todo desplazamiento es fracción del lado
+// del sello. BORRAR no usa shader: dibuja el original dentro del cuadrado
 const HEADER = `
 uniform shader image;
 uniform float4 rect;

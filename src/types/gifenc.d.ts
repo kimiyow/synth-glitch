@@ -1,4 +1,4 @@
-/** Tipos mínimos de gifenc 1.0.3 (la librería no trae los suyos). */
+// tipos mínimos de gifenc 1.0.3 (la librería no trae los suyos)
 declare module "gifenc" {
   export type Format = "rgb565" | "rgb444" | "rgba4444";
   export type Palette = number[][];

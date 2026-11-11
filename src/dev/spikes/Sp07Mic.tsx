@@ -7,15 +7,13 @@ import { MIC_POLL_MS, useMicMeter } from "../../platform/useMicMeter";
 import { colors, geometry } from "../../ui/tokens";
 import { labStyles } from "../lab/labUi";
 
-/**
- * SP-07: frecuencia real de lectura de `expo-audio` con medición y latencia percibida.
- * Aplaude: el cuadro destella en cada golpe; si el destello llega tarde se nota a simple vista.
- */
+// frecuencia real de lectura de expo-audio con medición y latencia percibida. Aplaude: el cuadro
+// destella en cada golpe; si el destello llega tarde se nota a simple vista
 export function Sp07Mic() {
   const mic = useMicMeter(true, DEFAULT_SOURCES.mic);
   const flash = useSharedValue(0);
 
-  // El contador de golpes lo escribe JS; aquí se lee desde JS para el destello (solo laboratorio).
+  // el contador de golpes lo escribe JS; aquí se lee desde JS para el destello (solo laboratorio)
   useEffect(() => {
     let seen = mic.hits.get();
     const id = setInterval(() => {

@@ -13,7 +13,7 @@ type Props = {
   onMore: () => void;
 };
 
-/** Ficha de la Galería: tocar abre; mantener pulsado abre las acciones. */
+// ficha de la Galería: tocar abre; mantener pulsado abre las acciones
 export function ProjectCard({ project, width, active, onOpen, onMore }: Props) {
   const meta = [project.mediaKind ? MEDIA_KIND_LABEL[project.mediaKind] : null, shortDate(project.updatedAt)]
     .filter(Boolean)

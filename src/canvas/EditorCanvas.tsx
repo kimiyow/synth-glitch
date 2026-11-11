@@ -34,7 +34,7 @@ import { clampAxis, clampZoom, fitContain, screenToImage } from "./viewTransform
 
 export type BrushConfig = {
   tool: BrushTool;
-  /** Deslizadores 0-1: tamaño (1-40 % del ancho mostrado) y distancia mínima (1 px a 2 × tamaño). */
+  // deslizadores 0-1: tamaño (1-40 % del ancho mostrado) y distancia mínima (1 px a 2 × tamaño)
   size: number;
   spacing: number;
   sceneSeed: number;
@@ -44,35 +44,35 @@ export function brushScreenSize(size: number, displayedWidth: number) {
   return (MIN_SIZE + size * (MAX_SIZE - MIN_SIZE)) * displayedWidth;
 }
 
-/** Un golpe del micrófono mantiene el ADSR encendido este tiempo antes de soltarlo. */
+// un golpe del micrófono mantiene el ADSR encendido este tiempo antes de soltarlo
 const MIC_HIT_GATE_S = 0.12;
 
 type Props = {
-  /** Foto o base generativa; en clips, el cuadro actual del video (SP-05). */
+  // foto o base generativa; en clips, el cuadro actual del video
   image: SkImage | SharedValue<SkImage | null>;
-  /** EDT-05: 1 mientras hay un dedo sobre la imagen (lo escribe el hilo de UI). */
+  // 1 mientras hay un dedo sobre la imagen (lo escribe el hilo de UI)
   working?: SharedValue<number>;
-  /** Gesto adicional simultáneo (modo escenario: blackout con dos dedos). */
+  // gesto adicional simultáneo (modo escenario: blackout con dos dedos)
   extraGesture?: GestureType;
-  /** Micrófono (SEN-02): nivel 0..1 y contador de golpes, escritos desde JS. */
+  // micrófono: nivel 0..1 y contador de golpes, escritos desde JS
   mic?: { level: SharedValue<number>; hits: SharedValue<number> };
-  /** Giro de los cuadros del video y su tamaño sin rotar. */
+  // giro de los cuadros del video y su tamaño sin rotar
   rotation?: 0 | 90 | 180 | 270;
   sourceSize?: { width: number; height: number };
-  /** Tamaño de la región visible (recortada) en px de la imagen original. */
+  // tamaño de la región visible (recortada) en px de la imagen original
   contentWidth: number;
   contentHeight: number;
   layers: readonly Layer[];
-  /** Modulación (3.5): se evalúa en cada cuadro en el hilo de UI (MOD-04). */
+  // modulación: se evalúa en cada cuadro en el hilo de UI
   routes: readonly Route[];
   sources: SourceConfig;
   seed: number;
   crop?: CropRect;
-  /** Id de la capa que ajusta el gesto X/Y de 1 dedo (FX-04); null = desactivado. */
+  // id de la capa que ajusta el gesto X/Y de 1 dedo; null = desactivado
   xyLayerId?: string | null;
   onCommitXY?: (layerId: string, x: number, y: number) => void;
   onResetXY?: (layerId: string) => void;
-  /** Pincel (M6): solo fotos. brush = null: herramienta inactiva. */
+  // pincel: solo fotos. brush = null: herramienta inactiva
   paintable?: boolean;
   brush?: BrushConfig | null;
   strokes?: readonly Stroke[];
@@ -84,11 +84,8 @@ type Props = {
 
 const NO_STROKES: readonly Stroke[] = [];
 
-/**
- * Lienzo del Editor: la escena ajustada al visor, con zoom de 0.5× a 8× y desplazamiento
- * con dos dedos (EDT-02). Todo el gesto vive en el hilo de UI (principio 2).
- * Un dedo queda libre para la herramienta (M5, M6).
- */
+// lienzo del Editor: la escena ajustada al visor, con zoom de 0.5× a 8× y desplazamiento con dos
+// dedos. Todo el gesto vive en el hilo de UI. Un dedo queda libre para la herramienta
 export function EditorCanvas(props: Props) {
   const { routes, sources } = props;
   const { image, contentWidth, contentHeight, layers, seed, crop, xyLayerId = null, onCommitXY, onResetXY } = props;
@@ -105,10 +102,10 @@ export function EditorCanvas(props: Props) {
   const scale = useSharedValue(1);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
-  // Estado al empezar el pellizco.
+  // estado al empezar el pellizco
   const start = useSharedValue({ s: 1, tx: 0, ty: 0, fx: 0, fy: 0 });
 
-  // La pintura solo existe sobre una imagen fija (foto o generativo, ADR-13).
+  // la pintura solo existe sobre una imagen fija (foto o generativo)
   const still = isSharedValue(image) ? null : (image as SkImage);
   const paint = usePaintBuffer(paintable ? still : null, mediaWidth, mediaHeight, strokes);
   const cancelled = useSharedValue(false);
@@ -116,7 +113,7 @@ export function EditorCanvas(props: Props) {
 
   const pinch = Gesture.Pinch()
     .onStart((e) => {
-      // Un segundo dedo durante un trazo lo cancela (EDT-02, CA-11).
+      // un segundo dedo durante un trazo lo cancela
       cancelled.set(true);
       if (live.get().length > 0) paint.cancelStroke();
       start.set({ s: scale.get(), tx: tx.get(), ty: ty.get(), fx: e.focalX, fy: e.focalY });
@@ -124,7 +121,7 @@ export function EditorCanvas(props: Props) {
     .onUpdate((e) => {
       const s0 = start.get();
       const s = clampZoom(s0.s * e.scale);
-      // El punto bajo los dedos sigue a los dedos: zoom y desplazamiento a la vez.
+      // el punto bajo los dedos sigue a los dedos: zoom y desplazamiento a la vez
       const nx = e.focalX - (s0.fx - s0.tx) * (s / s0.s);
       const ny = e.focalY - (s0.fy - s0.ty) * (s / s0.s);
       scale.set(s);
@@ -132,8 +129,8 @@ export function EditorCanvas(props: Props) {
       ty.set(clampAxis(ny, s, base.y, base.height, view.height));
     });
 
-  // Parámetros efectivos por nodo de la cadena: el gesto los cambia en el hilo de UI y
-  // al soltar se confirman en el store; aquí se resincronizan con lo confirmado.
+  // parámetros efectivos por nodo de la cadena: el gesto los cambia en el hilo de UI y al soltar se
+  // confirman en el store; aquí se resincronizan con lo confirmado
   const chain = buildLayerChain(layers);
   const committed = chain.flatMap((n) => [n.base.x, n.base.y]);
   const committedKey = committed.join(",");
@@ -146,10 +143,10 @@ export function EditorCanvas(props: Props) {
   useFrameCallback((info) => {
     time.set(info.timeSinceFirstFrame / 1000);
   });
-  // ADSR: se dispara al apoyar cualquier dedo sobre la imagen y se suelta al levantarlo.
+  // ADSR: se dispara al apoyar cualquier dedo sobre la imagen y se suelta al levantarlo
   const gateOn = useSharedValue<number | null>(null);
   const gateOff = useSharedValue<number | null>(null);
-  // Micrófono: el nivel lo escribe JS; un golpe nuevo (contador) dispara el ADSR (3.5).
+  // micrófono: el nivel lo escribe JS; un golpe nuevo (contador) dispara el ADSR
   const noMic = useSharedValue(0);
   const micLevel = props.mic?.level ?? noMic;
   const micHits = props.mic?.hits ?? noMic;
@@ -194,7 +191,7 @@ export function EditorCanvas(props: Props) {
       working?.set(0);
     });
 
-  // FX-04: arrastre relativo de 1 dedo (derecha = +X, arriba = +Y), un ancho de lienzo = rango completo.
+  // arrastre relativo de 1 dedo (derecha = +X, arriba = +Y), un ancho de lienzo = rango completo
   const idx = xyLayerId ? chain.findIndex((n) => n.layerId === xyLayerId) : -1;
   const xyEnabled = idx >= 0;
   const xyStart = useSharedValue({ x: 0, y: 0 });
@@ -212,14 +209,14 @@ export function EditorCanvas(props: Props) {
       next[idx * 2 + 1] = Math.min(1, Math.max(0, s.y - e.translationY / view.height));
       liveParams.set(next);
     });
-  // Confirmación en el hilo de JS (runOnJS): así no se llama a JS desde un worklet (ver PerfHud).
+  // confirmación en el hilo de JS (runOnJS): así no se llama a JS desde un worklet (ver PerfHud)
   const xyCommit = Gesture.Pan()
     .maxPointers(1)
     .enabled(xyEnabled)
     .runOnJS(true)
     .onEnd((_e, success) => {
       const p = liveParams.get();
-      // Un segundo dedo cancela el ajuste (SP-10): vuelve a lo confirmado.
+      // un segundo dedo cancela el ajuste: vuelve a lo confirmado
       if (success && xyLayerId) onCommitXY?.(xyLayerId, p[idx * 2], p[idx * 2 + 1]);
       else liveParams.set(committed);
     });
@@ -230,7 +227,7 @@ export function EditorCanvas(props: Props) {
     .onEnd((_e, success) => {
       if (success && xyLayerId) onResetXY?.(xyLayerId);
     });
-  // Pincel (3.6): tamaño y distancia constantes en pantalla; se pasan a la imagen según el zoom (BRU-05).
+  // pincel: tamaño y distancia constantes en pantalla; se pasan a la imagen según el zoom
   const cropR = crop ?? FULL_CROP;
   const brushOn = paintable && brush !== null && strokes.length < MAX_STROKES && view.width > 0;
   const sizeScreen = brush ? brushScreenSize(brush.size, base.width) : 0;
@@ -274,8 +271,8 @@ export function EditorCanvas(props: Props) {
     paint.beginStroke();
     placeAt(px, py);
   };
-  // Al apoyar el dedo se coloca un sello, también con un panel abierto: los paneles solo
-  // se cierran con su propio botón (decisión de producto, sustituye a S8).
+  // al apoyar el dedo se coloca un sello, también con un panel abierto: los paneles solo se cierran
+  // con su propio botón
   const brushPan = Gesture.Pan()
     .maxPointers(1)
     .minDistance(0)
@@ -284,7 +281,7 @@ export function EditorCanvas(props: Props) {
     .onUpdate((e) => {
       if (!cancelled.get()) placeAt(e.x, e.y);
     });
-  // Confirmación del trazo en el hilo de JS: una llamada por gesto (3.2).
+  // confirmación del trazo en el hilo de JS: una llamada por gesto
   const brushCommit = Gesture.Pan()
     .maxPointers(1)
     .minDistance(0)
@@ -349,7 +346,7 @@ export function EditorCanvas(props: Props) {
         </GestureDetector>
       )}
       {showSizePreview && brush && (
-        // BRU-02: cuadrado del tamaño real del sello en pantalla.
+        // cuadrado del tamaño real del sello en pantalla
         <View pointerEvents="none" style={styles.previewWrap}>
           <View style={[styles.preview, { width: sizeScreen, height: sizeScreen }]} />
         </View>

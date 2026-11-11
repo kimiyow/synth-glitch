@@ -8,11 +8,9 @@ import { hasUnsavedWork } from "../state/sceneStore";
 
 type Result = { ok: true } | { ok: false; error: string };
 
-/**
- * "Guardar proyecto": escribe `project.json` y renueva la miniatura de la Galería con la
- * escena actual. En fotos y generativos también la vista previa; en clips `preview.jpg`
- * es el primer cuadro limpio (lo usan las fichas de efectos) y no se toca.
- */
+// "guardar proyecto": escribe project.json y renueva la miniatura de la Galería con la escena
+// actual. En fotos y generativos también la vista previa; en clips preview.jpg es el primer cuadro
+// limpio (lo usan las fichas de efectos) y no se toca
 export async function saveActiveProject(): Promise<Result> {
   const store = sceneStore.getState();
   if (!store.save()) {
@@ -32,16 +30,14 @@ export async function saveActiveProject(): Promise<Result> {
       image.dispose();
     }
   } catch (error) {
-    // El proyecto ya está guardado; solo la miniatura queda como estaba.
+    // el proyecto ya está guardado; solo la miniatura queda como estaba
     console.warn("No se pudo renovar la miniatura", error);
   }
   return { ok: true };
 }
 
-/**
- * Antes de dejar el proyecto activo (volver, abrir otro, capturar uno nuevo): si hay
- * trabajo sin guardar pregunta Guardar / Salir sin guardar / Cancelar. True = continuar.
- */
+// antes de dejar el proyecto activo (volver, abrir otro, capturar uno nuevo): si hay trabajo sin
+// guardar pregunta Guardar / Salir sin guardar / Cancelar. True = continuar
 export function confirmLeave(): Promise<boolean> {
   if (!hasUnsavedWork(sceneStore.getState())) return Promise.resolve(true);
   const { draft } = sceneStore.getState();

@@ -14,7 +14,7 @@ import { colors } from "../ui/tokens";
 export default function RootLayout() {
   const [intro, setIntro] = useState(true);
   const onboardingSeen = useSettings((s) => s.onboardingSeen);
-  // UI-03 / 4.4: el iPad admite todas las orientaciones; el iPhone se queda en vertical.
+  // el iPad admite todas las orientaciones; el iPhone se queda en vertical
   useEffect(() => {
     if (deviceType !== DeviceType.TABLET) void lockAsync(OrientationLock.PORTRAIT_UP).catch(() => {});
   }, []);

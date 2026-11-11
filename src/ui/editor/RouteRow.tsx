@@ -6,7 +6,7 @@ import { ChipRow, type Chip } from "../ChipRow";
 import { Slider } from "../Slider";
 import { colors, type } from "../tokens";
 
-/** Fuentes que se pueden asignar a un eje desde el panel (4.2). `touch` = DEDO (sin ruta). */
+// fuentes que se pueden asignar a un eje desde el panel. touch = DEDO (sin ruta)
 const SOURCES: readonly Chip<SourceId>[] = [
   { id: "touch", label: "DEDO" },
   { id: "lfo", label: "LFO" },
@@ -22,11 +22,11 @@ type Props = {
   source: SourceId;
   amount: number;
   onSource: (source: SourceId) => void;
-  /** Se confirma al soltar el deslizador (un movimiento completo = un cambio, 3.8). */
+  // se confirma al soltar el deslizador (un movimiento completo = un cambio)
   onAmount: (amount: number) => void;
 };
 
-/** Modulación de un eje: selector de fuente y cantidad de -1 a 1 (MOD-03). */
+// modulación de un eje: selector de fuente y cantidad de -1 a 1
 export function RouteRow({ axis, source, amount, onSource, onAmount }: Props) {
   const [draft, setDraft] = useState<number | null>(null);
   const shown = draft ?? amount;

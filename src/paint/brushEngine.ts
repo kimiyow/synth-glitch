@@ -11,7 +11,7 @@ import {
 import { STAMP_SKSL } from "../engine/stamps/stamps";
 import type { Stamp, StampEffect, Stroke } from "../domain/types";
 
-/** Resolución del buffer de pintura: lado largo de preview (3.4). */
+// resolución del buffer de pintura: lado largo de preview
 export const PAINT_LONG_SIDE = 2048;
 
 const STAMP_RUNTIME: Record<StampEffect, SkRuntimeEffect | null> = {
@@ -26,7 +26,7 @@ export function paintBufferSize(mediaW: number, mediaH: number, longSide = PAINT
   return { width: Math.round(mediaW * k), height: Math.round(mediaH * k) };
 }
 
-/** Dibuja el original escalado al buffer (estado sin pintura). */
+// dibuja el original escalado al buffer (estado sin pintura)
 export function drawOriginal(surface: SkSurface, original: SkImage) {
   "worklet";
   const canvas = surface.getCanvas();
@@ -38,11 +38,9 @@ export function drawOriginal(surface: SkSurface, original: SkImage) {
   );
 }
 
-/**
- * Un sello sobre el buffer (3.6). x, y, size normalizados al ancho de la imagen, así que el
- * resultado no depende de la resolución del buffer (ADR-14). El efecto lee una instantánea
- * previa de su zona (copia al escribir), de modo que los sellos se apilan.
- */
+// un sello sobre el buffer. x, y, size normalizados al ancho de la imagen, así que el resultado no
+// depende de la resolución del buffer. El efecto lee una instantánea previa de su zona (copia al
+// escribir), de modo que los sellos se apilan
 export function drawStamp(surface: SkSurface, original: SkImage, stamp: Stamp) {
   "worklet";
   const bw = surface.width();
@@ -55,7 +53,7 @@ export function drawStamp(surface: SkSurface, original: SkImage, stamp: Stamp) {
   const paint = Skia.Paint();
 
   if (stamp.erase) {
-    // BORRAR: restaura el original dentro del cuadrado.
+    // BORRAR: restaura el original dentro del cuadrado
     const sx = original.width() / bw;
     const sy = original.height() / bh;
     canvas.drawImageRect(original, Skia.XYWHRect(x0 * sx, y0 * sy, sizePx * sx, sizePx * sy), square, paint);
@@ -84,7 +82,7 @@ export function drawStamp(surface: SkSurface, original: SkImage, stamp: Stamp) {
   canvas.drawRect(square, paint);
 }
 
-/** Reproduce trazos sobre el buffer (deshacer, abrir y exportar). */
+// reproduce trazos sobre el buffer (deshacer, abrir y exportar)
 export function replayStrokes(surface: SkSurface, original: SkImage, strokes: readonly Stroke[], from = 0) {
   "worklet";
   for (let i = from; i < strokes.length; i++) {
@@ -93,7 +91,7 @@ export function replayStrokes(surface: SkSurface, original: SkImage, strokes: re
   surface.flush();
 }
 
-/** Imagen con la pintura aplicada, para miniaturas y exportación (hilo de JS). */
+// imagen con la pintura aplicada, para miniaturas y exportación (hilo de JS)
 export function renderPainted(original: SkImage, strokes: readonly Stroke[], longSide: number): SkImage {
   if (strokes.length === 0) return original;
   const size = paintBufferSize(original.width(), original.height(), longSide);

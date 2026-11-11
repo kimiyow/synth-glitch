@@ -11,12 +11,12 @@ import type { Project } from "../domain/types";
 
 export type ExportResult = { ok: true; uri: string; ms: number } | { ok: false; error: string };
 
-/** Nombre de archivo exportado a partir del nombre del proyecto. */
+// nombre de archivo exportado a partir del nombre del proyecto
 export function exportFileName(project: Project, extension: "jpg" | "gif"): string {
   return synthFxFileName(project.name).replace(/\.synthfx$/, `.${extension}`);
 }
 
-/** Original del proyecto decodificado: la foto, la base generativa o el primer cuadro del clip. */
+// original del proyecto decodificado: la foto, la base generativa o el primer cuadro del clip
 export async function loadOriginal(project: Project): Promise<SkImage> {
   const file = project.scene.media.file;
   if (!file) throw new Error("EL PROYECTO NO TIENE IMAGEN");
@@ -27,10 +27,8 @@ export async function loadOriginal(project: Project): Promise<SkImage> {
   return image;
 }
 
-/**
- * EXP-01: JPG a resolución original (≤ 4096 px de lado largo) con recorte, pintura
- * reproducida y capas con sus valores en el instante `t` (los mismos que el preview).
- */
+// JPG a resolución original (≤ 4096 px de lado largo) con recorte, pintura reproducida y capas con
+// sus valores en el instante t (los mismos que el preview)
 export async function exportJpeg(project: Project, t: number): Promise<ExportResult> {
   try {
     const start = Date.now();
@@ -50,16 +48,14 @@ export async function exportJpeg(project: Project, t: number): Promise<ExportRes
   }
 }
 
-/** Lado largo del GIF (3.11). */
+// lado largo del GIF
 export const GIF_LONG_SIDE = 480;
 
 export class ExportCancelled extends Error {}
 
-/**
- * EXP-02: GIF de fotos y generativos, 480 px, 12 fps, hasta 4 s. Las fuentes en vivo se
- * congelan y solo anima lo que depende del tiempo. Se codifica en JS cuadro a cuadro,
- * cediendo el hilo entre cuadros para que la interfaz siga respondiendo y se pueda cancelar.
- */
+// GIF de fotos y generativos, 480 px, 12 fps, hasta 4 s. Las fuentes en vivo se congelan y solo
+// anima lo que depende del tiempo. Se codifica en JS cuadro a cuadro, cediendo el hilo entre
+// cuadros para que la interfaz siga respondiendo y se pueda cancelar
 export async function exportGif(
   project: Project,
   opts: { onProgress: (p: number) => void; isCancelled: () => boolean },
@@ -76,7 +72,7 @@ export async function exportGif(
       for (let i = 0; i < frames; i++) {
         if (opts.isCancelled()) throw new ExportCancelled();
         const rgba = await renderer.render(sceneFrameAt(scene, i / GIF_FPS));
-        // rgb444 cuantiza más rápido que rgb565 y basta a 480 px.
+        // rgb444 cuantiza más rápido que rgb565 y basta a 480 px
         const palette = quantize(rgba, 256, { format: "rgb444" });
         const index = applyPalette(rgba, palette, "rgb444");
         gif.writeFrame(index, renderer.size.width, renderer.size.height, { palette, delay, repeat: 0 });

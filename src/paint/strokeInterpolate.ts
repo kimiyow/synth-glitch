@@ -1,14 +1,14 @@
 import type { StampEffect } from "../domain/types";
 
-/** Chip del panel Pincel: un efecto de sello o BORRAR (S9). */
+// chip del panel Pincel: un efecto de sello o BORRAR
 export type BrushTool = StampEffect | "erase";
 
-/** 3.6: límites del pincel. */
+// límites del pincel
 export const MAX_STROKES = 400;
 export const MIN_SIZE = 0.01; // 1 % del ancho
 export const MAX_SIZE = 0.4; // 40 % del ancho
 
-/** Parámetros por defecto de cada efecto de sello (tabla 3.6). */
+// parámetros por defecto de cada efecto de sello
 export const STAMP_DEFAULTS: Record<StampEffect, number[]> = {
   datamosh: [6, 0.35], // franjas, amplitud
   chromatic: [0.12], // amplitud
@@ -16,14 +16,12 @@ export const STAMP_DEFAULTS: Record<StampEffect, number[]> = {
   smear: [1.0], // longitud
 };
 
-/** Punto de colocación pendiente: el último sello y lo recorrido desde él. */
+// punto de colocación pendiente: el último sello y lo recorrido desde él
 export type StrokeCursor = { x: number; y: number } | null;
 
-/**
- * Coloca sellos a lo largo del recorrido (3.6): el primero al apoyar el dedo y después
- * uno cada `spacing`, interpolando entre muestras para no dejar huecos a velocidad alta.
- * Coordenadas en cualquier unidad, siempre que `spacing` use la misma.
- */
+// coloca sellos a lo largo del recorrido: el primero al apoyar el dedo y después uno cada spacing,
+// interpolando entre muestras para no dejar huecos a velocidad alta. Coordenadas en cualquier
+// unidad, siempre que spacing use la misma
 export function advanceStroke(
   cursor: StrokeCursor,
   x: number,
@@ -50,16 +48,14 @@ export function advanceStroke(
   return { stamps, cursor: { x: cx, y: cy } };
 }
 
-/** Tamaño constante en pantalla (BRU-05): px de pantalla → fracción del ancho de la imagen. */
+// tamaño constante en pantalla: px de pantalla → fracción del ancho de la imagen
 export function screenToImageFraction(screenPx: number, zoom: number, displayedImageWidth: number): number {
   "worklet";
   return screenPx / (zoom * displayedImageWidth);
 }
 
-/**
- * Semilla determinista de un sello (BRU-07): hash(semillaDeEscena, índiceDeTrazo, índiceDeSello).
- * Entero en [0, 10007) para que el shader no pierda precisión en float.
- */
+// semilla determinista de un sello: hash(semillaDeEscena, índiceDeTrazo, índiceDeSello). Entero en
+// [0, 10007) para que el shader no pierda precisión en float
 export function stampSeed(sceneSeed: number, strokeIndex: number, stampIndex: number): number {
   "worklet";
   let h = (sceneSeed | 0) ^ 0x9e3779b9;

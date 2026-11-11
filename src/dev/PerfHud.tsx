@@ -13,12 +13,9 @@ import {
   type FrameSummary,
 } from "./frameWindow";
 
-/**
- * HUD de rendimiento (desarrollo o EXPO_PUBLIC_DEV_TOOLS=1).
- * Hilo de UI: useFrameCallback solo suma números en valores compartidos (sin objetos,
- * sin llamadas a otros módulos ni a JS). Hilo de JS: los lee cada 500 ms.
- * Toque: plegar o desplegar. Mantener: abrir testLab.
- */
+// HUD de rendimiento (desarrollo o EXPO_PUBLIC_DEV_TOOLS=1). Hilo de UI: useFrameCallback solo suma
+// números en valores compartidos (sin objetos, sin llamadas a otros módulos ni a JS). Hilo de JS:
+// los lee cada 500 ms. Toque: plegar o desplegar. Mantener: abrir testLab
 export function PerfHud() {
   const insets = useSafeAreaInsets();
   const ui = useUiFrameSummary();
@@ -30,7 +27,7 @@ export function PerfHud() {
       accessibilityLabel="Monitor de rendimiento"
       onPress={() => setCollapsed((c) => !c)}
       onLongPress={() => router.push("/test-lab")}
-      // Abajo a la derecha, sobre las pestañas: arriba tapaba los botones de las cabeceras.
+      // abajo a la derecha, sobre las pestañas: arriba tapaba los botones de las cabeceras
       style={[styles.root, { bottom: insets.bottom + 56 }]}
       hitSlop={8}
     >
@@ -48,7 +45,7 @@ export function PerfHud() {
 
 function useUiFrameSummary() {
   const [summary, setSummary] = useState<FrameSummary | null>(null);
-  // Contadores que solo crecen; JS calcula la diferencia entre lecturas.
+  // contadores que solo crecen; JS calcula la diferencia entre lecturas
   const totalFrames = useSharedValue(0);
   const totalMs = useSharedValue(0);
   const maxMs = useSharedValue(0);

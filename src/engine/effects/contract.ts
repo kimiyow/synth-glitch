@@ -1,7 +1,5 @@
-/**
- * Cabecera común de los efectos globales (SDD 6.2). Todos declaran el contrato
- * completo aunque no usen cada uniform, para que el render graph los trate igual.
- */
+// cabecera común de los efectos globales. Todos declaran el contrato completo aunque no usen cada
+// uniform, para que el render graph los trate igual
 export const EFFECT_HEADER = `
 uniform shader image;
 uniform float2 resolution;

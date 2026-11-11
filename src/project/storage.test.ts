@@ -19,10 +19,10 @@ import {
 
 class Crash extends Error {}
 
-/** Sistema de archivos en memoria. `move` es NO atómico (borra y luego renombra). */
+// sistema de archivos en memoria. move es NO atómico (borra y luego renombra)
 class MemoryFs implements ProjectFs {
   dirs = new Map<string, Map<string, string | Uint8Array>>();
-  /** Si es un número, la operación con ese índice lanza Crash. */
+  // si es un número, la operación con ese índice lanza Crash
   crashAt: number | null = null;
   ops = 0;
 
@@ -44,7 +44,7 @@ class MemoryFs implements ProjectFs {
   readText = (id: string, name: string) => String(this.dir(id).get(name));
   writeText = (id: string, name: string, text: string) => {
     this.step();
-    // Una escritura cortada deja el archivo a medias.
+    // una escritura cortada deja el archivo a medias
     this.dir(id).set(name, text.slice(0, Math.floor(text.length / 2)));
     this.step();
     this.dir(id).set(name, text);

@@ -25,7 +25,7 @@ function randomLayers(): Layer[] {
   });
 }
 
-/** M2: crea proyectos con la imagen de prueba mientras no existe la cámara (M3). */
+// crea proyectos con la imagen de prueba mientras no existe la cámara
 async function createTestProject(): Promise<string> {
   const image = makeTestImage();
   if (!image) throw new Error("no se generó la imagen de prueba");

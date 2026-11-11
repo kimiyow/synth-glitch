@@ -13,11 +13,11 @@ import type { Layer, Stamp, StampEffect } from "../../domain/types";
 import { LabChip, labStyles } from "./labUi";
 import { makeTestImage } from "./testImage";
 
-/** 12 MP, como una foto de la cámara del iPhone. */
+// 12 MP, como una foto de la cámara del iPhone
 const BIG = { width: 4032, height: 3024 };
 export const ENDURANCE_CYCLES = 50;
 
-/** Imagen grande nueva en cada ciclo (la de prueba ampliada), para estresar la memoria. */
+// imagen grande nueva en cada ciclo (la de prueba ampliada), para estresar la memoria
 function makeBigImage(): SkImage {
   const small = makeTestImage();
   const surface = Skia.Surface.MakeOffscreen(BIG.width, BIG.height);
@@ -52,7 +52,7 @@ function randomStroke(seed: number): Stamp[] {
   });
 }
 
-/** Memoria del motor de JS (Hermes), si la expone; la memoria nativa no se puede leer desde Expo Go. */
+// memoria del motor de JS (Hermes), si la expone; la memoria nativa no se puede leer desde Expo Go
 function jsHeapMb(): number | null {
   const hermes = (globalThis as { HermesInternal?: { getInstrumentedStats?: () => Record<string, number> } }).HermesInternal;
   const stats = hermes?.getInstrumentedStats?.();
@@ -60,7 +60,7 @@ function jsHeapMb(): number | null {
   return typeof bytes === "number" ? bytes / 1024 / 1024 : null;
 }
 
-/** Un ciclo captura → editar → exportar (NFR-10). Devuelve los ms que tardó. */
+// un ciclo captura → editar → exportar. Devuelve los ms que tardó
 async function runCycle(i: number): Promise<number> {
   const start = Date.now();
   const image = makeBigImage();
@@ -72,14 +72,14 @@ async function runCycle(i: number): Promise<number> {
     scene: { ...base.scene, layers: randomLayers(), paint: { strokes: [{ id: `s${i}`, strokeSeed: seed, stamps: randomStroke(seed) }] } },
   };
   try {
-    // Captura: se escribe el medio como borrador y se abre, como al tomar una foto.
+    // captura: se escribe el medio como borrador y se abre, como al tomar una foto
     createProjectFiles(projectFs, project, { media: { name: "media.jpg", bytes: image.encodeToBytes(ImageFormat.JPEG, 92) } }, { draft: true });
     sceneStore.getState().open(project, false, { draft: true });
-    // Editar: un cambio confirmado (entra al historial).
+    // editar: un cambio confirmado (entra al historial)
     sceneStore.getState().commit("resistencia", (scene) => {
       scene.layers[0].params = { x: Math.random(), y: Math.random() };
     });
-    // Exportar: JPG a resolución completa a la caché (no a Fotos, para no llenar la fototeca).
+    // exportar: JPG a resolución completa a la caché (no a Fotos, para no llenar la fototeca)
     const scene = sceneStore.getState().project?.scene ?? project.scene;
     const bytes = await renderSceneJpeg(image, scene, exportLongSide(image, scene), 95, sceneFrameAt(scene, i * 0.1));
     const out = new File(Paths.cache, "resistencia.jpg");
@@ -89,13 +89,13 @@ async function runCycle(i: number): Promise<number> {
     out.delete();
   } finally {
     image.dispose();
-    // Salir sin guardar: el borrador se borra.
+    // salir sin guardar: el borrador se borra
     sceneStore.getState().close();
   }
   return Date.now() - start;
 }
 
-/** NFR-10 / CA-28: 50 ciclos de captura, edición y exportación sin cierres ni memoria creciente. */
+// 50 ciclos de captura, edición y exportación sin cierres ni memoria creciente
 export function EnduranceLab() {
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);

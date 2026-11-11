@@ -9,7 +9,7 @@ import { colors, radius, space, type } from "../tokens";
 
 export type ExportAction = "jpg" | "gif" | "project" | "gesture" | "share";
 
-/** Exportación en curso (GIF): progreso 0-1 y cancelación (EXP-02). */
+// exportación en curso (GIF): progreso 0-1 y cancelación
 export type ExportJob = { label: string; progress: number | null; onCancel?: () => void };
 
 type Props = {
@@ -17,9 +17,9 @@ type Props = {
   readOnly: boolean;
   status: SaveStatus;
   onRename: (name: string) => boolean;
-  /** Proyecto recién creado que aún no se guarda. */
+  // proyecto recién creado que aún no se guarda
   draft: boolean;
-  /** Motivo por el que una salida no está disponible (se muestra en el módulo), o null. */
+  // motivo por el que una salida no está disponible (se muestra en el módulo), o null
   unavailable: Partial<Record<ExportAction, string>>;
   job: ExportJob | null;
   onAction: (action: ExportAction) => void;
@@ -33,7 +33,7 @@ const ROWS: { id: ExportAction; icon: SFSymbol; label: string }[] = [
   { id: "gesture", icon: "hand.draw", label: "Guardar preset gestual" },
 ];
 
-/** Panel Exportar (3.11): nombre editable, estado del guardado manual y salidas en módulos. */
+// panel Exportar: nombre editable, estado del guardado manual y salidas en módulos
 export function ExportPanel({ name, readOnly, status, draft: isDraft, unavailable, job, onRename, onAction }: Props) {
   const [draft, setDraft] = useState(name);
   const statusText = readOnly

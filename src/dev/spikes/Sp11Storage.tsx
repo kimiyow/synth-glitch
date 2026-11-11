@@ -19,7 +19,7 @@ const STROKES = 400;
 const STAMPS_PER_STROKE = 30;
 const RUNS = 10;
 
-/** Proyecto sintético con 400 trazos (el máximo) para medir NFR-08. */
+// proyecto sintético con 400 trazos (el máximo) para medir el guardado
 function heavyProject(id: string): Project {
   const p = createProject({ id, media: { kind: "photo", file: "media.jpg", width: 4032, height: 3024 }, seed: 1, now: new Date() });
   const strokes: Stroke[] = Array.from({ length: STROKES }, (_, s) => ({
@@ -38,17 +38,15 @@ function heavyProject(id: string): Project {
   return { ...p, scene: { ...p.scene, paint: { strokes } } };
 }
 
-/**
- * SP-11: escritura atómica con renombrado en el sistema de archivos real,
- * recuperación tras un corte simulado y tiempo de guardado con 400 trazos (≤ 150 ms).
- */
+// escritura atómica con renombrado en el sistema de archivos real, recuperación tras un corte
+// simulado y tiempo de guardado con 400 trazos (≤ 150 ms)
 export function Sp11Storage() {
   const [lines, setLines] = useState<Line[] | null>(null);
   const [running, setRunning] = useState(false);
 
   const run = () => {
     setRunning(true);
-    // Deja pintar el estado "EJECUTANDO…" antes del trabajo síncrono.
+    // deja pintar el estado "EJECUTANDO…" antes del trabajo síncrono
     setTimeout(() => {
       setLines(runChecks());
       setRunning(false);
