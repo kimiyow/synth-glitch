@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { addModulation, MAX_MODS_PER_LAYER, rerollSeed, resetLayer, setBlend, toggleLayerVisible } from "../../actions/sceneEdits";
@@ -48,6 +48,13 @@ export function LayerInspector(props: Props) {
   const def = layerDef(layer);
   const mods = routes.filter((r) => r.target.layerId === layer.id);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // quitar pide un segundo toque en 3 s
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  useEffect(() => {
+    if (!confirmRemove) return;
+    const id = setTimeout(() => setConfirmRemove(false), 3000);
+    return () => clearTimeout(id);
+  }, [confirmRemove]);
 
   const modulated = (axis: "x" | "y") => mods.some((r) => (r.target.param === axis || r.source === "track") && r.amount !== 0);
 
@@ -65,25 +72,15 @@ export function LayerInspector(props: Props) {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <IconButton icon="chevron.left" label="Volver" size={34} onPress={props.onBack} />
-        <Text style={styles.title} numberOfLines={1}>
+        <IconButton icon="chevron.left" label="Volver" bare onPress={props.onBack} />
+        <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
           {def.label}
         </Text>
         <IconButton
           icon={layer.visible ? "eye" : "eye.slash"}
           label={layer.visible ? "Ocultar capa" : "Mostrar capa"}
-          size={34}
+          active={!layer.visible}
           onPress={() => toggleLayerVisible(layer.id)}
-        />
-        <IconButton icon="arrow.counterclockwise" label="Restablecer parámetros" size={34} onPress={() => resetLayer(layer.id)} />
-        <IconButton
-          icon="trash"
-          label="Quitar capa"
-          size={34}
-          onPress={() => {
-            props.onRemove(layer.id);
-            props.onBack();
-          }}
         />
       </View>
 
@@ -178,6 +175,29 @@ export function LayerInspector(props: Props) {
       )}
 
       {warning && <Text style={styles.warning}>{warning}</Text>}
+
+      {/* acciones sobre la capa, lejos de la cabecera: restablecer (reversible) a la izquierda y
+          quitar (destructiva, con segundo toque) a la derecha */}
+      <View style={styles.actions}>
+        <Pressable accessibilityRole="button" hitSlop={8} onPress={() => resetLayer(layer.id)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+          <Icon name="arrow.counterclockwise" size={13} color={colors.inkMute} />
+          <Text style={styles.actionText}>RESTABLECER PARÁMETROS</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityHint={confirmRemove ? "Toca otra vez para quitar la capa" : undefined}
+          hitSlop={8}
+          onPress={() => {
+            if (!confirmRemove) return setConfirmRemove(true);
+            props.onRemove(layer.id);
+            props.onBack();
+          }}
+          style={({ pressed }) => [styles.action, confirmRemove && styles.actionConfirm, pressed && styles.pressed]}
+        >
+          <Icon name="trash" size={13} color={confirmRemove ? colors.paperText : colors.inkMute} />
+          <Text style={[styles.actionText, confirmRemove && styles.actionTextConfirm]}>{confirmRemove ? "¿QUITAR? TOCA OTRA VEZ" : "QUITAR CAPA"}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -185,7 +205,12 @@ export function LayerInspector(props: Props) {
 const styles = StyleSheet.create({
   root: { gap: space.md },
   flex: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", gap: space.xs },
+  header: { flexDirection: "row", alignItems: "center", gap: space.sm, marginLeft: -space.sm },
+  actions: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space.sm, marginTop: space.xs },
+  action: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36, paddingHorizontal: space.sm, borderRadius: radius.pill },
+  actionConfirm: { backgroundColor: colors.paper },
+  actionText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
+  actionTextConfirm: { color: colors.paperText, fontWeight: "700" },
   title: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600", letterSpacing: 1, marginLeft: space.xs },
   section: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   count: { color: colors.inkMute, fontWeight: "400" },
