@@ -1,9 +1,4 @@
-import type { SFSymbol } from "expo-symbols";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-
-import { tapFeedback } from "../../platform/haptics";
-import { Icon } from "../kit/Icon";
-import { colors, radius, space, type } from "../tokens";
+import { ActionGrid, type GridAction } from "../kit/ActionGrid";
 
 type Props = {
   readOnly: boolean;
@@ -12,63 +7,26 @@ type Props = {
   onShare: () => void;
 };
 
-type Module = { id: string; icon: SFSymbol; label: string; milestone: string | null };
+type PresetAction = "import" | "share" | "save" | "mutate" | "random";
 
-const MODULES: Module[] = [
-  { id: "import", icon: "square.and.arrow.down", label: "Importar .synthfx", milestone: null },
-  { id: "share", icon: "square.and.arrow.up", label: "Compartir .synthfx", milestone: null },
-  { id: "save", icon: "square.stack.3d.up", label: "Guardar escena", milestone: "PRÓXIMAMENTE" },
-  { id: "mutate", icon: "wand.and.rays", label: "Mutar", milestone: "PRÓXIMAMENTE" },
-  { id: "random", icon: "dice", label: "Aleatorizar", milestone: "PRÓXIMAMENTE" },
-];
-
-// panel Presets, importar y compartir la receta .synthfx
+// panel Presets: importar y compartir la receta .synthfx (capas, modulación y semilla, sin la
+// pintura); guardar escena, mutar y aleatorizar llegan con el resto de M7
 export function PresetsPanel({ readOnly, busy, onImport, onShare }: Props) {
+  const actions: GridAction<PresetAction>[] = [
+    { id: "import", icon: "square.and.arrow.down", label: "Importar receta", reason: readOnly ? "SOLO LECTURA" : null },
+    { id: "share", icon: "square.and.arrow.up", label: "Compartir receta" },
+    { id: "save", icon: "square.stack.3d.up", label: "Guardar escena", reason: "PRONTO" },
+    { id: "mutate", icon: "wand.and.rays", label: "Mutar", reason: "PRONTO" },
+    { id: "random", icon: "dice", label: "Aleatorizar", reason: "PRONTO" },
+  ];
   return (
-    <View style={styles.root}>
-      <Text style={styles.hint}>Una receta guarda capas, modulación y semilla, sin la pintura.</Text>
-      <View style={styles.grid}>
-        {MODULES.map((m) => {
-          const off = m.milestone !== null || busy || (m.id === "import" && readOnly);
-          return (
-            <Pressable
-              key={m.id}
-              accessibilityRole="button"
-              accessibilityLabel={m.label}
-              accessibilityState={{ disabled: off }}
-              disabled={off}
-              onPress={() => {
-                tapFeedback();
-                if (m.id === "import") onImport();
-                if (m.id === "share") onShare();
-              }}
-              style={({ pressed }) => [styles.module, off && styles.off, pressed && styles.pressed]}
-            >
-              <Icon name={m.icon} size={22} />
-              <Text style={styles.moduleLabel}>{m.label}</Text>
-              {m.milestone && <Text style={styles.pending}>{m.milestone}</Text>}
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
+    <ActionGrid
+      actions={actions}
+      disabled={busy}
+      onPress={(id) => {
+        if (id === "import") onImport();
+        if (id === "share") onShare();
+      }}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  root: { gap: space.sm },
-  hint: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  module: {
-    width: "48.5%",
-    minHeight: 76,
-    padding: space.md,
-    gap: 6,
-    borderRadius: radius.md,
-    backgroundColor: colors.inkRaised,
-  },
-  off: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
-  moduleLabel: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1 },
-  pending: { position: "absolute", top: space.sm, right: space.sm, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro },
-});

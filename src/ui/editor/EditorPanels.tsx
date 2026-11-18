@@ -3,6 +3,7 @@ import type { ComponentProps } from "react";
 
 import { applyGesturePreset, ensureGestureRoute, removeGesturePreset, saveGesturePreset } from "../../actions/gestureLibrary";
 import { setSources, setTempo } from "../../actions/sceneEdits";
+import type { StageMode } from "../../canvas/StageView";
 import type { Layer, Project } from "../../domain/types";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { MAX_STROKES } from "../../paint/strokeInterpolate";
@@ -18,6 +19,7 @@ import { LayersPanel } from "./LayersPanel";
 import { PanelSheet } from "./PanelSheet";
 import type { PanelId } from "./panels";
 import { PresetsPanel } from "./PresetsPanel";
+import { StagePanel } from "./StagePanel";
 import type { MicView } from "./SourceEditor";
 import { useParamDrag } from "./useParamDrag";
 import type { useExportJob } from "./useExportJob";
@@ -37,8 +39,20 @@ type Props = {
   onNotice: (text: string) => void;
   // cierra el panel (✕)
   onClose: () => void;
+  // entra al modo escenario con el modo elegido
+  onStartStage: (mode: StageMode) => void;
   exports: ReturnType<typeof useExportJob>;
   onImportRecipe: () => void;
+};
+
+const PANEL_TITLE: Record<PanelId, string> = {
+  brush: "Pincel",
+  effects: "Efectos",
+  layers: "Capas",
+  gesture: "Gesto",
+  presets: "Presets",
+  export: "Exportar",
+  stage: "Escenario",
 };
 
 // el panel abierto del editor dentro de su hoja flotante. Efectos y Capas comparten el inspector de
@@ -72,7 +86,7 @@ export function EditorPanels(props: Props) {
   );
 
   return (
-    <PanelSheet key={panel} onClose={props.onClose}>
+    <PanelSheet key={panel} title={PANEL_TITLE[panel]} onClose={props.onClose}>
       {panel === "brush" ? (
         <BrushPanel {...props.brush} strokes={project.scene.paint.strokes.length} maxStrokes={MAX_STROKES} />
       ) : panel === "effects" ? (
@@ -124,6 +138,8 @@ export function EditorPanels(props: Props) {
             void exports.onExportAction(a);
           }}
         />
+      ) : panel === "stage" ? (
+        <StagePanel onStart={props.onStartStage} />
       ) : panel === "presets" ? (
         <PresetsPanel
           readOnly={readOnly}

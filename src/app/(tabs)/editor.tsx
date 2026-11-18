@@ -197,18 +197,17 @@ function ProjectView({ project }: { project: Project }) {
     onResetXY: resetLayer,
   };
 
-  // menú ⋯: modo escenario (el submodo se elige al entrar) y reabrir el onboarding
+  // menú ⋯: reabrir el onboarding (el modo escenario tiene su propio botón y panel)
   const openMore = () =>
-    Alert.alert(
-      "Más opciones",
-      "Modo escenario: lienzo a pantalla completa y brillo al máximo. Para salir mantén 2 s la esquina superior izquierda.",
-      [
-        { text: "Escenario · interactivo", onPress: () => setStage("interactive") },
-        { text: "Escenario · bloqueado", onPress: () => setStage("locked") },
-        { text: "Ver introducción", onPress: () => settingsStore.getState().update({ onboardingSeen: false }) },
-        { text: "Cancelar", style: "cancel" },
-      ],
-    );
+    Alert.alert("Más opciones", undefined, [
+      { text: "Ver introducción", onPress: () => settingsStore.getState().update({ onboardingSeen: false }) },
+      { text: "Cancelar", style: "cancel" },
+    ]);
+  const startStage = (mode: StageMode) => {
+    if (!image) return setNotice("CARGANDO LA IMAGEN…");
+    setOverlays([]);
+    setStage(mode);
+  };
 
   const toolbar = (
     <Animated.View style={chromeStyle}>
@@ -232,6 +231,7 @@ function ProjectView({ project }: { project: Project }) {
             canRedo={canRedo && !readOnly}
             unsaved={!readOnly && (isDraft || saveStatus.state !== "saved")}
             exportOpen={openPanel === "export"}
+            stageOpen={openPanel === "stage"}
             onBack={() => {
               void confirmLeave().then((leave) => {
                 if (leave) sceneStore.getState().close();
@@ -240,6 +240,7 @@ function ProjectView({ project }: { project: Project }) {
             onUndo={() => sceneStore.getState().undo()}
             onRedo={() => sceneStore.getState().redo()}
             onExport={() => togglePanel("export")}
+            onStage={() => togglePanel("stage")}
             onMore={openMore}
           />
         </Animated.View>
@@ -303,6 +304,7 @@ function ProjectView({ project }: { project: Project }) {
                     onOpenEffects={() => onToolPress("effects")}
                     onNotice={setNotice}
                     onClose={() => setOverlays([])}
+                  onStartStage={startStage}
                     exports={exports}
                     onImportRecipe={() => void onImportRecipe()}
                   />

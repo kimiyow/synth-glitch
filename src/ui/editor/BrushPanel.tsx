@@ -1,18 +1,18 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import type { BrushTool } from "../../paint/strokeInterpolate";
-import { Pill } from "../kit/Pill";
+import { IconTiles, type IconTile } from "../kit/IconTiles";
 import { Slider } from "../Slider";
-import { colors, type } from "../tokens";
+import { colors, space, type } from "../tokens";
 
 export type { BrushTool };
 
-const CHIPS: { id: BrushTool; label: string }[] = [
-  { id: "chromatic", label: "CHROMATIC" },
-  { id: "datamosh", label: "DATAMOSH" },
-  { id: "pixel", label: "PIXEL" },
-  { id: "smear", label: "SMEAR" },
-  { id: "erase", label: "BORRAR" },
+const TOOLS: readonly IconTile<BrushTool>[] = [
+  { id: "chromatic", label: "CHROMA", icon: "circle.lefthalf.filled", hint: "Separa los canales de color" },
+  { id: "datamosh", label: "MOSH", icon: "square.stack.3d.down.right", hint: "Arrastra bloques de la imagen" },
+  { id: "pixel", label: "PIXEL", icon: "square.grid.3x3", hint: "Pixela la zona pintada" },
+  { id: "smear", label: "SMEAR", icon: "scribble.variable", hint: "Corre la imagen en la dirección del trazo" },
+  { id: "erase", label: "BORRAR", icon: "eraser", hint: "Quita la pintura" },
 ];
 
 type Props = {
@@ -29,31 +29,16 @@ type Props = {
   onPreview: (visible: boolean) => void;
 };
 
-// panel Pincel del Figma: Tamaño Pincel, Distancia mínima y chips de efecto
+// panel Pincel: la herramienta como fichas con icono (igual que las fuentes de modulación),
+// tamaño y distancia entre sellos, y el conteo de trazos
 export function BrushPanel(props: Props) {
   const { tool, size, spacing, strokes, maxStrokes, onTool, onSize, onSpacing, onPreview } = props;
   return (
     <View style={styles.root}>
+      <IconTiles tiles={TOOLS} value={tool} onChange={onTool} />
       <View style={styles.sliders}>
-        <Slider
-          label="Tamaño Pincel"
-          value={size}
-          onChange={onSize}
-          onSlidingStart={() => onPreview(true)}
-          onSlidingEnd={() => onPreview(false)}
-        />
-        <Slider
-          label="Distancia mínima"
-          value={spacing}
-          onChange={onSpacing}
-          onSlidingStart={() => onPreview(true)}
-          onSlidingEnd={() => onPreview(false)}
-        />
-      </View>
-      <View style={styles.chips}>
-        {CHIPS.map((chip) => (
-          <Pill key={chip.id} label={chip.label} selected={chip.id === tool} onPress={() => onTool(chip.id)} />
-        ))}
+        <Slider label="Tamaño" value={size} onChange={onSize} onSlidingStart={() => onPreview(true)} onSlidingEnd={() => onPreview(false)} />
+        <Slider label="Distancia" value={spacing} onChange={onSpacing} onSlidingStart={() => onPreview(true)} onSlidingEnd={() => onPreview(false)} />
       </View>
       <Text style={styles.count}>
         {strokes} / {maxStrokes} TRAZOS
@@ -63,8 +48,7 @@ export function BrushPanel(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { gap: 10 },
-  sliders: { flexDirection: "row", gap: 24 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  count: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro },
+  root: { gap: space.md },
+  sliders: { flexDirection: "row", gap: space.xl },
+  count: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1, fontVariant: ["tabular-nums"] },
 });

@@ -5,7 +5,7 @@ import { EFFECTS, GENERATORS } from "../../engine/registry";
 import { selectFeedback } from "../../platform/haptics";
 import type { EffectId, GeneratorId, Layer } from "../../domain/types";
 import { Icon } from "../kit/Icon";
-import { Pill } from "../kit/Pill";
+import { Segmented } from "../kit/Segmented";
 import { colors, radius, space, type } from "../tokens";
 
 const CATEGORIES = [
@@ -76,11 +76,7 @@ export function EffectsPanel(props: Props) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.categories}>
-        {CATEGORIES.map((c) => (
-          <Pill key={c.id} label={c.label} selected={c.id === category} onPress={() => setCategory(c.id)} />
-        ))}
-      </View>
+      <Segmented options={CATEGORIES} value={category} onChange={setCategory} />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tiles}>
         {tiles.map((t) => {
@@ -101,7 +97,6 @@ export function EffectsPanel(props: Props) {
       </ScrollView>
 
       {warning && <Text style={styles.warning}>{warning}</Text>}
-      <Text style={styles.hint}>TOCA UN EFECTO PARA PERSONALIZARLO</Text>
     </View>
   );
 }
@@ -140,7 +135,6 @@ function Tile(p: { label: string; order: number | null; selected: boolean; modul
 
 const styles = StyleSheet.create({
   root: { gap: space.md },
-  categories: { flexDirection: "row", gap: 6 },
   tiles: { gap: space.md, paddingRight: space.lg },
   tileWrap: { alignItems: "center", gap: 6, width: THUMB_SIZE + 4 },
   tile: {
@@ -184,7 +178,6 @@ const styles = StyleSheet.create({
   tileLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8 },
   tileLabelOn: { color: colors.inkText },
   pressed: { opacity: 0.6 },
-  hint: { flexShrink: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
   warning: {
     alignSelf: "flex-start",
     color: colors.paperText,

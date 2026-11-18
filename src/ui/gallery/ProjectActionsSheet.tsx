@@ -1,3 +1,5 @@
+import { BlurView } from "expo-blur";
+import type { SFSymbol } from "expo-symbols";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -10,6 +12,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { Icon } from "../kit/Icon";
 
 import { ALL_ORIENTATIONS, useLayout } from "../useLayout";
 import { colors, geometry, radius, type } from "../tokens";
@@ -63,16 +67,19 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cerrar" style={styles.backdrop} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: insets.bottom + geometry.compactMargin }, regular && { width: panelWidth, alignSelf: "center" }]}>
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={styles.handle} />
+          <Text style={styles.section}>{mode === "delete" ? "ELIMINAR" : mode === "rename" ? "RENOMBRAR" : "PROYECTO"}</Text>
           <Text style={styles.title} numberOfLines={1}>
-            {mode === "delete" ? "¿ELIMINAR?" : mode === "rename" ? "RENOMBRAR" : project?.name}
+            {mode === "delete" ? "¿Eliminar el proyecto?" : project?.name}
           </Text>
 
           {mode === "actions" && (
             <>
-              <SheetButton label="RENOMBRAR" disabled={project?.readOnly} onPress={() => setMode("rename")} />
-              <SheetButton label="DUPLICAR" onPress={() => run(onDuplicate)} />
-              <SheetButton label="ELIMINAR" onPress={() => setMode("delete")} />
-              <SheetButton label="CANCELAR" muted onPress={onClose} />
+              <SheetButton label="Renombrar" icon="pencil" disabled={project?.readOnly} onPress={() => setMode("rename")} />
+              <SheetButton label="Duplicar" icon="plus.square.on.square" onPress={() => run(onDuplicate)} />
+              <SheetButton label="Eliminar" icon="trash" onPress={() => setMode("delete")} />
+              <SheetButton label="Cancelar" muted onPress={onClose} />
             </>
           )}
 
@@ -92,18 +99,16 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
                 accessibilityLabel="Nombre del proyecto"
                 style={styles.input}
               />
-              <SheetButton label="GUARDAR" onPress={() => run((id) => onRename(id, name))} />
-              <SheetButton label="CANCELAR" muted onPress={() => setMode("actions")} />
+              <SheetButton label="Guardar" icon="checkmark" onPress={() => run((id) => onRename(id, name))} />
+              <SheetButton label="Cancelar" muted onPress={() => setMode("actions")} />
             </>
           )}
 
           {mode === "delete" && (
             <>
-              <Text style={styles.body}>
-                Se borrarán «{project?.name}» y su imagen original. No se puede deshacer.
-              </Text>
-              <SheetButton label="ELIMINAR" onPress={() => run(onDelete)} />
-              <SheetButton label="CANCELAR" muted onPress={() => setMode("actions")} />
+              <Text style={styles.body}>Se borran «{project?.name}» y su imagen. No se puede deshacer.</Text>
+              <SheetButton label="Eliminar" icon="trash" onPress={() => run(onDelete)} />
+              <SheetButton label="Cancelar" muted onPress={() => setMode("actions")} />
             </>
           )}
 
@@ -116,11 +121,13 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
 
 function SheetButton({
   label,
+  icon,
   onPress,
   muted = false,
   disabled = false,
 }: {
   label: string;
+  icon?: SFSymbol;
   onPress: () => void;
   muted?: boolean;
   disabled?: boolean;
@@ -130,8 +137,9 @@ function SheetButton({
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, pressed && styles.pressed, disabled && styles.disabled]}
+      style={({ pressed }) => [styles.button, muted && styles.buttonMuted, pressed && styles.pressed, disabled && styles.disabled]}
     >
+      {icon && <Icon name={icon} size={16} />}
       <Text style={[styles.buttonText, muted && styles.muted]}>{label}</Text>
     </Pressable>
   );
@@ -141,12 +149,14 @@ const styles = StyleSheet.create({
   flex: { flex: 1, justifyContent: "flex-end" },
   backdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: {
-    backgroundColor: colors.inkSurface,
+    overflow: "hidden",
+    backgroundColor: "rgba(18,18,18,0.9)",
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     paddingHorizontal: geometry.compactMargin,
-    paddingTop: geometry.compactMargin,
   },
+  handle: { alignSelf: "center", width: 36, height: 4, borderRadius: 2, marginVertical: 12, backgroundColor: colors.inkLineStrong },
+  section: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.4, marginBottom: 4 },
   title: {
     color: colors.inkText,
     fontFamily: type.family,
@@ -166,7 +176,9 @@ const styles = StyleSheet.create({
   },
   button: {
     minHeight: 48,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     paddingHorizontal: 14,
     marginBottom: 6,
     borderRadius: radius.md,
@@ -174,6 +186,7 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   disabled: { opacity: 0.5 },
+  buttonMuted: { backgroundColor: "transparent", justifyContent: "center" },
   buttonText: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600" },
   muted: { color: colors.inkMute },
   error: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, marginTop: 8 },

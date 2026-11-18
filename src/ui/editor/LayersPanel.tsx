@@ -60,9 +60,7 @@ export function LayersPanel(props: Props) {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={[styles.title, styles.titleList]}>
-          Capas <Text style={styles.count}>{layers.length}</Text>
-        </Text>
+        <Text style={styles.section}>{layers.length === 1 ? "1 CAPA" : `${layers.length} CAPAS`}</Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Reloj y micrófono"
@@ -148,7 +146,7 @@ const styles = StyleSheet.create({
   root: { gap: space.md },
   header: { flexDirection: "row", alignItems: "center", gap: space.sm },
   title: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600", letterSpacing: 0.6 },
-  titleList: { fontSize: type.title },
+  section: { flex: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   count: { color: colors.inkMute, fontWeight: "400" },
   globalBtn: {
     flexDirection: "row",

@@ -2,10 +2,10 @@ import type { SFSymbol } from "expo-symbols";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { tapFeedback } from "../../platform/haptics";
 import type { SaveStatus } from "../../state/sceneStore";
+import { ActionGrid } from "../kit/ActionGrid";
 import { Icon } from "../kit/Icon";
-import { colors, radius, space, type } from "../tokens";
+import { colors, space, type } from "../tokens";
 
 export type ExportAction = "jpg" | "gif" | "project" | "gesture" | "share";
 
@@ -26,11 +26,11 @@ type Props = {
 };
 
 const ROWS: { id: ExportAction; icon: SFSymbol; label: string }[] = [
-  { id: "jpg", icon: "photo", label: "Guardar como JPG" },
-  { id: "gif", icon: "sparkles.rectangle.stack", label: "Guardar como GIF" },
+  { id: "jpg", icon: "photo", label: "JPG" },
+  { id: "gif", icon: "sparkles.rectangle.stack", label: "GIF" },
   { id: "project", icon: "folder", label: "Guardar proyecto" },
   { id: "share", icon: "square.and.arrow.up", label: "Compartir" },
-  { id: "gesture", icon: "hand.draw", label: "Guardar preset gestual" },
+  { id: "gesture", icon: "hand.draw", label: "Preset gestual" },
 ];
 
 // panel Exportar: nombre editable, estado del guardado manual y salidas en módulos
@@ -81,30 +81,11 @@ export function ExportPanel({ name, readOnly, status, draft: isDraft, unavailabl
           )}
         </View>
       )}
-      <View style={styles.grid}>
-        {ROWS.map((row) => {
-          const reason = unavailable[row.id] ?? null;
-          const off = reason !== null || job !== null;
-          return (
-            <Pressable
-              key={row.id}
-              accessibilityRole="button"
-              accessibilityLabel={row.label}
-              accessibilityState={{ disabled: off }}
-              disabled={off}
-              onPress={() => {
-                tapFeedback();
-                onAction(row.id);
-              }}
-              style={({ pressed }) => [styles.module, off && styles.off, pressed && styles.pressed]}
-            >
-              <Icon name={row.icon} size={22} />
-              <Text style={styles.moduleLabel}>{row.label}</Text>
-              {reason && <Text style={styles.pending}>{reason}</Text>}
-            </Pressable>
-          );
-        })}
-      </View>
+      <ActionGrid
+        actions={ROWS.map((r) => ({ ...r, reason: unavailable[r.id] ?? null }))}
+        disabled={job !== null}
+        onPress={onAction}
+      />
     </View>
   );
 }
@@ -113,24 +94,11 @@ const styles = StyleSheet.create({
   root: { gap: space.xs },
   nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
   name: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.title, fontWeight: "600", paddingVertical: 2 },
-  status: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, marginBottom: space.sm },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  module: {
-    width: "48.5%",
-    minHeight: 76,
-    padding: space.md,
-    gap: 6,
-    borderRadius: radius.md,
-    backgroundColor: colors.inkRaised,
-  },
-  off: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
-  moduleLabel: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1 },
+  status: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1, marginBottom: space.sm },
   job: { gap: 6, marginBottom: space.xs },
   jobHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   jobLabel: { color: colors.inkText, fontFamily: type.family, fontSize: type.label },
   cancel: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600", letterSpacing: 1 },
   track: { height: 3, borderRadius: 2, backgroundColor: colors.inkRaised, overflow: "hidden" },
   fill: { height: 3, backgroundColor: colors.inkText },
-  pending: { position: "absolute", top: space.sm, right: space.sm, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro },
 });

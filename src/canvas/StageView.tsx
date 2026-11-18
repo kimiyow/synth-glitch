@@ -9,13 +9,15 @@ import Animated, {
   useAnimatedStyle,
   useFrameCallback,
   useSharedValue,
+  withDelay,
   withTiming,
 } from "react-native-reanimated";
 
 import { DEV_TOOLS_ENABLED } from "../dev/devTools";
 import { FULL_SCALE, stepRenderScale } from "../engine/renderScale";
 import { useStageScreen } from "../platform/screen";
-import { colors, type } from "../ui/tokens";
+import { Icon } from "../ui/kit/Icon";
+import { colors, radius, space, type } from "../ui/tokens";
 import { ALL_ORIENTATIONS } from "../ui/useLayout";
 import { EditorCanvas } from "./EditorCanvas";
 
@@ -29,6 +31,8 @@ const EXIT_SIZE = 64;
 const BLACKOUT_TAP_SLOP = 12;
 const BLACKOUT_TAP_MS = 300;
 const RING = 30;
+// tiempo que se ve el aviso de atajos al entrar
+const HINT_MS = 2500;
 
 type CanvasProps = Omit<ComponentProps<typeof EditorCanvas>, "brush" | "extraGesture" | "onCommitStroke" | "showSizePreview">;
 
@@ -39,6 +43,12 @@ type CanvasProps = Omit<ComponentProps<typeof EditorCanvas>, "brush" | "extraGes
 export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: CanvasProps; onExit: () => void }) {
   useStageScreen();
   const insets = useSafeAreaInsets();
+  // aviso al entrar: se ve 2.5 s y se desvanece (nunca recibe toques)
+  const hint = useSharedValue(1);
+  useEffect(() => {
+    hint.set(withDelay(HINT_MS, withTiming(0, { duration: 600 })));
+  }, [hint]);
+  const hintStyle = useAnimatedStyle(() => ({ opacity: hint.get() }));
   const [blackout, setBlackout] = useState(false);
   const toggleBlackout = () => setBlackout((b) => !b);
   const scale = useRenderScale(!blackout);
@@ -110,6 +120,22 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
             <View style={StyleSheet.absoluteFill} accessibilityLabel="Modo escenario bloqueado" />
           </GestureDetector>
         )}
+        <Animated.View style={[styles.hint, { bottom: insets.bottom + 24 }, hintStyle]} pointerEvents="none">
+          <View style={styles.hintRow}>
+            <Icon name="circle" size={12} />
+            <Text style={styles.hintText}>MANTÉN 2 S LA ESQUINA PARA SALIR</Text>
+          </View>
+          <View style={styles.hintRow}>
+            <Icon name="hand.tap" size={12} />
+            <Text style={styles.hintText}>DOBLE TOQUE CON 2 DEDOS · NEGRO</Text>
+          </View>
+          {mode === "locked" && (
+            <View style={styles.hintRow}>
+              <Icon name="lock" size={12} />
+              <Text style={styles.hintText}>BLOQUEADO · SE IGNORAN LOS TOQUES</Text>
+            </View>
+          )}
+        </Animated.View>
         <GestureDetector gesture={Gesture.Simultaneous(exitHold, exitCommit)}>
           <View style={[styles.exit, { top: insets.top, left: insets.left }]} accessibilityRole="button" accessibilityLabel="Salir del modo escenario: mantén pulsado 2 segundos">
             <Animated.View style={[styles.ring, ringStyle]} />
@@ -155,4 +181,15 @@ const styles = StyleSheet.create({
   },
   exit: { position: "absolute", top: 0, left: 0, width: EXIT_SIZE, height: EXIT_SIZE, alignItems: "center", justifyContent: "center" },
   ring: { width: RING, height: RING, borderRadius: RING / 2, borderWidth: 2 },
+  hint: {
+    position: "absolute",
+    alignSelf: "center",
+    gap: 6,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
+    backgroundColor: "rgba(0,0,0,0.7)",
+  },
+  hintRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  hintText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
 });

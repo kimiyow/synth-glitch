@@ -9,17 +9,20 @@ type Props = {
   // hay cambios sin guardar (punto sobre Exportar)
   unsaved: boolean;
   exportOpen: boolean;
+  stageOpen: boolean;
   onBack: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onExport: () => void;
-  // menú ⋯ (modo escenario)
+  // panel del modo escenario
+  onStage: () => void;
+  // menú ⋯ (ver introducción)
   onMore: () => void;
 };
 
-// barra superior: volver · deshacer/rehacer (50 % si no aplican) · exportar con punto de cambios
-// sin guardar
-export function EditorTopBar({ canUndo, canRedo, unsaved, exportOpen, onBack, onUndo, onRedo, onExport, onMore }: Props) {
+// barra superior: volver · deshacer/rehacer (50 % si no aplican) · ⋯ · escenario · exportar con
+// punto de cambios sin guardar
+export function EditorTopBar({ canUndo, canRedo, unsaved, exportOpen, stageOpen, onBack, onUndo, onRedo, onExport, onStage, onMore }: Props) {
   return (
     <View style={styles.root}>
       <IconButton icon="chevron.left" label="Volver" onPress={onBack} />
@@ -29,6 +32,7 @@ export function EditorTopBar({ canUndo, canRedo, unsaved, exportOpen, onBack, on
       </View>
       <View style={styles.center}>
         <IconButton icon="ellipsis" label="Más opciones" onPress={onMore} />
+        <IconButton icon="play.rectangle" label="Modo escenario" active={stageOpen} onPress={onStage} />
         <IconButton icon="square.and.arrow.up" label="Exportar" active={exportOpen} dot={unsaved} onPress={onExport} />
       </View>
     </View>

@@ -39,7 +39,10 @@ export function Sheet({
     <View style={[styles.root, side ? styles.side : regular && [styles.floating, { width: panelWidth }]]}>
       <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
       <View style={styles.top}>
-        <View style={styles.topSide} />
+        {/* título de la sección a la izquierda, barrita al centro, ✕ a la derecha */}
+        <Text style={styles.topTitle} numberOfLines={1} accessibilityRole="header">
+          {title?.toUpperCase() ?? ""}
+        </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={minimized ? "Mostrar panel" : "Minimizar panel"}
@@ -52,11 +55,10 @@ export function Sheet({
         >
           <View style={[styles.handle, minimized && styles.handleMin]} />
         </Pressable>
-        <View style={[styles.topSide, styles.topRight]}>
+        <View style={styles.topRight}>
           {onClose && <IconButton icon="xmark" label="Cerrar panel" size={28} bare onPress={onClose} />}
         </View>
       </View>
-      {title && !minimized && <Text style={styles.title}>{title}</Text>}
       {/* minimizado: el contenido sigue montado (conserva su estado) pero no ocupa espacio */}
       <View style={minimized ? styles.hidden : side ? styles.sideBody : undefined}>
         <ScrollView
@@ -104,10 +106,10 @@ const styles = StyleSheet.create({
   sideBody: { flexShrink: 1 },
   sideScroll: { flexGrow: 0, flexShrink: 1 },
   hidden: { height: 0, overflow: "hidden" },
-  top: { flexDirection: "row", alignItems: "center", height: 36, marginHorizontal: -space.sm },
-  topSide: { width: 36 },
-  topRight: { alignItems: "flex-end" },
-  handleHit: { flex: 1, height: 36, alignItems: "center", justifyContent: "center" },
+  top: { flexDirection: "row", alignItems: "center", height: 36, marginRight: -space.sm },
+  topTitle: { flex: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.4 },
+  topRight: { flex: 1, alignItems: "flex-end" },
+  handleHit: { width: 72, height: 36, alignItems: "center", justifyContent: "center" },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.inkLineStrong },
   handleMin: { width: 48, backgroundColor: colors.inkText },
   title: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600", marginBottom: space.sm },

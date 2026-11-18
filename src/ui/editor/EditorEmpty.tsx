@@ -8,7 +8,7 @@ import type { GeneratorId } from "../../domain/types";
 import { AppHeader } from "../AppHeader";
 import { Button } from "../kit/Button";
 import { Icon } from "../kit/Icon";
-import { Pill } from "../kit/Pill";
+import { Segmented } from "../kit/Segmented";
 import { colors, radius, space, type } from "../tokens";
 import { CONTENT_MAX_WIDTH } from "../useLayout";
 
@@ -70,14 +70,9 @@ function CreateGenerative({ busy, onCreate, renderGeneratorThumb, onCancel }: Pr
   return (
     <View style={styles.create}>
       <Text style={styles.title}>Crear sin imagen</Text>
-      <Text style={styles.subtitle}>Elige un formato y un generador como base</Text>
 
       <Text style={styles.section}>FORMATO</Text>
-      <View style={styles.row}>
-        {ASPECTS.map((a) => (
-          <Pill key={a} label={a} selected={a === aspect} onPress={() => setAspect(a)} />
-        ))}
-      </View>
+      <Segmented options={ASPECTS.map((a) => ({ id: a, label: a }))} value={aspect} onChange={setAspect} />
 
       <Text style={styles.section}>GENERADOR</Text>
       <View style={styles.row}>

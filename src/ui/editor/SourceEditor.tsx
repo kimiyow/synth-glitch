@@ -1,4 +1,4 @@
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
 import { saveGesturePreset } from "../../actions/gestureLibrary";
@@ -167,7 +167,7 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
     const m = own.mic ?? DEFAULT_MIC_ROUTE;
     return (
       <View style={styles.root}>
-        {mic.state !== "on" && <MicStatus mic={mic} />}
+        {mic.state === "denied" || mic.state === "error" ? <MicStatus mic={mic} /> : <MicCheck mic={mic} scene={scene.mic} />}
         <Segmented
           options={[
             { id: "level", label: "VOLUMEN" },
@@ -237,6 +237,46 @@ function GestureControls({ route }: { route: Route }) {
       />
     </View>
   );
+}
+
+// cuánto tiempo seguido en silencio o saturado antes de avisar
+const MIC_HEALTH_MS = 3000;
+
+// medidor del micrófono dentro de la tarjeta, con CALIBRAR al lado. Si la señal pasa 3 s casi en
+// cero (sala más ruidosa que el piso, o techo muy alto) o pegada al máximo, dice por qué y qué hacer
+function MicCheck({ mic, scene }: { mic: MicView; scene: SourceConfig["mic"] }) {
+  const health = useMicHealth(mic, scene);
+  return (
+    <View style={styles.micCheck}>
+      <View style={styles.micRow}>
+        <MicMeter mic={mic} scene={scene} />
+        <Btn label={mic.calibrating ? "ESCUCHANDO…" : "CALIBRAR"} onPress={mic.onCalibrate} />
+      </View>
+      {mic.calibrating ? (
+        <Text style={styles.note}>GUARDA SILENCIO 2 S</Text>
+      ) : health === "quiet" ? (
+        <Text style={styles.warn}>NO LLEGA SONIDO · CALIBRA O SUBE LA SENSIBILIDAD</Text>
+      ) : health === "loud" ? (
+        <Text style={styles.warn}>SATURADO · CALIBRA O BAJA LA SENSIBILIDAD</Text>
+      ) : null}
+    </View>
+  );
+}
+
+// "quiet" / "loud" si el nivel lleva MIC_HEALTH_MS por debajo de 3 % o por encima de 97 %
+function useMicHealth(mic: MicView, scene: SourceConfig["mic"]): "ok" | "quiet" | "loud" {
+  const since = useRef<{ kind: "ok" | "quiet" | "loud"; at: number }>({ kind: "ok", at: 0 });
+  const [health, setHealth] = useState<"ok" | "quiet" | "loud">("ok");
+  useEffect(() => {
+    if (mic.state !== "on" || mic.db === null || mic.calibrating) return;
+    const u = dbToUnit(mic.db, scene.floor, scene.ceiling);
+    const kind = u < 0.03 ? "quiet" : u > 0.97 ? "loud" : "ok";
+    const now = Date.now();
+    if (kind !== since.current.kind) since.current = { kind, at: now };
+    const next = kind !== "ok" && now - since.current.at >= MIC_HEALTH_MS ? kind : "ok";
+    setHealth((h) => (h === next ? h : next));
+  }, [mic.db, mic.state, mic.calibrating, scene.floor, scene.ceiling]);
+  return health;
 }
 
 function MicStatus({ mic }: { mic: MicView }) {
@@ -425,6 +465,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   pair: { flexDirection: "row", gap: space.lg },
   note: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
+  // aviso: texto claro sobre gris oscuro (sin color de acento, como el resto de la app)
+  warn: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1 },
+  micCheck: { gap: 6 },
   section: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   sectionGap: { marginTop: space.sm },
   bars: { flexDirection: "row", height: 64, gap: 3 },

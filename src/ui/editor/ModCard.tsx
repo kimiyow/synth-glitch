@@ -7,6 +7,7 @@ import type { Route, RouteCurve, RouteSettings, SourceConfig, SourceId } from ".
 import { selectFeedback } from "../../platform/haptics";
 import { ChipRow, type Chip } from "../ChipRow";
 import { Icon } from "../kit/Icon";
+import { IconTiles, type IconTile } from "../kit/IconTiles";
 import { Segmented } from "../kit/Segmented";
 import { colors, radius, space, type } from "../tokens";
 import { LiveScope } from "./LiveScope";
@@ -26,6 +27,7 @@ export const MOD_SOURCES: { id: SourceId; label: string; icon: SFSymbol; what: s
 export const SOURCE_LABEL = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.label])) as Record<SourceId, string>;
 export const SOURCE_ICON = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.icon])) as Record<SourceId, SFSymbol>;
 
+const SOURCE_TILES: readonly IconTile<SourceId>[] = MOD_SOURCES.map((s) => ({ id: s.id, label: s.label, icon: s.icon, hint: s.what }));
 const CURVES: readonly Chip<RouteCurve>[] = [
   { id: "lin", label: "LINEAL" },
   { id: "scurve", label: "SUAVE" },
@@ -100,28 +102,7 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
             </View>
           </View>
 
-          <View style={styles.sources}>
-            {MOD_SOURCES.map((s) => {
-              const on = s.id === route.source;
-              return (
-                <Pressable
-                  key={s.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${s.label}: ${s.what}`}
-                  accessibilityState={{ selected: on }}
-                  onPress={() => {
-                    if (on) return;
-                    selectFeedback();
-                    setModulationSource(route.id, s.id);
-                  }}
-                  style={({ pressed }) => [styles.source, on && styles.sourceOn, pressed && styles.pressed]}
-                >
-                  <Icon name={s.icon} size={16} color={on ? colors.paperText : colors.inkText} />
-                  <Text style={[styles.sourceText, on && styles.sourceTextOn]}>{s.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <IconTiles tiles={SOURCE_TILES} value={route.source} onChange={(s) => setModulationSource(route.id, s)} />
 
           {isGesture ? (
             <Text style={styles.axes} numberOfLines={1}>
@@ -207,12 +188,7 @@ const styles = StyleSheet.create({
   swatchSignal: { backgroundColor: colors.inkText },
   swatchResult: { backgroundColor: colors.inkMute, marginLeft: 6 },
   legendText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.6 },
-  sources: { flexDirection: "row", gap: 3 },
   axes: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8, textAlign: "center" },
-  source: { flex: 1, height: 48, borderRadius: radius.sm, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center", gap: 4 },
-  sourceOn: { backgroundColor: colors.paper },
-  sourceText: { color: colors.inkText, fontFamily: type.family, fontSize: 8, letterSpacing: 0.4 },
-  sourceTextOn: { color: colors.paperText, fontWeight: "700" },
   more: { gap: space.md, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.inkLine },
   footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   footBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36 },
