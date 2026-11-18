@@ -186,6 +186,18 @@ export function patchModulationSettings<K extends keyof RouteSettings>(
   });
 }
 
+// mueve una capa a otra posición de la pila (la primera se aplica antes)
+export function moveLayer(layerId: string, toIndex: number) {
+  commit("ordenar capas", (scene) => {
+    const from = scene.layers.findIndex((l) => l.id === layerId);
+    if (from < 0) return;
+    const to = Math.min(scene.layers.length - 1, Math.max(0, toIndex));
+    if (to === from) return;
+    const [layer] = scene.layers.splice(from, 1);
+    scene.layers.splice(to, 0, layer);
+  });
+}
+
 export function toggleLayerVisible(layerId: string) {
   commit("mostrar u ocultar capa", (scene) => {
     const layer = scene.layers.find((l) => l.id === layerId);
