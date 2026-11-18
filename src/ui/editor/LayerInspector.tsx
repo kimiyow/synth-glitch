@@ -129,7 +129,7 @@ export function LayerInspector(props: Props) {
 
       <View style={styles.modHeader}>
         <Text style={styles.section}>
-          MODULACIÓN <Text style={styles.count}>{mods.length}</Text>
+          MODULACIÓN <Text style={styles.count}>{mods.length}/{MAX_MODS_PER_LAYER}</Text>
         </Text>
         {mods.length > 0 && (
           <Pressable

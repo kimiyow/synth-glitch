@@ -49,6 +49,12 @@ describe("evaluate", () => {
     const r = route({ source: "seq", mode: "replace", amount: 1 });
     expect(evaluate([layer], [r], S, 0, NO_INPUTS, 1)[0]).toBeCloseTo(S.seq.steps[0], 6);
   });
+
+  it("reemplazo con intensidad 0.5: a mitad de camino entre la base y la fuente", () => {
+    const r = route({ source: "seq", mode: "replace", amount: 0.5 });
+    const base = layer.params.x;
+    expect(evaluate([layer], [r], S, 0, NO_INPUTS, 1)[0]).toBeCloseTo(base + 0.5 * (S.seq.steps[0] - base), 6);
+  });
 });
 
 describe("fuentes", () => {

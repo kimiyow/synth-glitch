@@ -119,9 +119,11 @@ export function evaluateAxis(
   seed: number,
 ): number {
   "worklet";
+  const b = param === "x" ? base.x : base.y;
   let add = 0;
-  let replace = 0;
-  let hasReplace = false;
+  // reemplazo: cada ruta lleva el valor desde la base hacia su fuente según su intensidad
+  // (1 = la fuente manda; 0.5 = a mitad de camino; 0 = la base)
+  let pull = 0;
   for (let i = 0; i < routes.length; i++) {
     const r = routes[i];
     // un gesto mueve los dos ejes de su capa
@@ -129,15 +131,13 @@ export function evaluateAxis(
     // cada ruta tiene su propio azar: dos S&H en capas distintas no se mueven igual
     const v = sourceValue(r, sources, t, inputs, seed + i * 7919, base, param);
     if (r.mode === "replace") {
-      hasReplace = true;
       const u = isBipolar(r.source) ? (v + 1) / 2 : v;
-      replace += r.amount * curve01(r.curve, u);
+      pull += r.amount * (curve01(r.curve, u) - b);
     } else {
       add += r.amount * (isBipolar(r.source) ? curveSigned(r.curve, v) : curve01(r.curve, v));
     }
   }
-  const b = param === "x" ? base.x : base.y;
-  return Math.min(1, Math.max(0, (hasReplace ? replace : b) + add));
+  return Math.min(1, Math.max(0, b + pull + add));
 }
 
 // evaluate(escena, t, entradas): parámetros efectivos intercalados [x, y] de las capas dadas, en
