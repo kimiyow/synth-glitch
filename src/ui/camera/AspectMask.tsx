@@ -19,13 +19,20 @@ export function AspectMask({ width, height, aspect }: { width: number; height: n
         style={[styles.shade, { right: 0, top: box.top, width: width - box.left - box.width, height: box.height }]}
       />
       <View style={[styles.box, box]}>
-        <CornerMarks />
+        {/* cuadrícula de tercios, muy tenue */}
+        <View style={[styles.lineV, { left: "33.333%" }]} />
+        <View style={[styles.lineV, { left: "66.666%" }]} />
+        <View style={[styles.lineH, { top: "33.333%" }]} />
+        <View style={[styles.lineH, { top: "66.666%" }]} />
+        <CornerMarks size={22} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  shade: { position: "absolute", backgroundColor: "rgba(0,0,0,0.65)" },
+  shade: { position: "absolute", backgroundColor: "rgba(0,0,0,0.7)" },
   box: { position: "absolute" },
+  lineV: { position: "absolute", top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.22)" },
+  lineH: { position: "absolute", left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.22)" },
 });

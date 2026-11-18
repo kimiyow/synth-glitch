@@ -11,15 +11,18 @@ import { confirmLeave } from "../../actions/leaveGuard";
 import { AppHeader } from "../../ui/AppHeader";
 import { IconButton } from "../../ui/kit/IconButton";
 import { AspectMask } from "../../ui/camera/AspectMask";
-import { CameraMenu } from "../../ui/camera/CameraMenu";
+import { AspectPicker } from "../../ui/camera/AspectPicker";
+import { RecBadge } from "../../ui/camera/RecBadge";
 import { Shutter } from "../../ui/camera/Shutter";
 import { PermissionScreen } from "../../ui/PermissionScreen";
-import { colors, geometry, type } from "../../ui/tokens";
+import { colors, radius, space, type } from "../../ui/tokens";
 
 const MAX_CLIP_S = 5;
 const VIEWFINDER_MARGIN = 18;
 // alto mínimo para el obturador (72 pt), el texto y los márgenes bajo el visor
 const CONTROLS_MIN_HEIGHT = 150;
+// botón lateral de la fila del obturador (girar cámara) y su hueco simétrico
+const SIDE_BUTTON = 48;
 const MIN_CLIP_MS = 1000;
 const DOUBLE_TAP_MS = 300;
 // si la cámara no avisa que está lista tras cambiar a modo video, se graba igual
@@ -61,7 +64,6 @@ function CameraCapture() {
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const aspect = useSettings((s) => s.cameraAspect);
   const holdHintSeen = useSettings((s) => s.holdHintSeen);
 
@@ -153,10 +155,12 @@ function CameraCapture() {
     if (isRecording.current) cameraRef.current?.stopRecording();
   };
 
+  const flip = () => setFacing((f) => (f === "back" ? "front" : "back"));
+
   const onViewfinderPress = () => {
     const now = Date.now();
     if (now - lastViewTap.current < DOUBLE_TAP_MS && !recording) {
-      setFacing((f) => (f === "back" ? "front" : "back"));
+      flip();
       lastViewTap.current = 0;
     } else {
       lastViewTap.current = now;
@@ -165,11 +169,7 @@ function CameraCapture() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <AppHeader
-        right={
-          <IconButton icon="ellipsis" label="Más opciones" active={menuOpen} onPress={() => setMenuOpen((o) => !o)} />
-        }
-      />
+      <AppHeader />
 
       <View style={styles.area} onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}>
         <Pressable
@@ -177,7 +177,7 @@ function CameraCapture() {
           accessibilityLabel="Visor de la cámara"
           accessibilityHint="Activa para cambiar entre la cámara frontal y la trasera"
           accessibilityActions={[{ name: "activate", label: "Cambiar de cámara" }]}
-          onAccessibilityAction={() => setFacing((f) => (f === "back" ? "front" : "back"))}
+          onAccessibilityAction={flip}
           onPress={onViewfinderPress}
           style={[styles.viewfinder, { width: viewW, height: viewH }]}
         >
@@ -191,7 +191,18 @@ function CameraCapture() {
             onCameraReady={onCameraReady}
           />
           <AspectMask width={viewW} height={viewH} aspect={aspect} />
-          <Text style={styles.aspectLabel}>{aspect}</Text>
+          {recording && (
+            <View style={styles.topOverlay} pointerEvents="none">
+              <RecBadge maxSeconds={MAX_CLIP_S} />
+            </View>
+          )}
+          <View style={styles.bottomOverlay} pointerEvents="box-none">
+            <AspectPicker
+              aspect={aspect}
+              disabled={busy || recording}
+              onSelect={(a) => settingsStore.getState().update({ cameraAspect: a })}
+            />
+          </View>
         </Pressable>
 
         <View style={styles.controls}>
@@ -200,14 +211,26 @@ function CameraCapture() {
               {message}
             </Text>
           )}
-          <Shutter
-            recording={recording}
-            disabled={busy}
-            progress={progress}
-            onTap={takePhoto}
-            onHoldStart={startClip}
-            onHoldEnd={endClip}
-          />
+          <View style={styles.shutterRow}>
+            <View style={styles.sideSlot} />
+            <Shutter
+              recording={recording}
+              disabled={busy}
+              progress={progress}
+              onTap={takePhoto}
+              onHoldStart={startClip}
+              onHoldEnd={endClip}
+            />
+            <View style={styles.sideSlot}>
+              <IconButton
+                icon="arrow.triangle.2.circlepath"
+                label="Cambiar de cámara"
+                size={SIDE_BUTTON}
+                disabled={busy || recording}
+                onPress={flip}
+              />
+            </View>
+          </View>
           <Text style={styles.hint}>
             {busy
               ? "CREANDO PROYECTO…"
@@ -219,40 +242,35 @@ function CameraCapture() {
           </Text>
         </View>
       </View>
-
-      <CameraMenu
-        visible={menuOpen}
-        aspect={aspect}
-        onSelect={(a) => settingsStore.getState().update({ cameraAspect: a })}
-        onClose={() => setMenuOpen(false)}
-      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
-  headerButton: { minWidth: geometry.target, minHeight: geometry.target, alignItems: "flex-end", justifyContent: "center" },
-  title: { color: colors.inkText, fontFamily: type.family, fontSize: type.title },
-  viewfinder: { alignSelf: "center", borderRadius: 22, overflow: "hidden", backgroundColor: colors.inkSurface },
-  aspectLabel: {
-    position: "absolute",
-    bottom: 8,
-    right: geometry.compactMargin,
-    color: colors.inkText,
-    fontFamily: type.family,
-    fontSize: type.label,
-    letterSpacing: 1.2,
+  viewfinder: {
+    alignSelf: "center",
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    backgroundColor: colors.inkSurface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.inkLine,
   },
+  topOverlay: { position: "absolute", top: space.md, left: 0, right: 0, alignItems: "center" },
+  bottomOverlay: { position: "absolute", bottom: space.md, left: 0, right: 0, alignItems: "center" },
   area: { flex: 1 },
-  controls: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+  controls: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.md },
+  shutterRow: { flexDirection: "row", alignItems: "center", gap: 44 },
+  sideSlot: { width: SIDE_BUTTON, height: SIDE_BUTTON },
   hint: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   message: {
     color: colors.paperText,
     backgroundColor: colors.paper,
     fontFamily: type.family,
     fontSize: type.label,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    overflow: "hidden",
   },
 });
