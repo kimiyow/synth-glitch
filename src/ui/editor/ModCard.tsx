@@ -27,7 +27,12 @@ export const MOD_SOURCES: { id: SourceId; label: string; icon: SFSymbol; what: s
 export const SOURCE_LABEL = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.label])) as Record<SourceId, string>;
 export const SOURCE_ICON = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.icon])) as Record<SourceId, SFSymbol>;
 
-const SOURCE_TILES: readonly IconTile<SourceId>[] = MOD_SOURCES.map((s) => ({ id: s.id, label: s.label, icon: s.icon, hint: s.what }));
+// dos grupos de pocas opciones: las que se mueven solas y las que reaccionan a ti
+const tilesFor = (ids: SourceId[]): IconTile<SourceId>[] =>
+  ids.map((id) => MOD_SOURCES.find((s) => s.id === id)).flatMap((s) => (s ? [{ id: s.id, label: s.label, icon: s.icon, hint: s.what }] : []));
+const AUTO_TILES = tilesFor(["lfo", "sh", "seq", "tempo"]);
+const REACT_TILES = tilesFor(["adsr", "mic", "track"]);
+const inGroup = (tiles: IconTile<SourceId>[], id: SourceId) => (tiles.some((t) => t.id === id) ? id : null);
 const CURVES: readonly Chip<RouteCurve>[] = [
   { id: "lin", label: "LINEAL" },
   { id: "scurve", label: "SUAVE" },
@@ -102,7 +107,15 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
             </View>
           </View>
 
-          <IconTiles tiles={SOURCE_TILES} value={route.source} onChange={(s) => setModulationSource(route.id, s)} />
+          <View style={styles.group}>
+            <Text style={styles.groupLabel}>SE MUEVE SOLA</Text>
+            <IconTiles tiles={AUTO_TILES} value={inGroup(AUTO_TILES, route.source)} onChange={(s) => setModulationSource(route.id, s)} />
+          </View>
+          <View style={styles.group}>
+            <Text style={styles.groupLabel}>REACCIONA A TI</Text>
+            <IconTiles tiles={REACT_TILES} value={inGroup(REACT_TILES, route.source)} onChange={(s) => setModulationSource(route.id, s)} />
+          </View>
+          <Text style={styles.what}>{src.what}</Text>
 
           {isGesture ? (
             <Text style={styles.axes} numberOfLines={1}>
@@ -188,6 +201,9 @@ const styles = StyleSheet.create({
   swatchSignal: { backgroundColor: colors.inkText },
   swatchResult: { backgroundColor: colors.inkMute, marginLeft: 6 },
   legendText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.6 },
+  group: { gap: 6 },
+  groupLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
+  what: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, marginTop: -space.xs },
   axes: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8, textAlign: "center" },
   more: { gap: space.md, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.inkLine },
   footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

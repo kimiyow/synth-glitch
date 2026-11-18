@@ -15,7 +15,8 @@ export function IconTiles<T extends string>({
   onChange,
 }: {
   tiles: readonly IconTile<T>[];
-  value: T;
+  // null: ninguna elegida en esta fila (p. ej. la elección está en otro grupo)
+  value: T | null;
   onChange: (id: T) => void;
 }) {
   return (
@@ -48,9 +49,9 @@ export function IconTiles<T extends string>({
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 3 },
-  tile: { flex: 1, height: 48, borderRadius: radius.sm, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 2 },
+  tile: { flex: 1, height: 52, borderRadius: radius.sm, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 2 },
   tileOn: { backgroundColor: colors.paper },
   pressed: { opacity: 0.6 },
-  text: { color: colors.inkText, fontFamily: type.family, fontSize: 8, letterSpacing: 0.4 },
+  text: { color: colors.inkText, fontFamily: type.family, fontSize: 10, letterSpacing: 0.4 },
   textOn: { color: colors.paperText, fontWeight: "700" },
 });
