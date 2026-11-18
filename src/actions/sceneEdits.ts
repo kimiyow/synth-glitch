@@ -186,6 +186,15 @@ export function patchModulationSettings<K extends keyof RouteSettings>(
   });
 }
 
+// reemplaza capas y rutas por una variación (mutar o aleatorizar); la pintura, el medio y el
+// recorte no cambian. Un cambio deshacible
+export function applySceneVariation(next: { layers: Layer[]; routes: Route[] }, label: string) {
+  commit(label, (scene) => {
+    scene.layers = next.layers;
+    scene.routes = next.routes;
+  });
+}
+
 // mueve una capa a otra posición de la pila (la primera se aplica antes)
 export function moveLayer(layerId: string, toIndex: number) {
   commit("ordenar capas", (scene) => {

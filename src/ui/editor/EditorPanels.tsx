@@ -144,6 +144,10 @@ export function EditorPanels(props: Props) {
         <PresetsPanel
           readOnly={readOnly}
           busy={exports.recipeBusy}
+          layers={layers}
+          routes={routes}
+          sources={sources}
+          onSelect={props.onSelect}
           onImport={props.onImportRecipe}
           onShare={() => void exports.onShareRecipe()}
         />
