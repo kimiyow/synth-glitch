@@ -173,7 +173,7 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
     return (
       <View style={styles.root}>
         <View style={styles.micRow}>
-          <Text style={[styles.note, styles.flex]}>INCLINA EL TELÉFONO</Text>
+          <GyroStatus />
           <RecalibrateButton />
         </View>
         <CommitSlider
@@ -244,6 +244,24 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
 
   // tempo (pulso): sin ajustes propios
   return null;
+}
+
+// instrucción o aviso si el teléfono no da lecturas de movimiento. JS consulta el valor numérico
+// que escribe el sensor (sin llamadas desde el hilo de UI)
+function GyroStatus() {
+  const live = useLiveMod();
+  const [available, setAvailable] = useState(true);
+  useEffect(() => {
+    const bus = live?.bus;
+    if (!bus) return;
+    const id = setInterval(() => setAvailable(bus.oriAvailable.get() === 1), 500);
+    return () => clearInterval(id);
+  }, [live]);
+  return available ? (
+    <Text style={[styles.note, styles.flex]}>INCLINA EL TELÉFONO</Text>
+  ) : (
+    <Text style={[styles.warn, styles.flex]}>SIN SENSOR DE MOVIMIENTO · NO HAY GIRO EN ESTE DISPOSITIVO</Text>
+  );
 }
 
 // fija como centro la posición actual del teléfono

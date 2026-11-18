@@ -10,7 +10,7 @@ import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
 import { Slider } from "../Slider";
 import { colors, radius, space, type } from "../tokens";
-import { ModCard } from "./ModCard";
+import { ModCard, SOURCE_LABEL } from "./ModCard";
 import type { MicView } from "./SourceEditor";
 
 const BLENDS: readonly Chip<BlendMode>[] = [
@@ -48,6 +48,8 @@ export function LayerInspector(props: Props) {
   const def = layerDef(layer);
   const mods = routes.filter((r) => r.target.layerId === layer.id);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // la última modulación creada se abre eligiendo fuente
+  const [fresh, setFresh] = useState<string | null>(null);
   // quitar pide un segundo toque en 3 s
   const [confirmRemove, setConfirmRemove] = useState(false);
   useEffect(() => {
@@ -56,7 +58,11 @@ export function LayerInspector(props: Props) {
     return () => clearTimeout(id);
   }, [confirmRemove]);
 
-  const modulated = (axis: "x" | "y") => mods.some((r) => (r.target.param === axis || r.source === "track" || r.source === "orientation") && r.amount !== 0);
+  // modulaciones que tocan un eje (el gesto y el giro mueven los dos)
+  const onAxis = (axis: "x" | "y") =>
+    mods.filter((r) => (r.target.param === axis || r.source === "track" || r.source === "orientation") && r.amount !== 0);
+  // con intensidad 1 en reemplazo, la fuente manda y el valor del usuario no cambia nada
+  const lockedBy = (axis: "x" | "y") => onAxis(axis).find((r) => r.mode === "replace" && r.amount >= 0.99) ?? null;
 
   const add = () => {
     const xCount = mods.filter((r) => r.target.param === "x").length;
@@ -65,6 +71,7 @@ export function LayerInspector(props: Props) {
     if (id) {
       tapFeedback();
       setExpanded(id);
+      setFresh(id);
     } else props.onNotice(`MÁXIMO ${MAX_MODS_PER_LAYER} MODULACIONES POR CAPA`);
   };
   const full = mods.length >= MAX_MODS_PER_LAYER;
@@ -89,9 +96,14 @@ export function LayerInspector(props: Props) {
           return (
             <View key={axis} style={styles.flex}>
               <Slider
-                label={modulated(axis) ? `∿ ${def.axes[axis]}` : def.axes[axis]}
+                label={def.axes[axis]}
+                badge={lockedBy(axis) ? "lock.fill" : onAxis(axis).length > 0 ? "waveform.path" : undefined}
                 value={layer.params[axis]}
-                onSlidingStart={() => props.onParamStart(layer.id)}
+                onSlidingStart={() => {
+                  const lock = lockedBy(axis);
+                  if (lock) props.onNotice(`${SOURCE_LABEL[lock.source]} CONTROLA ${def.axes[axis].toUpperCase()} · BAJA SU INTENSIDAD`);
+                  props.onParamStart(layer.id);
+                }}
                 onChange={(v) => props.onParam(layer.id, axis, Math.round(v * 1000) / 1000)}
                 onSlidingEnd={() => props.onParamEnd(layer.id)}
               />
@@ -168,6 +180,7 @@ export function LayerInspector(props: Props) {
               scene={scene}
               mic={mic}
               expanded={expanded === r.id}
+              fresh={fresh === r.id}
               onToggle={() => setExpanded((e) => (e === r.id ? null : r.id))}
             />
           ))}

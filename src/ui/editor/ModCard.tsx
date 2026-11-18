@@ -56,6 +56,8 @@ type Props = {
   scene: SourceConfig;
   mic: MicView;
   expanded: boolean;
+  // recién creada: se abre con los grupos de fuentes a la vista para elegir
+  fresh?: boolean;
   onToggle: () => void;
 };
 
@@ -63,9 +65,17 @@ const signed = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`;
 
 // tarjeta de una modulación. Cerrada: una línea (forma, fuente → parámetro, intensidad). Abierta:
 // la señal en vivo, la fuente, el parámetro, su ajuste principal y la intensidad; lo demás plegado
-export function ModCard({ route, index, routes, params, base, scene, mic, expanded, onToggle }: Props) {
+export function ModCard({ route, index, routes, params, base, scene, mic, expanded, fresh = false, onToggle }: Props) {
   const [scopeW, setScopeW] = useState(0);
   const [more, setMore] = useState(false);
+  // elegir fuente es poco frecuente; ajustarla es lo común: los grupos se ven solo al pedirlos
+  const [picking, setPicking] = useState(fresh);
+  const pickSource = (s: SourceId) => {
+    setModulationSource(route.id, s);
+    // GIRO toma como centro la posición actual del teléfono
+    if (s === "orientation") live?.bus.oriCalibrate.set(live.bus.oriCalibrate.get() + 1);
+    setPicking(false);
+  };
   const sheet = useContext(SheetPin);
   const live = useLiveMod();
   const cardRef = useRef<ComponentRef<typeof View>>(null);
@@ -128,23 +138,44 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
           </View>
           )}
 
-          <View style={styles.group}>
-            <Text style={styles.groupLabel}>SE MUEVE SOLA</Text>
-            <IconTiles tiles={AUTO_TILES} value={inGroup(AUTO_TILES, route.source)} onChange={(s) => setModulationSource(route.id, s)} />
-          </View>
-          <View style={styles.group}>
-            <Text style={styles.groupLabel}>REACCIONA A TI</Text>
-            <IconTiles
-              tiles={REACT_TILES}
-              value={inGroup(REACT_TILES, route.source)}
-              onChange={(s) => {
-                setModulationSource(route.id, s);
-                // GIRO toma como centro la posición actual del teléfono
-                if (s === "orientation") live?.bus.oriCalibrate.set(live.bus.oriCalibrate.get() + 1);
-              }}
-            />
-          </View>
-          <Text style={styles.what}>{src.what}</Text>
+          {picking ? (
+            <>
+              <View style={styles.group}>
+                <Text style={styles.groupLabel}>SE MUEVE SOLA</Text>
+                <IconTiles tiles={AUTO_TILES} value={inGroup(AUTO_TILES, route.source)} onChange={pickSource} />
+              </View>
+              <View style={styles.group}>
+                <Text style={styles.groupLabel}>REACCIONA A TI</Text>
+                <IconTiles tiles={REACT_TILES} value={inGroup(REACT_TILES, route.source)} onChange={pickSource} />
+              </View>
+              <Text style={styles.what}>{src.what}</Text>
+            </>
+          ) : (
+            // fuente elegida en una fila: su ficha, qué hace y CAMBIAR
+            <View style={styles.chosen}>
+              <View style={styles.chosenTile}>
+                <Icon name={src.icon} size={16} color={colors.paperText} />
+              </View>
+              <View style={styles.chosenText}>
+                <Text style={styles.chosenLabel}>{src.label}</Text>
+                <Text style={styles.chosenWhat} numberOfLines={1}>
+                  {src.what}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Cambiar la fuente, ahora ${src.label}`}
+                hitSlop={8}
+                onPress={() => {
+                  selectFeedback();
+                  setPicking(true);
+                }}
+                style={({ pressed }) => [styles.change, pressed && styles.pressed]}
+              >
+                <Text style={styles.changeText}>CAMBIAR</Text>
+              </Pressable>
+            </View>
+          )}
 
           {isGesture ? (
             <Text style={styles.axes} numberOfLines={1}>
@@ -271,6 +302,13 @@ const styles = StyleSheet.create({
   swatchResult: { backgroundColor: colors.inkMute, marginLeft: 6 },
   legendText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.6 },
   group: { gap: 6 },
+  chosen: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  chosenTile: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center" },
+  chosenText: { flex: 1, gap: 2 },
+  chosenLabel: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "700", letterSpacing: 0.8 },
+  chosenWhat: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.4 },
+  change: { height: 32, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.inkRaised, justifyContent: "center" },
+  changeText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
   groupLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   what: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, marginTop: -space.xs },
   axes: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8, textAlign: "center" },

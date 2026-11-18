@@ -1,6 +1,9 @@
 import { useContext, useRef, useState } from "react";
 import { StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
+import type { SFSymbol } from "expo-symbols";
+
+import { Icon } from "./kit/Icon";
 import { SheetScrollLock } from "./kit/Sheet";
 import { colors, type } from "./tokens";
 
@@ -13,6 +16,8 @@ type Props = {
   onSlidingEnd?: () => void;
   // texto del valor a la derecha (por defecto, porcentaje)
   valueText?: string;
+  // icono antes del nombre (p. ej. modulado o bloqueado por una modulación)
+  badge?: SFSymbol;
 };
 
 const THUMB = 18;
@@ -22,7 +27,7 @@ const INTENT_SLOP = 6;
 // deslizador moderno: pista fina, perilla blanca y valor a la derecha (responder de RN). No cambia
 // el valor hasta saber la intención: un arrastre horizontal lo ajusta; uno vertical se cede a la
 // hoja (scroll) sin tocar el valor; un toque sin arrastre salta al punto tocado al soltar
-export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, valueText }: Props) {
+export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, valueText, badge }: Props) {
   const [width, setWidth] = useState(1);
   const [active, setActive] = useState(false);
   // la perilla sigue al dedo con su propio estado; el padre puede tardar en actualizar value
@@ -56,9 +61,12 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.label} numberOfLines={1}>
-          {label}
-        </Text>
+        <View style={styles.labelRow}>
+          {badge && <Icon name={badge} size={11} color={colors.inkText} />}
+          <Text style={styles.label} numberOfLines={1}>
+            {label}
+          </Text>
+        </View>
         <Text style={[styles.value, active && styles.valueOn]}>{valueText ?? `${Math.round(v * 100)}`}</Text>
       </View>
       <View
@@ -119,6 +127,7 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
+  labelRow: { flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 4 },
   label: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label },
   value: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
   valueOn: { color: colors.inkText },
