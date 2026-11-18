@@ -148,6 +148,7 @@ export function EditorPanels(props: Props) {
           routes={routes}
           sources={sources}
           onSelect={props.onSelect}
+          onNotice={props.onNotice}
           onImport={props.onImportRecipe}
           onShare={() => void exports.onShareRecipe()}
         />

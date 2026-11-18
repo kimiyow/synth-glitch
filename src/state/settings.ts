@@ -1,6 +1,8 @@
 import { createStore } from "zustand/vanilla";
 
-import type { CropAspect, GesturePreset } from "../domain/types";
+import type { CropAspect, GesturePreset, ScenePreset } from "../domain/types";
+import { parseSources, withRouteSettings } from "../modulation/sources";
+import { parseLayer, parseRoute } from "../project/schema";
 
 export type CameraAspect = Exclude<CropAspect, "free">;
 export const CAMERA_ASPECTS: readonly CameraAspect[] = ["9:16", "1:1", "4:5"];
@@ -14,9 +16,37 @@ export type AppSettings = {
   onboardingSeen: boolean;
   // biblioteca de presets gestuales (compartida entre proyectos)
   gestures: GesturePreset[];
+  // presets de escena del usuario (capas + modulaciones, sin foto ni pintura)
+  scenes: ScenePreset[];
 };
 
-export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false, onboardingSeen: false, gestures: [] };
+export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false, onboardingSeen: false, gestures: [], scenes: [] };
+
+// presets de escena del usuario que se conservan
+export const MAX_SCENE_PRESETS = 30;
+
+// presets de escena guardados; uno dañado se descarta sin afectar a los demás
+function parseScenes(v: unknown): ScenePreset[] {
+  if (!Array.isArray(v)) return [];
+  const out: ScenePreset[] = [];
+  for (const raw of v) {
+    try {
+      if (typeof raw !== "object" || raw === null) continue;
+      const o = raw as Record<string, unknown>;
+      if (typeof o.id !== "string" || typeof o.name !== "string" || !Array.isArray(o.layers) || !Array.isArray(o.routes)) continue;
+      const sources = parseSources(o.sources);
+      const layers = o.layers.map((l, i) => parseLayer(l, `scenes.layers[${i}]`));
+      const ids = new Set(layers.map((l) => l.id));
+      const routes = o.routes
+        .map((r, i) => withRouteSettings(parseRoute(r, `scenes.routes[${i}]`), sources))
+        .filter((r) => ids.has(r.target.layerId));
+      out.push({ id: o.id, name: o.name.slice(0, 30), builtIn: false, layers, routes, sources });
+    } catch {
+      // preset inválido: se omite
+    }
+  }
+  return out.slice(0, MAX_SCENE_PRESETS);
+}
 
 // gestos que se conservan en la biblioteca (cada uno ocupa hasta ~600 números)
 export const MAX_GESTURE_PRESETS = 12;
@@ -45,6 +75,7 @@ export function parseSettings(raw: unknown): AppSettings {
     holdHintSeen: typeof o.holdHintSeen === "boolean" ? o.holdHintSeen : DEFAULT_SETTINGS.holdHintSeen,
     onboardingSeen: typeof o.onboardingSeen === "boolean" ? o.onboardingSeen : DEFAULT_SETTINGS.onboardingSeen,
     gestures: parseGestures(o.gestures),
+    scenes: parseScenes(o.scenes),
   };
 }
 
@@ -61,9 +92,9 @@ export function createSettingsStore(io: { load: () => unknown; save: (settings: 
     ...initial,
     update(patch) {
       set(patch);
-      const { cameraAspect, holdHintSeen, onboardingSeen, gestures } = get();
+      const { cameraAspect, holdHintSeen, onboardingSeen, gestures, scenes } = get();
       try {
-        io.save({ cameraAspect, holdHintSeen, onboardingSeen, gestures });
+        io.save({ cameraAspect, holdHintSeen, onboardingSeen, gestures, scenes });
       } catch {
         // no guardar un ajuste no debe romper la app; se reintenta en el próximo cambio
       }

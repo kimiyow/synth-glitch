@@ -14,6 +14,7 @@ describe("parseSettings", () => {
       holdHintSeen: true,
       onboardingSeen: false,
       gestures: [],
+      scenes: [],
     });
   });
 });
@@ -24,7 +25,7 @@ describe("createSettingsStore", () => {
     const store = createSettingsStore({ load: () => ({ cameraAspect: "4:5" }), save: (s) => saved.push(s) });
     expect(store.getState().cameraAspect).toBe("4:5");
     store.getState().update({ holdHintSeen: true });
-    expect(saved).toEqual([{ cameraAspect: "4:5", holdHintSeen: true, onboardingSeen: false, gestures: [] }]);
+    expect(saved).toEqual([{ cameraAspect: "4:5", holdHintSeen: true, onboardingSeen: false, gestures: [], scenes: [] }]);
   });
 
   it("si no puede leer ni guardar, sigue funcionando con los valores por defecto", () => {

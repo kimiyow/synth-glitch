@@ -1,14 +1,21 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { applyScenePreset, removeScenePreset, saveScenePreset } from "../../actions/scenePresets";
 import { applySceneVariation } from "../../actions/sceneEdits";
-import type { Layer, Route, SourceConfig } from "../../domain/types";
+import type { Layer, Route, ScenePreset, SourceConfig } from "../../domain/types";
+import { FACTORY_PRESETS } from "../../engine/factoryPresets";
 import { mutateScene, newMutationSeed, randomScene, type MutationLevel } from "../../engine/mutate";
-import { tapFeedback } from "../../platform/haptics";
+import { selectFeedback, tapFeedback } from "../../platform/haptics";
+import { useSettings } from "../../state/appSettings";
+import { MAX_SCENE_PRESETS } from "../../state/settings";
 import { ActionGrid, type GridAction } from "../kit/ActionGrid";
 import { Icon } from "../kit/Icon";
+import { IconButton } from "../kit/IconButton";
 import { Segmented } from "../kit/Segmented";
 import { colors, radius, space, type } from "../tokens";
+import { layerDef } from "./LayerInspector";
+import { SOURCE_ICON } from "./ModCard";
 
 type Props = {
   readOnly: boolean;
@@ -18,8 +25,9 @@ type Props = {
   sources: SourceConfig;
   onImport: () => void;
   onShare: () => void;
-  // tras aleatorizar, la capa que queda seleccionada
+  // tras aleatorizar o aplicar un preset, la capa que queda seleccionada
   onSelect: (layerId: string) => void;
+  onNotice: (text: string) => void;
 };
 
 type PresetAction = "import" | "share" | "save" | "mutate" | "random";
@@ -36,8 +44,17 @@ type Explore = { kind: "mutate"; base: { layers: Layer[]; routes: Route[] }; see
 
 // panel Presets: recetas .synthfx y exploración (mutar, aleatorizar). Cada variación es un cambio
 // deshacible y muestra su semilla
-export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport, onShare, onSelect }: Props) {
+export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport, onShare, onSelect, onNotice }: Props) {
   const [explore, setExplore] = useState<Explore | null>(null);
+  const userScenes = useSettings((s) => s.scenes);
+  const apply = (p: ScenePreset) => {
+    if (readOnly) return;
+    selectFeedback();
+    const last = applyScenePreset(p);
+    if (last) onSelect(last);
+    setExplore(null);
+    onNotice(`${p.name.toUpperCase()} APLICADO`);
+  };
   const bpm = sources.tempo.bpm;
 
   const mutate = (base: { layers: Layer[]; routes: Route[] }, seed: number, level: MutationLevel) => {
@@ -57,7 +74,12 @@ export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport
     { id: "share", icon: "square.and.arrow.up", label: "Compartir receta" },
     { id: "mutate", icon: "wand.and.rays", label: "Mutar", reason: readOnly ? "SOLO LECTURA" : layers.length === 0 ? "SIN CAPAS" : null },
     { id: "random", icon: "dice", label: "Aleatorizar", reason: readOnly ? "SOLO LECTURA" : null },
-    { id: "save", icon: "square.stack.3d.up", label: "Guardar escena", reason: "PRONTO" },
+    {
+      id: "save",
+      icon: "square.stack.3d.up",
+      label: "Guardar escena",
+      reason: readOnly ? "SOLO LECTURA" : layers.length === 0 ? "SIN CAPAS" : userScenes.length >= MAX_SCENE_PRESETS ? "LLENA" : null,
+    },
   ];
 
   return (
@@ -70,6 +92,10 @@ export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport
           if (id === "share") onShare();
           if (id === "mutate") mutate({ layers: [...layers], routes: [...routes] }, newMutationSeed(), explore?.kind === "mutate" ? explore.level : "medium");
           if (id === "random") randomize(newMutationSeed());
+          if (id === "save") {
+            const name = saveScenePreset(layers, routes, sources);
+            onNotice(name ? `${name.toUpperCase()} GUARDADA` : "BIBLIOTECA LLENA · BORRA UNA ESCENA");
+          }
         }}
       />
 
@@ -102,11 +128,58 @@ export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport
           </View>
         </View>
       )}
+
+      <Text style={styles.section}>
+        ESCENAS <Text style={styles.seed}>{userScenes.length}/{MAX_SCENE_PRESETS}</Text>
+      </Text>
+      <View style={styles.list}>
+        {[...FACTORY_PRESETS, ...userScenes].map((p) => (
+          <SceneRow key={p.id} preset={p} disabled={readOnly || busy} onApply={() => apply(p)} onDelete={p.builtIn ? undefined : () => removeScenePreset(p.id)} />
+        ))}
+      </View>
     </View>
   );
 }
 
+// fila de un preset: nombre, sus efectos y los iconos de sus modulaciones. Tocar la aplica
+function SceneRow({ preset, disabled, onApply, onDelete }: { preset: ScenePreset; disabled: boolean; onApply: () => void; onDelete?: () => void }) {
+  const effects = preset.layers.map((l) => layerDef(l).label).join(" + ");
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${preset.name}: ${effects}${preset.builtIn ? ", de fábrica" : ""}`}
+      accessibilityHint="Reemplaza las capas de la escena"
+      disabled={disabled}
+      onPress={onApply}
+      style={({ pressed }) => [styles.sceneRow, disabled && styles.off, pressed && styles.pressed]}
+    >
+      <View style={styles.sceneText}>
+        <Text style={styles.sceneName} numberOfLines={1}>
+          {preset.name}
+          {preset.builtIn ? <Text style={styles.seed}> · DE FÁBRICA</Text> : null}
+        </Text>
+        <Text style={styles.sceneFx} numberOfLines={1}>
+          {effects}
+        </Text>
+      </View>
+      <View style={styles.sceneMods}>
+        {preset.routes.slice(0, 4).map((r) => (
+          <Icon key={r.id} name={SOURCE_ICON[r.source]} size={11} color={colors.inkMute} />
+        ))}
+      </View>
+      {onDelete && <IconButton icon="trash" label={`Borrar ${preset.name}`} size={32} bare onPress={onDelete} />}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  list: { gap: space.xs },
+  sceneRow: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 52, paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: colors.inkSurface },
+  sceneText: { flex: 1, gap: 2 },
+  sceneName: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600" },
+  sceneFx: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.6 },
+  sceneMods: { flexDirection: "row", gap: 4 },
+  off: { opacity: 0.45 },
   root: { gap: space.md },
   explore: { gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: colors.inkSurface },
   section: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
