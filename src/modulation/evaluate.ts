@@ -1,6 +1,6 @@
 import type { Layer, Route, SourceConfig } from "../domain/types";
 import { curve01, curveSigned } from "./curves";
-import { adsrValue, lfoValue, routeLfo, routeSeq, routeSh, seqValue, shValue } from "./sources";
+import { adsrValue, gestureValue, lfoValue, routeLfo, routeSeq, routeSh, seqValue, shValue } from "./sources";
 import { beatPhase } from "./tempo";
 
 // entradas en vivo del cuadro (no se guardan en el proyecto)
@@ -17,6 +17,8 @@ export type ModInputs = {
   micHitAt: number | null;
   // pista gestual activa: muestras [x, y] intercaladas, duración e inicio de reproducción (s)
   track: { samples: number[]; durationMs: number; startAt: number } | null;
+  // grabación de un gesto en curso: la ruta que se graba sigue al dedo en vivo
+  rec: { routeId: string; x: number; y: number } | null;
 };
 
 export const NO_INPUTS: ModInputs = {
@@ -27,6 +29,7 @@ export const NO_INPUTS: ModInputs = {
   mic: 0,
   micHitAt: null,
   track: null,
+  rec: null,
 };
 
 // duración de la compuerta del ADSR cuando lo dispara un golpe del micrófono
@@ -46,6 +49,8 @@ export function sourceValue(
   inputs: ModInputs,
   seed: number,
   base: { x: number; y: number },
+  // eje que se evalúa (el gesto mueve los dos con una sola ruta)
+  param: "x" | "y" = route.target.param,
 ): number {
   "worklet";
   const bpm = sources.tempo.bpm;
@@ -82,6 +87,13 @@ export function sourceValue(
       return Math.min(1, inputs.mic * m.gain);
     }
     case "track": {
+      const rec = inputs.rec;
+      if (rec !== null && rec.routeId === route.id) return param === "x" ? rec.x : rec.y;
+      const g = route.settings === undefined ? undefined : route.settings.gesture;
+      if (g !== undefined) {
+        const v = gestureValue(g, t, param === "x" ? 0 : 1);
+        return v === null ? (param === "x" ? base.x : base.y) : v;
+      }
       const tr = inputs.track;
       if (!tr || tr.samples.length < 2 || tr.durationMs <= 0) return route.target.param === "x" ? base.x : base.y;
       const frames = tr.samples.length / 2;
@@ -112,9 +124,10 @@ export function evaluateAxis(
   let hasReplace = false;
   for (let i = 0; i < routes.length; i++) {
     const r = routes[i];
-    if (r.target.layerId !== layerId || r.target.param !== param) continue;
+    // un gesto mueve los dos ejes de su capa
+    if (r.target.layerId !== layerId || (r.target.param !== param && r.source !== "track")) continue;
     // cada ruta tiene su propio azar: dos S&H en capas distintas no se mueven igual
-    const v = sourceValue(r, sources, t, inputs, seed + i * 7919, base);
+    const v = sourceValue(r, sources, t, inputs, seed + i * 7919, base, param);
     if (r.mode === "replace") {
       hasReplace = true;
       const u = isBipolar(r.source) ? (v + 1) / 2 : v;

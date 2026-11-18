@@ -58,7 +58,15 @@ export type Route = {
 // responde. level = sigue el volumen; hit = pulso que decae en cada golpe
 export type MicRouteConfig = { mode: "level" | "hit"; gain: number; decay: number };
 export type AdsrTrigger = "touch" | "mic";
+// gesto grabado: posición absoluta del dedo [x, y] intercalada (0..1) a 30 Hz. smooth = el final se
+// funde con el inicio para que el bucle no salte; cut = salta tal cual se grabó
+export type GestureLoop = "smooth" | "cut";
+export type GestureClip = { durationMs: number; samples: number[]; loop: GestureLoop };
+// gesto guardado en la biblioteca de la app (se aplica a cualquier capa o proyecto)
+export type GesturePreset = { id: string; name: string; durationMs: number; samples: number[] };
+
 export type RouteSettings = {
+  gesture?: GestureClip;
   lfo?: SourceConfig["lfo"];
   adsr?: SourceConfig["adsr"] & { trigger: AdsrTrigger };
   sh?: SourceConfig["sh"];

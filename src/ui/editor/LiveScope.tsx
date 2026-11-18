@@ -1,7 +1,7 @@
 import { Canvas, Circle, Line, Points, vec } from "@shopify/react-native-skia";
 import { useDerivedValue, useFrameCallback, useSharedValue } from "react-native-reanimated";
 
-import { useLiveMod } from "../../canvas/modBus";
+import { recInput, useLiveMod } from "../../canvas/modBus";
 import type { Route, SourceConfig } from "../../domain/types";
 import { evaluateAxis, sourceValue, type ModInputs } from "../../modulation/evaluate";
 import { colors } from "../tokens";
@@ -40,6 +40,7 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
       mic: live ? live.micLevel.get() : 0,
       micHitAt: bus ? bus.micHitAt.get() : null,
       track: null,
+      rec: bus ? recInput(bus) : null,
     };
     const seed = live ? live.seed : 0;
     const v = sourceValue(route, sources, t, inputs, seed + Math.max(0, index) * 7919, base);

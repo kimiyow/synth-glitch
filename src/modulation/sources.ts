@@ -1,4 +1,4 @@
-import type { LfoShape, MicRouteConfig, Route, RouteSettings, SeqDirection, SourceConfig, SourceId } from "../domain/types";
+import type { GestureClip, LfoShape, MicRouteConfig, Route, RouteSettings, SeqDirection, SourceConfig, SourceId } from "../domain/types";
 
 // valores por defecto de las fuentes
 export const DEFAULT_SOURCES: SourceConfig = {
@@ -81,6 +81,37 @@ export function parseSources(raw: unknown): SourceConfig {
 
 export const DEFAULT_MIC_ROUTE: MicRouteConfig = { mode: "level", gain: 1, decay: 0.3 };
 
+// gesto: 30 muestras por segundo, hasta 10 s
+export const GESTURE_RATE_HZ = 30;
+export const GESTURE_MAX_S = 10;
+export const GESTURE_MAX_FRAMES = GESTURE_RATE_HZ * GESTURE_MAX_S;
+// duración del fundido del cierre suave: 0.4 s o la cuarta parte de un gesto corto
+const GESTURE_FADE_S = 0.4;
+
+// valor de un eje (0 = x, 1 = y) del gesto en t (s), en bucle e interpolado entre muestras; null si
+// aún no hay gesto grabado
+export function gestureValue(g: GestureClip, t: number, axis: 0 | 1): number | null {
+  "worklet";
+  const frames = Math.floor(g.samples.length / 2);
+  if (frames < 2 || g.durationMs <= 0) return null;
+  const dur = g.durationMs / 1000;
+  const local = t - Math.floor(t / dur) * dur;
+  const f = Math.min(frames - 1, Math.max(0, (local / dur) * (frames - 1)));
+  const i = Math.floor(f);
+  const j = Math.min(frames - 1, i + 1);
+  const k = f - i;
+  const v = g.samples[i * 2 + axis] * (1 - k) + g.samples[j * 2 + axis] * k;
+  if (g.loop !== "smooth") return v;
+  // cierre suave: en el último tramo se funde hacia el punto inicial (curva S), así al volver a
+  // empezar no hay salto
+  const fade = Math.min(GESTURE_FADE_S, dur * 0.25);
+  const into = local - (dur - fade);
+  if (into <= 0 || fade <= 0) return v;
+  const u = Math.min(1, into / fade);
+  const w = u * u * (3 - 2 * u);
+  return v * (1 - w) + g.samples[axis] * w;
+}
+
 // ajustes de una modulación nueva para la fuente dada, a partir de los de la escena
 export function defaultRouteSetting(source: SourceId, scene: SourceConfig): RouteSettings {
   switch (source) {
@@ -94,6 +125,8 @@ export function defaultRouteSetting(source: SourceId, scene: SourceConfig): Rout
       return { seq: { ...scene.seq, steps: [...scene.seq.steps] } };
     case "mic":
       return { mic: { ...DEFAULT_MIC_ROUTE } };
+    case "track":
+      return { gesture: { durationMs: 0, samples: [], loop: "smooth" } };
     default:
       return {};
   }
@@ -117,6 +150,16 @@ export function parseRouteSettings(raw: unknown): RouteSettings | undefined {
   if (r.adsr !== undefined) out.adsr = { ...full.adsr, trigger: o(r.adsr).trigger === "mic" ? "mic" : "touch" };
   if (r.sh !== undefined) out.sh = full.sh;
   if (r.seq !== undefined) out.seq = full.seq;
+  if (r.gesture !== undefined) {
+    const g = o(r.gesture);
+    const raw = Array.isArray(g.samples) ? g.samples.slice(0, GESTURE_MAX_FRAMES * 2) : [];
+    const samples = raw.slice(0, raw.length - (raw.length % 2)).map((v) => num(v, 0.5, 0, 1));
+    out.gesture = {
+      durationMs: num(g.durationMs, 0, 0, GESTURE_MAX_S * 1000),
+      samples,
+      loop: g.loop === "cut" ? "cut" : "smooth",
+    };
+  }
   if (r.mic !== undefined) {
     const m = o(r.mic);
     out.mic = {

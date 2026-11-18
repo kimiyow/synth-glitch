@@ -21,6 +21,7 @@ export const MOD_SOURCES: { id: SourceId; label: string; icon: SFSymbol; what: s
   { id: "seq", label: "PASOS", icon: "chart.bar.fill", what: "Recorre una secuencia que tú dibujas" },
   { id: "tempo", label: "PULSO", icon: "metronome", what: "Una rampa en cada tiempo del reloj" },
   { id: "mic", label: "MIC", icon: "mic", what: "Responde al sonido del micrófono" },
+  { id: "track", label: "GESTO", icon: "hand.draw", what: "Repite en bucle un movimiento que grabas con el dedo" },
 ];
 export const SOURCE_LABEL = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.label])) as Record<SourceId, string>;
 export const SOURCE_ICON = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.icon])) as Record<SourceId, SFSymbol>;
@@ -56,7 +57,9 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
   const [scopeW, setScopeW] = useState(0);
   const [more, setMore] = useState(false);
   const src = MOD_SOURCES.find((s) => s.id === route.source) ?? MOD_SOURCES[0];
-  const paramName = params[route.target.param];
+  // el gesto mueve los dos parámetros (horizontal → el primero, vertical → el segundo)
+  const isGesture = route.source === "track";
+  const paramName = isGesture ? `${params.x} + ${params.y}` : params[route.target.param];
   const patch = <K extends keyof RouteSettings>(key: K, label: string, p: Partial<NonNullable<RouteSettings[K]>>) =>
     patchModulationSettings(route.id, key, label, p);
 
@@ -120,14 +123,20 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
             })}
           </View>
 
-          <Segmented
-            options={[
-              { id: "x", label: params.x.toUpperCase() },
-              { id: "y", label: params.y.toUpperCase() },
-            ]}
-            value={route.target.param}
-            onChange={(param) => updateModulation(route.id, "parámetro modulado", (r) => void (r.target.param = param))}
-          />
+          {isGesture ? (
+            <Text style={styles.axes} numberOfLines={1}>
+              ↔ {params.x} · ↕ {params.y}
+            </Text>
+          ) : (
+            <Segmented
+              options={[
+                { id: "x", label: params.x.toUpperCase() },
+                { id: "y", label: params.y.toUpperCase() },
+              ]}
+              value={route.target.param}
+              onChange={(param) => updateModulation(route.id, "parámetro modulado", (r) => void (r.target.param = param))}
+            />
+          )}
 
           <RouteSourceEditor route={route} scene={scene} mic={mic} patch={patch} />
 
@@ -198,10 +207,11 @@ const styles = StyleSheet.create({
   swatchSignal: { backgroundColor: colors.inkText },
   swatchResult: { backgroundColor: colors.inkMute, marginLeft: 6 },
   legendText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.6 },
-  sources: { flexDirection: "row", gap: 4 },
+  sources: { flexDirection: "row", gap: 3 },
+  axes: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8, textAlign: "center" },
   source: { flex: 1, height: 48, borderRadius: radius.sm, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center", gap: 4 },
   sourceOn: { backgroundColor: colors.paper },
-  sourceText: { color: colors.inkText, fontFamily: type.family, fontSize: 8, letterSpacing: 0.6 },
+  sourceText: { color: colors.inkText, fontFamily: type.family, fontSize: 8, letterSpacing: 0.4 },
   sourceTextOn: { color: colors.paperText, fontWeight: "700" },
   more: { gap: space.md, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.inkLine },
   footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

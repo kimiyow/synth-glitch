@@ -49,7 +49,7 @@ export function LayerInspector(props: Props) {
   const mods = routes.filter((r) => r.target.layerId === layer.id);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const modulated = (axis: "x" | "y") => mods.some((r) => r.target.param === axis && r.amount !== 0);
+  const modulated = (axis: "x" | "y") => mods.some((r) => (r.target.param === axis || r.source === "track") && r.amount !== 0);
 
   const add = () => {
     const xCount = mods.filter((r) => r.target.param === "x").length;

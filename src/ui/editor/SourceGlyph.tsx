@@ -43,6 +43,14 @@ function samples(route: Route, scene: SourceConfig): { values: number[]; bipolar
     case "tempo":
       at(SAMPLES, (u) => (u * 4) % 1);
       return { values: out, bipolar: false };
+    case "track": {
+      // recorrido horizontal del gesto grabado (plano si aún no hay)
+      const s = route.settings?.gesture?.samples ?? [];
+      const frames = Math.floor(s.length / 2);
+      if (frames < 2) return { values: [0.5, 0.5], bipolar: false };
+      at(SAMPLES, (u) => s[Math.min(frames - 1, Math.floor(u * (frames - 1))) * 2]);
+      return { values: out, bipolar: false };
+    }
     case "mic": {
       const m = route.settings?.mic ?? DEFAULT_MIC_ROUTE;
       if (m.mode === "hit") {

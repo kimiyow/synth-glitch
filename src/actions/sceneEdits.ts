@@ -8,6 +8,7 @@ import type {
   BlendMode,
   EffectId,
   GeneratorId,
+  GestureClip,
   Layer,
   Route,
   RouteSettings,
@@ -105,25 +106,41 @@ export function rerollSeed(layerId: string) {
 // modulaciones: cada capa puede tener varias, cada una con su fuente y sus propios ajustes
 export const MAX_MODS_PER_LAYER = 4;
 
-const routeMode = (source: SourceId): Route["mode"] => (source === "seq" ? "replace" : "add");
+// el secuenciador y el gesto fijan el valor; el resto se suma al gesto X/Y
+const routeMode = (source: SourceId): Route["mode"] => (source === "seq" || source === "track" ? "replace" : "add");
 
-// añade una modulación (LFO sobre el eje dado). Devuelve su id, o null si la capa ya tiene el máximo
-export function addModulation(routes: readonly Route[], layerId: string, param: Axis): string | null {
+// el gesto fija la posición (reemplaza el valor del parámetro) con intensidad completa; el resto se
+// suma al gesto X/Y con media intensidad
+const defaultAmount = (source: SourceId) => (source === "track" ? 1 : 0.5);
+
+// añade una modulación sobre el eje dado (LFO si no se indica). Devuelve su id, o null si la capa
+// ya tiene el máximo
+export function addModulation(routes: readonly Route[], layerId: string, param: Axis, source: SourceId = "lfo"): string | null {
   if (routes.filter((r) => r.target.layerId === layerId).length >= MAX_MODS_PER_LAYER) return null;
   const id = `mod-${Date.now().toString(36)}-${Math.floor(Math.random() * 1296).toString(36)}`;
   commit("añadir modulación", (scene) => {
     scene.routes.push({
       id,
-      source: "lfo",
+      source,
       sourceIndex: 0,
       target: { layerId, param },
-      amount: 0.5,
+      amount: defaultAmount(source),
       curve: "lin",
-      mode: "add",
-      settings: defaultRouteSetting("lfo", scene.sources),
+      mode: routeMode(source),
+      settings: defaultRouteSetting(source, scene.sources),
     });
   });
   return id;
+}
+
+// gesto recién grabado (o aplicado desde la biblioteca) de una modulación GESTO
+export function setGestureClip(routeId: string, clip: Omit<GestureClip, "loop">, label = "grabar gesto") {
+  commit(label, (scene) => {
+    const r = scene.routes.find((x) => x.id === routeId);
+    if (!r) return;
+    const loop = r.settings?.gesture?.loop ?? "smooth";
+    r.settings = { ...r.settings, gesture: { durationMs: clip.durationMs, samples: [...clip.samples], loop } };
+  });
 }
 
 export function removeModulation(routeId: string) {
@@ -139,6 +156,7 @@ export function setModulationSource(routeId: string, source: SourceId) {
     if (!r || r.source === source) return;
     r.source = source;
     r.mode = routeMode(source);
+    if (source === "track") r.amount = 1;
     const key = source as keyof RouteSettings;
     if (!r.settings?.[key]) r.settings = { ...r.settings, ...defaultRouteSetting(source, scene.sources) };
   });

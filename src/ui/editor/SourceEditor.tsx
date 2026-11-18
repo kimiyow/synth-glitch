@@ -1,6 +1,7 @@
 import { useContext, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
+import { saveGesturePreset } from "../../actions/gestureLibrary";
 import type { Route, RouteSettings, SourceConfig } from "../../domain/types";
 import { dbToUnit } from "../../modulation/micEnvelope";
 import { DEFAULT_MIC_ROUTE, DIVISIONS, LFO_SHAPES, MAX_BPM, MIN_BPM, SEQ_DIRECTIONS } from "../../modulation/sources";
@@ -10,6 +11,7 @@ import { Segmented } from "../kit/Segmented";
 import { SheetScrollLock } from "../kit/Sheet";
 import { Slider } from "../Slider";
 import { colors, radius, space, type } from "../tokens";
+import { useGestureRecord } from "./gestureRecord";
 
 // estado del micrófono (lo da el adaptador de plataforma)
 export type MicView = {
@@ -38,7 +40,7 @@ type RouteProps = {
 
 // true si la fuente tiene ajustes avanzados (para mostrar "Más ajustes")
 export function hasAdvanced(route: Route): boolean {
-  return route.source === "lfo" || route.source === "adsr" || route.source === "sh" || route.source === "seq";
+  return route.source === "lfo" || route.source === "adsr" || route.source === "sh" || route.source === "seq" || route.source === "track";
 }
 
 // ajustes propios de la fuente de una modulación
@@ -143,6 +145,23 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
     return <StepBars steps={seq.steps} onCommit={(steps) => patch("seq", "pasos", { steps })} />;
   }
 
+  if (route.source === "track") {
+    const g = own.gesture;
+    if (advanced) {
+      return (
+        <Segmented
+          options={[
+            { id: "smooth", label: "CIERRE SUAVE" },
+            { id: "cut", label: "CORTE" },
+          ]}
+          value={g?.loop ?? "smooth"}
+          onChange={(loop) => patch("gesture", "cierre del gesto", { loop })}
+        />
+      );
+    }
+    return <GestureControls route={route} />;
+  }
+
   if (route.source === "mic") {
     if (advanced) return null;
     const m = own.mic ?? DEFAULT_MIC_ROUTE;
@@ -182,6 +201,42 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
 
   // tempo (pulso): sin ajustes propios
   return null;
+}
+
+// grabar, regrabar y guardar en la biblioteca el gesto de una modulación GESTO
+function GestureControls({ route }: { route: Route }) {
+  const rec = useGestureRecord();
+  const g = route.settings?.gesture;
+  const has = !!g && g.samples.length >= 4;
+  if (!has) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Mueve el dedo sobre la imagen; al soltar se repite en bucle"
+        onPress={() => rec?.start(route.id)}
+        style={({ pressed }) => [styles.recBig, pressed && styles.pressed]}
+      >
+        <View style={styles.recDot} />
+        <Text style={styles.recBigText}>GRABAR GESTO</Text>
+      </Pressable>
+    );
+  }
+  return (
+    <View style={styles.micRow}>
+      <Pressable accessibilityRole="button" onPress={() => rec?.start(route.id)} style={({ pressed }) => [styles.btn, styles.btnRow, pressed && styles.pressed]}>
+        <View style={styles.recDotSmall} />
+        <Text style={styles.btnText}>REGRABAR</Text>
+      </Pressable>
+      <Text style={[styles.note, styles.flex]}>{(g.durationMs / 1000).toFixed(1)} s</Text>
+      <Btn
+        label="GUARDAR"
+        onPress={() => {
+          const name = saveGesturePreset(g);
+          rec?.notice(name ? `${name.toUpperCase()} GUARDADO` : "BIBLIOTECA LLENA · BORRA UN GESTO");
+        }}
+      />
+    </View>
+  );
 }
 
 function MicStatus({ mic }: { mic: MicView }) {
@@ -394,4 +449,17 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   btnText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label },
+  btnRow: { flexDirection: "row", gap: 6 },
+  recBig: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.sm,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.paper,
+  },
+  recBigText: { color: colors.paperText, fontFamily: type.family, fontSize: type.label, fontWeight: "700", letterSpacing: 1.2 },
+  recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.paperText },
+  recDotSmall: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.inkText },
 });

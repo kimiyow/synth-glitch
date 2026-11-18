@@ -23,6 +23,10 @@ function routePeriod(route: Route, s: SourceConfig): number | null {
     }
     case "tempo":
       return beat;
+    case "track": {
+      const g = route.settings?.gesture;
+      return g && g.samples.length >= 4 && g.durationMs > 0 ? g.durationMs / 1000 : null;
+    }
     default:
       return null;
   }

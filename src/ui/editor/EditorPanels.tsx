@@ -1,18 +1,19 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import type { ComponentProps } from "react";
-import { StyleSheet, Text, View } from "react-native";
 
+import { applyGesturePreset, ensureGestureRoute, removeGesturePreset, saveGesturePreset } from "../../actions/gestureLibrary";
 import { setSources, setTempo } from "../../actions/sceneEdits";
 import type { Layer, Project } from "../../domain/types";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { MAX_STROKES } from "../../paint/strokeInterpolate";
 import { EffectThumb } from "../../render/EffectThumb";
 import { sceneStore, useScene } from "../../state/activeScene";
-import { colors, type } from "../tokens";
 import { BrushPanel } from "./BrushPanel";
 import { EffectsPanel, THUMB_SIZE, type TileRef } from "./EffectsPanel";
 import { ExportPanel } from "./ExportPanel";
-import { LayerInspector } from "./LayerInspector";
+import { useGestureRecord } from "./gestureRecord";
+import { GesturePanel } from "./GesturePanel";
+import { LayerInspector, layerDef } from "./LayerInspector";
 import { LayersPanel } from "./LayersPanel";
 import { PanelSheet } from "./PanelSheet";
 import type { PanelId } from "./panels";
@@ -49,6 +50,11 @@ export function EditorPanels(props: Props) {
   const draft = useScene((s) => s.draft);
   const paramDrag = useParamDrag();
   const { layers, routes, sources, seed } = project.scene;
+  const rec = useGestureRecord();
+  // gesto grabado de la capa seleccionada (para "Guardar preset gestual" en Exportar)
+  const selectedGesture = selected
+    ? routes.find((r) => r.target.layerId === selected.id && r.source === "track" && (r.settings?.gesture?.samples.length ?? 0) >= 4)?.settings?.gesture
+    : undefined;
   const warning = hasFastLuminanceRoute(layers, routes, sources) ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA" : null;
   const renderInspector = (layer: Layer, onBack: () => void) => (
     <LayerInspector
@@ -105,10 +111,18 @@ export function EditorPanels(props: Props) {
             gif: project.scene.media.kind === "clip" ? "SOLO FOTOS" : undefined,
             project: readOnly ? "SOLO LECTURA" : undefined,
             share: exports.lastExport ? undefined : "EXPORTA PRIMERO",
-            gesture: "PRÓXIMAMENTE",
+            gesture: readOnly ? "SOLO LECTURA" : selectedGesture ? undefined : "GRABA UN GESTO",
           }}
           job={exports.job}
-          onAction={(a) => void exports.onExportAction(a)}
+          onAction={(a) => {
+            if (a === "gesture") {
+              if (!selectedGesture) return;
+              const name = saveGesturePreset(selectedGesture);
+              props.onNotice(name ? `${name.toUpperCase()} GUARDADO EN LA BIBLIOTECA` : "BIBLIOTECA LLENA · BORRA UN GESTO");
+              return;
+            }
+            void exports.onExportAction(a);
+          }}
         />
       ) : panel === "presets" ? (
         <PresetsPanel
@@ -118,17 +132,24 @@ export function EditorPanels(props: Props) {
           onShare={() => void exports.onShareRecipe()}
         />
       ) : (
-        <View style={styles.pending}>
-          <Text style={styles.title}>Gesto</Text>
-          <Text style={styles.label}>PRÓXIMAMENTE</Text>
-        </View>
+        <GesturePanel
+          layerLabel={selected && !readOnly ? layerDef(selected).label : null}
+          scene={sources}
+          onRecord={() => {
+            if (!selected) return;
+            const id = ensureGestureRoute(routes, selected.id);
+            if (id) rec?.start(id);
+            else props.onNotice("MÁXIMO 4 MODULACIONES POR CAPA");
+          }}
+          onApply={(preset) => {
+            if (!selected) return;
+            props.onNotice(applyGesturePreset(routes, selected.id, preset) ? `${preset.name.toUpperCase()} APLICADO` : "MÁXIMO 4 MODULACIONES POR CAPA");
+          }}
+          onDelete={removeGesturePreset}
+        />
       )}
     </PanelSheet>
   );
 }
 
-const styles = StyleSheet.create({
-  pending: { minHeight: 80, gap: 12 },
-  title: { color: colors.inkText, fontFamily: type.family, fontSize: type.body },
-  label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
-});
+

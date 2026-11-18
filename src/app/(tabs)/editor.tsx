@@ -6,8 +6,10 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } fro
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { confirmLeave } from "../../actions/leaveGuard";
-import { addTileLayer, calibrateMic, commitStroke, commitXY, findTileLayer, removeLayer, resetLayer } from "../../actions/sceneEdits";
+import { addTileLayer, calibrateMic, commitStroke, commitXY, findTileLayer, removeLayer, resetLayer, setGestureClip } from "../../actions/sceneEdits";
 import { EditorCanvas } from "../../canvas/EditorCanvas";
+import { MIN_GESTURE_MS } from "../../actions/gestureLibrary";
+import { GestureRecorder } from "../../canvas/GestureRecorder";
 import { LiveModContext, useModBus } from "../../canvas/modBus";
 import { StageView, type StageMode } from "../../canvas/StageView";
 import { useSlowFrames } from "../../canvas/useSlowFrames";
@@ -22,6 +24,7 @@ import { settingsStore } from "../../state/appSettings";
 import { EditorPanels } from "../../ui/editor/EditorPanels";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
 import { EditorTopBar } from "../../ui/editor/EditorTopBar";
+import { GestureRecordContext } from "../../ui/editor/gestureRecord";
 import type { TileRef } from "../../ui/editor/EffectsPanel";
 import { NoProjectView } from "../../ui/editor/NoProjectView";
 import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../ui/editor/panels";
@@ -155,6 +158,22 @@ function ProjectView({ project }: { project: Project }) {
   // props del lienzo que comparten el editor y el modo escenario (mismo árbol, mismos valores)
   // señales en vivo que el lienzo escribe y la vista en vivo de cada modulación lee
   const bus = useModBus();
+
+  // grabación de un gesto: el panel se oculta (sin desmontarse) y una capa sobre el lienzo captura
+  // el dedo; al soltar, el gesto queda en su modulación y se repite en bucle
+  const [recordingRoute, setRecordingRoute] = useState<string | null>(null);
+  const gestureRecord = { start: (routeId: string) => setRecordingRoute(routeId), notice: setNotice };
+  const onGestureDone = useCallback(
+    (clip: { durationMs: number; samples: number[] }) => {
+      const id = recordingRoute;
+      setRecordingRoute(null);
+      if (!id) return;
+      if (clip.durationMs < MIN_GESTURE_MS) return setNotice("GESTO MUY CORTO · MANTÉN Y MUEVE EL DEDO");
+      setGestureClip(id, clip);
+      setNotice("GESTO GRABADO · SE REPITE EN BUCLE");
+    },
+    [recordingRoute],
+  );
   const canvasProps = {
     bus,
     // solo se usa cuando la imagen ya cargó (ambos lienzos van dentro de image && …)
@@ -246,11 +265,14 @@ function ProjectView({ project }: { project: Project }) {
               </View>
             )}
             {showCostWarning && <Text style={styles.warning}>RENDIMIENTO BAJO · {layers.length} CAPAS</Text>}
+            {recordingRoute && image && !stage && (
+              <GestureRecorder bus={bus} routeId={recordingRoute} onDone={onGestureDone} onCancel={() => setRecordingRoute(null)} />
+            )}
           </View>
 
           {/* capa flotante sobre el lienzo: el panel nunca cambia el tamaño ni la posición de la
               imagen; fuera del panel los toques siguen llegando al lienzo */}
-          <View style={[styles.overlay, landscape && styles.overlaySide]} pointerEvents="box-none">
+          <View style={[styles.overlay, landscape && styles.overlaySide, recordingRoute !== null && styles.hidden]} pointerEvents="box-none">
             {notice && (
               <Text style={styles.notice} pointerEvents="none">
                 {notice}
@@ -258,31 +280,33 @@ function ProjectView({ project }: { project: Project }) {
             )}
             {openPanel && (
               <LiveModContext.Provider value={{ bus, micLevel: mic.level, seed: project.scene.seed }}>
-                <EditorPanels
-                  panel={openPanel}
-                  project={project}
-                  image={image}
-                  selected={selected}
-                  brush={{
-                    tool: brushTool,
-                    size: brushSize,
-                    spacing: brushSpacing,
-                    onTool: setBrushTool,
-                    onSize: setBrushSize,
-                    onSpacing: setBrushSpacing,
-                    onPreview: setSizePreview,
-                  }}
-                  mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
-                  onMicVisible={setMicVisible}
-                  onTile={onTile}
-                  onSelect={setSelectedId}
-                  onRemove={onRemove}
-                  onOpenEffects={() => onToolPress("effects")}
-                  onNotice={setNotice}
-                  onClose={() => setOverlays([])}
-                  exports={exports}
-                  onImportRecipe={() => void onImportRecipe()}
-                />
+                <GestureRecordContext.Provider value={gestureRecord}>
+                  <EditorPanels
+                    panel={openPanel}
+                    project={project}
+                    image={image}
+                    selected={selected}
+                    brush={{
+                      tool: brushTool,
+                      size: brushSize,
+                      spacing: brushSpacing,
+                      onTool: setBrushTool,
+                      onSize: setBrushSize,
+                      onSpacing: setBrushSpacing,
+                      onPreview: setSizePreview,
+                    }}
+                    mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
+                    onMicVisible={setMicVisible}
+                    onTile={onTile}
+                    onSelect={setSelectedId}
+                    onRemove={onRemove}
+                    onOpenEffects={() => onToolPress("effects")}
+                    onNotice={setNotice}
+                    onClose={() => setOverlays([])}
+                    exports={exports}
+                    onImportRecipe={() => void onImportRecipe()}
+                  />
+                </GestureRecordContext.Provider>
               </LiveModContext.Provider>
             )}
           </View>
@@ -311,6 +335,8 @@ const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFill, justifyContent: "flex-end" },
   // iPad horizontal: la tarjeta lateral ocupa del borde superior al inferior del área de trabajo
   overlaySide: { justifyContent: "flex-start", paddingBottom: 8 },
+  // oculto sin desmontar: el panel conserva su estado mientras se graba un gesto
+  hidden: { display: "none" },
   canvasArea: { flex: 1, marginHorizontal: 18, marginBottom: 8 },
   noImage: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface, borderRadius: 12 },
   label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },

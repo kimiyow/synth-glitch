@@ -16,7 +16,7 @@ import Animated, {
 import { FULL_CROP, type CropRect } from "../engine/crop";
 import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate } from "../modulation/evaluate";
-import { useModBus, type ModBus } from "./modBus";
+import { recInput, useModBus, type ModBus } from "./modBus";
 import {
   advanceStroke,
   MAX_SIZE,
@@ -178,6 +178,7 @@ export function EditorCanvas(props: Props) {
       mic: micLevel.get(),
       micHitAt: micHitAt.get(),
       track: null,
+      rec: recInput(bus),
     };
     return { time: t, params: evaluate(chainLayers, routes, sources, t, inputs, seed) };
   });
