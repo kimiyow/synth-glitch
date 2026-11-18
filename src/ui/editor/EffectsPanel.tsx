@@ -1,14 +1,11 @@
 import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { EFFECT_BY_ID, EFFECTS, GENERATOR_BY_ID, GENERATORS } from "../../engine/registry";
+import { EFFECTS, GENERATORS } from "../../engine/registry";
 import { selectFeedback } from "../../platform/haptics";
-import type { BlendMode, EffectId, GeneratorId, Layer } from "../../domain/types";
-import { ChipRow, type Chip } from "../ChipRow";
+import type { EffectId, GeneratorId, Layer } from "../../domain/types";
 import { Icon } from "../kit/Icon";
-import { IconButton } from "../kit/IconButton";
 import { Pill } from "../kit/Pill";
-import { Slider } from "../Slider";
 import { colors, radius, space, type } from "../tokens";
 
 const CATEGORIES = [
@@ -19,13 +16,6 @@ type Category = (typeof CATEGORIES)[number]["id"];
 
 // ficha tocada: un efecto global o un generador (una capa de cada uno como máximo)
 export type TileRef = { kind: "effect"; effect: EffectId } | { kind: "generator"; generator: GeneratorId };
-
-const BLENDS: readonly Chip<BlendMode>[] = [
-  { id: "screen", label: "SCREEN" },
-  { id: "multiply", label: "MULTIPLY" },
-  { id: "difference", label: "DIFFERENCE" },
-  { id: "replace", label: "REPLACE" },
-];
 
 export const THUMB_SIZE = 64;
 
@@ -42,25 +32,19 @@ const DEFAULT_LAYERS: Record<string, Layer> = Object.fromEntries([
 type Props = {
   layers: readonly Layer[];
   selectedLayerId: string | null;
+  // capas con alguna modulación (la ficha lo indica)
+  modulatedIds: ReadonlySet<string>;
   warning: string | null;
   // dibuja la miniatura de una capa (vive en editor/, que sí conoce Skia)
   renderThumb: (layer: Layer) => ReactNode;
+  // inspector de la capa: parámetros y modulaciones (el mismo del panel Capas)
+  renderInspector: (layer: Layer, onBack: () => void) => ReactNode;
   // enciende (si estaba apagada) y selecciona la capa de la ficha
   onTile: (tile: TileRef) => void;
-  onRemove: (layerId: string) => void;
-  onReset: (layerId: string) => void;
-  onBlend: (layerId: string, blend: BlendMode) => void;
-  onSeed: (layerId: string) => void;
-  // deslizador: inicio, cada movimiento (vista previa) y fin (un cambio deshacible)
-  onParamStart: (layerId: string) => void;
-  onParam: (layerId: string, axis: "x" | "y", value: number) => void;
-  onParamEnd: (layerId: string) => void;
-  onModulate: () => void;
 };
 
 // panel Efectos al estilo Picsart: una tira de miniaturas con el efecto aplicado a la imagen; tocar
-// una abre ese efecto con sus parámetros con nombre, modo de mezcla y semilla para generadores. El
-// gesto X/Y sobre la imagen sigue activo
+// una abre su inspector (parámetros y modulaciones). El gesto X/Y sobre la imagen sigue activo
 export function EffectsPanel(props: Props) {
   const { layers, selectedLayerId, warning } = props;
   const [category, setCategory] = useState<Category>("image");
@@ -68,7 +52,7 @@ export function EffectsPanel(props: Props) {
   const selected = layers.find((l) => l.id === selectedLayerId) ?? null;
 
   if (editing && selected) {
-    return <EffectDetail {...props} layer={selected} onBack={() => setEditing(false)} />;
+    return <>{props.renderInspector(selected, () => setEditing(false))}</>;
   }
 
   const open = (tile: TileRef) => {
@@ -108,6 +92,7 @@ export function EffectsPanel(props: Props) {
               label={t.label}
               order={index >= 0 ? index + 1 : null}
               selected={index >= 0 && layers[index].id === selectedLayerId}
+              modulated={index >= 0 && props.modulatedIds.has(layers[index].id)}
               thumb={props.renderThumb(layer)}
               onPress={() => open(t.tile)}
             />
@@ -121,85 +106,12 @@ export function EffectsPanel(props: Props) {
   );
 }
 
-function EffectDetail(props: Props & { layer: Layer; onBack: () => void }) {
-  const { layer, warning } = props;
-  const def = layer.kind === "effect" ? EFFECT_BY_ID[layer.effect] : GENERATOR_BY_ID[layer.generator];
-  const axes = (["x", "y"] as const).map((axis) => ({ axis, label: def.axes[axis], value: layer.params[axis] }));
-
-  return (
-    <View style={styles.root}>
-      <View style={styles.header}>
-        <IconButton icon="chevron.left" label="Volver a los efectos" size={34} onPress={props.onBack} />
-        <Text style={styles.title} numberOfLines={1}>
-          {def.label}
-        </Text>
-        <IconButton icon="arrow.counterclockwise" label="Restablecer" size={34} onPress={() => props.onReset(layer.id)} />
-        <IconButton
-          icon="trash"
-          label="Quitar efecto"
-          size={34}
-          onPress={() => {
-            props.onRemove(layer.id);
-            props.onBack();
-          }}
-        />
-      </View>
-
-      <View style={styles.sliders}>
-        {axes.map((a) => (
-          <Slider
-            key={a.axis}
-            label={a.label}
-            value={a.value}
-            onSlidingStart={() => props.onParamStart(layer.id)}
-            onChange={(v) => props.onParam(layer.id, a.axis, Math.round(v * 1000) / 1000)}
-            onSlidingEnd={() => props.onParamEnd(layer.id)}
-          />
-        ))}
-      </View>
-
-      {layer.kind === "generator" && (
-        <>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Mezcla</Text>
-            <View style={styles.rowBody}>
-              <ChipRow chips={BLENDS} value={layer.blend} onChange={(b) => props.onBlend(layer.id, b)} />
-            </View>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Semilla</Text>
-            <Text style={styles.seed}>{layer.seed ?? 0}</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Semilla aleatoria"
-              onPress={() => {
-                selectFeedback();
-                props.onSeed(layer.id);
-              }}
-              style={({ pressed }) => [styles.dice, pressed && styles.pressed]}
-            >
-              <Icon name="dice" size={16} />
-              <Text style={styles.diceText}>ALEATORIA</Text>
-            </Pressable>
-          </View>
-        </>
-      )}
-
-      {warning && <Text style={styles.warning}>{warning}</Text>}
-      <View style={styles.footer}>
-        <Text style={styles.hint}>ARRASTRA SOBRE LA IMAGEN · DOBLE TOQUE RESTABLECE</Text>
-        <Pill label="MODULAR" onPress={props.onModulate} />
-      </View>
-    </View>
-  );
-}
-
-function Tile(p: { label: string; order: number | null; selected: boolean; thumb: ReactNode; onPress: () => void }) {
+function Tile(p: { label: string; order: number | null; selected: boolean; modulated: boolean; thumb: ReactNode; onPress: () => void }) {
   const on = p.order !== null;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${p.label}${on ? `, capa ${p.order}` : ""}${p.selected ? ", seleccionado" : ""}`}
+      accessibilityLabel={`${p.label}${on ? `, capa ${p.order}` : ""}${p.modulated ? ", modulado" : ""}${p.selected ? ", seleccionado" : ""}`}
       onPress={() => {
         selectFeedback();
         p.onPress();
@@ -211,6 +123,11 @@ function Tile(p: { label: string; order: number | null; selected: boolean; thumb
         {on && (
           <View style={[styles.badge, p.selected && styles.badgeSelected]}>
             <Text style={[styles.badgeText, p.selected && styles.badgeTextSelected]}>{p.order}</Text>
+          </View>
+        )}
+        {p.modulated && (
+          <View style={styles.modBadge}>
+            <Icon name="waveform.path" size={10} />
           </View>
         )}
       </View>
@@ -250,30 +167,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.7)",
   },
+  modBadge: {
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.7)",
+  },
   badgeSelected: { backgroundColor: colors.paper },
   badgeText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, fontWeight: "700" },
   badgeTextSelected: { color: colors.paperText },
   tileLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8 },
   tileLabelOn: { color: colors.inkText },
   pressed: { opacity: 0.6 },
-  header: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  title: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600", letterSpacing: 1 },
-  sliders: { flexDirection: "row", gap: space.xl },
-  row: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 32 },
-  rowLabel: { width: 62, color: colors.inkText, fontFamily: type.family, fontSize: type.label },
-  rowBody: { flex: 1 },
-  seed: { flex: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
-  dice: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: space.md,
-    height: 30,
-    borderRadius: radius.pill,
-    backgroundColor: colors.inkRaised,
-  },
-  diceText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
-  footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm },
   hint: { flexShrink: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
   warning: {
     alignSelf: "flex-start",

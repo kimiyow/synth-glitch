@@ -1,4 +1,4 @@
-import type { LfoShape, SeqDirection, SourceConfig } from "../domain/types";
+import type { LfoShape, MicRouteConfig, Route, RouteSettings, SeqDirection, SourceConfig, SourceId } from "../domain/types";
 
 // valores por defecto de las fuentes
 export const DEFAULT_SOURCES: SourceConfig = {
@@ -77,6 +77,72 @@ export function parseSources(raw: unknown): SourceConfig {
       hitThreshold: num(mic.hitThreshold, d.mic.hitThreshold, 0, 1),
     },
   };
+}
+
+export const DEFAULT_MIC_ROUTE: MicRouteConfig = { mode: "level", gain: 1, decay: 0.3 };
+
+// ajustes de una modulación nueva para la fuente dada, a partir de los de la escena
+export function defaultRouteSetting(source: SourceId, scene: SourceConfig): RouteSettings {
+  switch (source) {
+    case "lfo":
+      return { lfo: { ...scene.lfo } };
+    case "adsr":
+      return { adsr: { ...scene.adsr, trigger: "touch" } };
+    case "sh":
+      return { sh: { ...scene.sh } };
+    case "seq":
+      return { seq: { ...scene.seq, steps: [...scene.seq.steps] } };
+    case "mic":
+      return { mic: { ...DEFAULT_MIC_ROUTE } };
+    default:
+      return {};
+  }
+}
+
+// completa los ajustes propios de la fuente de la ruta (proyectos anteriores usaban los de la escena)
+export function withRouteSettings(route: Route, scene: SourceConfig): Route {
+  const own = route.settings ?? {};
+  const key = route.source as keyof RouteSettings;
+  if (own[key] !== undefined) return route;
+  return { ...route, settings: { ...own, ...defaultRouteSetting(route.source, scene) } };
+}
+
+// lee los ajustes de una ruta; lo inválido toma valores por defecto y se recorta a su rango
+export function parseRouteSettings(raw: unknown): RouteSettings | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const r = raw as Record<string, unknown>;
+  const full = parseSources(r);
+  const out: RouteSettings = {};
+  if (r.lfo !== undefined) out.lfo = full.lfo;
+  if (r.adsr !== undefined) out.adsr = { ...full.adsr, trigger: o(r.adsr).trigger === "mic" ? "mic" : "touch" };
+  if (r.sh !== undefined) out.sh = full.sh;
+  if (r.seq !== undefined) out.seq = full.seq;
+  if (r.mic !== undefined) {
+    const m = o(r.mic);
+    out.mic = {
+      mode: m.mode === "hit" ? "hit" : "level",
+      gain: num(m.gain, DEFAULT_MIC_ROUTE.gain, 0.25, 4),
+      decay: num(m.decay, DEFAULT_MIC_ROUTE.decay, 0.05, 2),
+    };
+  }
+  return out;
+}
+
+// ajustes efectivos de una ruta (propios o, si no tiene, los de la escena)
+export function routeLfo(route: Route, s: SourceConfig): SourceConfig["lfo"] {
+  "worklet";
+  const own = route.settings === undefined ? undefined : route.settings.lfo;
+  return own === undefined ? s.lfo : own;
+}
+export function routeSh(route: Route, s: SourceConfig): SourceConfig["sh"] {
+  "worklet";
+  const own = route.settings === undefined ? undefined : route.settings.sh;
+  return own === undefined ? s.sh : own;
+}
+export function routeSeq(route: Route, s: SourceConfig): SourceConfig["seq"] {
+  "worklet";
+  const own = route.settings === undefined ? undefined : route.settings.seq;
+  return own === undefined ? s.seq : own;
 }
 
 // frecuencia efectiva en Hz: libre o sincronizada al tempo (division pulsos por ciclo)

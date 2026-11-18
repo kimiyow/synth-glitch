@@ -17,7 +17,7 @@ function sample(): Project {
     { kind: "generator", id: "g", generator: "bars", params: { x: 0.5, y: 0.5 }, visible: false, blend: "screen" },
   ];
   p.scene.routes = [
-    { id: "r", source: "lfo", sourceIndex: 0, target: { layerId: "a", param: "x" }, amount: -0.5, curve: "exp", mode: "add" },
+    { id: "r", source: "lfo", sourceIndex: 0, target: { layerId: "a", param: "x" }, amount: -0.5, curve: "exp", mode: "add", settings: { lfo: { ...p.scene.sources.lfo } } },
   ];
   p.scene.paint.strokes = [
     {

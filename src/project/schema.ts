@@ -1,4 +1,4 @@
-import { DEFAULT_SOURCES, parseSources } from "../modulation/sources";
+import { DEFAULT_SOURCES, parseRouteSettings, parseSources, withRouteSettings } from "../modulation/sources";
 import type {
   CropAspect,
   EffectId,
@@ -173,6 +173,7 @@ export function parseRoute(v: unknown, path: string): Route {
     amount,
     curve: oneOf(o.curve, CURVES, `${path}.curve`),
     mode: oneOf(o.mode, ["add", "replace"] as const, `${path}.mode`),
+    ...(o.settings === undefined ? {} : { settings: parseRouteSettings(o.settings) }),
   };
 }
 
@@ -193,6 +194,7 @@ function scene(v: unknown, path: string): Scene {
   const rect = arr(crop.rect, `${path}.crop.rect`);
   if (rect.length !== 4) fail(`${path}.crop.rect`, "4 números");
   obj(o.sources, `${path}.sources`);
+  const sources = parseSources(o.sources);
   return {
     media: {
       kind: oneOf(media.kind, MEDIA_KINDS, `${path}.media.kind`),
@@ -206,8 +208,9 @@ function scene(v: unknown, path: string): Scene {
     },
     paint: paint(o.paint, `${path}.paint`),
     layers: arr(o.layers, `${path}.layers`).map((l, i) => parseLayer(l, `${path}.layers[${i}]`)),
-    routes: arr(o.routes, `${path}.routes`).map((r, i) => parseRoute(r, `${path}.routes[${i}]`)),
-    sources: parseSources(o.sources),
+    // cada modulación lleva sus propios ajustes; los proyectos anteriores los toman de la escena
+    routes: arr(o.routes, `${path}.routes`).map((r, i) => withRouteSettings(parseRoute(r, `${path}.routes[${i}]`), sources)),
+    sources,
     tracks: arr(o.tracks, `${path}.tracks`).map((t, i) => track(t, `${path}.tracks[${i}]`)),
     seed: num(o.seed, `${path}.seed`),
   };

@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { confirmLeave } from "../../actions/leaveGuard";
 import { addTileLayer, calibrateMic, commitStroke, commitXY, findTileLayer, removeLayer, resetLayer } from "../../actions/sceneEdits";
 import { EditorCanvas } from "../../canvas/EditorCanvas";
+import { LiveModContext, useModBus } from "../../canvas/modBus";
 import { StageView, type StageMode } from "../../canvas/StageView";
 import { useSlowFrames } from "../../canvas/useSlowFrames";
 import type { Project } from "../../domain/types";
@@ -43,7 +44,7 @@ function ProjectView({ project }: { project: Project }) {
   const isDraft = useScene((s) => s.draft);
   const canUndo = useScene((s) => s.history.past.length > 0);
   const canRedo = useScene((s) => s.history.future.length > 0);
-  const { regular } = useLayout();
+  const { regular, landscape } = useLayout();
   const { media, layers } = project.scene;
   const strokes = project.scene.paint.strokes;
 
@@ -77,7 +78,10 @@ function ProjectView({ project }: { project: Project }) {
   // la vista; se apaga al salir
   const [micVisible, setMicVisible] = useState(false);
   const [calibrating, setCalibrating] = useState(false);
-  const hasMicRoute = project.scene.routes.some((r) => r.source === "mic" && r.amount !== 0);
+  // también los ADSR que se disparan con golpes del micrófono
+  const hasMicRoute = project.scene.routes.some(
+    (r) => r.amount !== 0 && (r.source === "mic" || (r.source === "adsr" && r.settings?.adsr?.trigger === "mic")),
+  );
   const mic = useMicMeter(focused && (hasMicRoute || micVisible || calibrating), project.scene.sources.mic);
   const calibrate = async () => {
     if (calibrating) return;
@@ -108,6 +112,8 @@ function ProjectView({ project }: { project: Project }) {
     if (id === "brush" && isClip) return setNotice("PINCEL · SOLO FOTOS");
     if (id === "brush" && strokes.length >= MAX_STROKES) setNotice(`LÍMITE DE ${MAX_STROKES} TRAZOS`);
     if (id === "brush" || id === "effects") setActiveTool(id);
+    // en Capas el gesto X/Y actúa sobre la capa abierta, como en Efectos
+    if (id === "layers") setActiveTool("effects");
     togglePanel(id);
   };
 
@@ -147,7 +153,10 @@ function ProjectView({ project }: { project: Project }) {
   }));
 
   // props del lienzo que comparten el editor y el modo escenario (mismo árbol, mismos valores)
+  // señales en vivo que el lienzo escribe y la vista en vivo de cada modulación lee
+  const bus = useModBus();
   const canvasProps = {
+    bus,
     // solo se usa cuando la imagen ya cargó (ambos lienzos van dentro de image && …)
     image: isClip ? video.currentFrame : image!,
     mic: { level: mic.level, hits: mic.hits },
@@ -241,35 +250,40 @@ function ProjectView({ project }: { project: Project }) {
 
           {/* capa flotante sobre el lienzo: el panel nunca cambia el tamaño ni la posición de la
               imagen; fuera del panel los toques siguen llegando al lienzo */}
-          <View style={styles.overlay} pointerEvents="box-none">
+          <View style={[styles.overlay, landscape && styles.overlaySide]} pointerEvents="box-none">
             {notice && (
               <Text style={styles.notice} pointerEvents="none">
                 {notice}
               </Text>
             )}
             {openPanel && (
-              <EditorPanels
-                panel={openPanel}
-                project={project}
-                image={image}
-                selected={selected}
-                brush={{
-                  tool: brushTool,
-                  size: brushSize,
-                  spacing: brushSpacing,
-                  onTool: setBrushTool,
-                  onSize: setBrushSize,
-                  onSpacing: setBrushSpacing,
-                  onPreview: setSizePreview,
-                }}
-                mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
-                onMicVisible={setMicVisible}
-                onTile={onTile}
-                onRemove={onRemove}
-                onToggleMod={() => togglePanel("mod")}
-                exports={exports}
-                onImportRecipe={() => void onImportRecipe()}
-              />
+              <LiveModContext.Provider value={{ bus, micLevel: mic.level, seed: project.scene.seed }}>
+                <EditorPanels
+                  panel={openPanel}
+                  project={project}
+                  image={image}
+                  selected={selected}
+                  brush={{
+                    tool: brushTool,
+                    size: brushSize,
+                    spacing: brushSpacing,
+                    onTool: setBrushTool,
+                    onSize: setBrushSize,
+                    onSpacing: setBrushSpacing,
+                    onPreview: setSizePreview,
+                  }}
+                  mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
+                  onMicVisible={setMicVisible}
+                  onTile={onTile}
+                  onSelect={setSelectedId}
+                  onRemove={onRemove}
+                  onOpenEffects={() => onToolPress("effects")}
+                  onNotice={setNotice}
+                  onClose={() => setOverlays([])}
+                  exports={exports}
+                  onImportRecipe={() => void onImportRecipe()}
+                />
+              </LiveModContext.Provider>
             )}
           </View>
         </View>
@@ -295,6 +309,8 @@ const styles = StyleSheet.create({
   main: { flex: 1 },
   work: { flex: 1 },
   overlay: { ...StyleSheet.absoluteFill, justifyContent: "flex-end" },
+  // iPad horizontal: la tarjeta lateral ocupa del borde superior al inferior del área de trabajo
+  overlaySide: { justifyContent: "flex-start", paddingBottom: 8 },
   canvasArea: { flex: 1, marginHorizontal: 18, marginBottom: 8 },
   noImage: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface, borderRadius: 12 },
   label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },

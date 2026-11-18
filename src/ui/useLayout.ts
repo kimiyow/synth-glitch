@@ -7,11 +7,15 @@ export const CONTENT_MAX_WIDTH = 440;
 
 // compacto (< 600 pt, iPhone) y regular (≥ 600 pt, iPad)
 export function useLayout() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const regular = width >= 600;
+  // iPad en horizontal: los paneles flotan a la derecha en lugar de abajo
+  const landscape = regular && width > height;
 
   return {
     regular,
+    landscape,
+    height,
     margin: regular ? 32 : 16,
     scale: regular ? 1.15 : 1,
     // ancho de un panel flotante en iPad; en iPhone los paneles ocupan todo el ancho

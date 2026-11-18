@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
 import { SheetScrollLock } from "./kit/Sheet";
@@ -16,24 +16,41 @@ type Props = {
 };
 
 const THUMB = 18;
+// movimiento (pt) que decide si el dedo arrastra el deslizador (horizontal) o desplaza la hoja
+const INTENT_SLOP = 6;
 
-// deslizador moderno: pista fina, perilla blanca y valor a la derecha (responder de RN)
+// deslizador moderno: pista fina, perilla blanca y valor a la derecha (responder de RN). No cambia
+// el valor hasta saber la intención: un arrastre horizontal lo ajusta; uno vertical se cede a la
+// hoja (scroll) sin tocar el valor; un toque sin arrastre salta al punto tocado al soltar
 export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, valueText }: Props) {
   const [width, setWidth] = useState(1);
   const [active, setActive] = useState(false);
   // la perilla sigue al dedo con su propio estado; el padre puede tardar en actualizar value
   const [drag, setDrag] = useState<number | null>(null);
   const lockSheet = useContext(SheetScrollLock);
+  // inicio del toque y si ya se decidió que es un arrastre del deslizador
+  const touch = useRef({ x: 0, y: 0, engaged: false, cancelled: false });
+  const valueAt = (e: GestureResponderEvent) =>
+    Math.min(1, Math.max(0, (e.nativeEvent.locationX - THUMB / 2) / Math.max(1, width - THUMB)));
   const update = (e: GestureResponderEvent) => {
-    const next = Math.min(1, Math.max(0, (e.nativeEvent.locationX - THUMB / 2) / Math.max(1, width - THUMB)));
+    const next = valueAt(e);
     setDrag(next);
     onChange(next);
   };
+  const engage = (e: GestureResponderEvent) => {
+    touch.current.engaged = true;
+    setActive(true);
+    lockSheet(true);
+    onSlidingStart?.();
+    update(e);
+  };
   const end = () => {
+    const wasEngaged = touch.current.engaged;
+    touch.current.engaged = false;
     setActive(false);
     setDrag(null);
     lockSheet(false);
-    onSlidingEnd?.();
+    if (wasEngaged) onSlidingEnd?.();
   };
   const v = Math.min(1, Math.max(0, drag ?? value));
   return (
@@ -60,22 +77,40 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
         onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
-        onResponderTerminationRequest={() => false}
+        // mientras no arrastra, la hoja puede quedarse con el toque para desplazarse
+        onResponderTerminationRequest={() => !touch.current.engaged}
         onResponderGrant={(e) => {
-          setActive(true);
-          lockSheet(true);
-          onSlidingStart?.();
-          update(e);
+          touch.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY, engaged: false, cancelled: false };
         }}
-        onResponderMove={update}
-        onResponderRelease={end}
+        onResponderMove={(e) => {
+          const t = touch.current;
+          if (t.cancelled) return;
+          if (t.engaged) return update(e);
+          const dx = Math.abs(e.nativeEvent.pageX - t.x);
+          const dy = Math.abs(e.nativeEvent.pageY - t.y);
+          if (dy > INTENT_SLOP && dy > dx) t.cancelled = true;
+          else if (dx > INTENT_SLOP) engage(e);
+        }}
+        onResponderRelease={(e) => {
+          const t = touch.current;
+          // toque sin arrastre: salta al punto tocado (un cambio completo)
+          if (!t.engaged && !t.cancelled) {
+            onSlidingStart?.();
+            onChange(valueAt(e));
+            onSlidingEnd?.();
+            return;
+          }
+          end();
+        }}
         onResponderTerminate={end}
         style={styles.hit}
       >
-        <View style={styles.track}>
+        {/* sin toques en los hijos: así locationX siempre es relativo a la pista y la perilla no
+            salta cuando el dedo pasa por encima de ella */}
+        <View style={styles.track} pointerEvents="none">
           <View style={[styles.fill, { width: `${v * 100}%` }]} />
         </View>
-        <View style={[styles.thumb, active && styles.thumbOn, { left: v * Math.max(0, width - THUMB) }]} />
+        <View pointerEvents="none" style={[styles.thumb, active && styles.thumbOn, { left: v * Math.max(0, width - THUMB) }]} />
       </View>
     </View>
   );
@@ -87,7 +122,7 @@ const styles = StyleSheet.create({
   label: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label },
   value: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
   valueOn: { color: colors.inkText },
-  hit: { height: 44, justifyContent: "center" },
+  hit: { height: 36, justifyContent: "center" },
   track: { height: 3, marginHorizontal: THUMB / 2, borderRadius: 2, backgroundColor: colors.inkRaised, overflow: "hidden" },
   fill: { height: 3, backgroundColor: colors.inkText },
   thumb: {

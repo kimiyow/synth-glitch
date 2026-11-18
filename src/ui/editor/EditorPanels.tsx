@@ -2,17 +2,8 @@ import type { SkImage } from "@shopify/react-native-skia";
 import type { ComponentProps } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import {
-  rerollSeed,
-  resetLayer,
-  setBlend,
-  setRouteAmount,
-  setRouteSource,
-  setSources,
-  setTempo,
-} from "../../actions/sceneEdits";
+import { setSources, setTempo } from "../../actions/sceneEdits";
 import type { Layer, Project } from "../../domain/types";
-import { EFFECT_BY_ID, GENERATOR_BY_ID } from "../../engine/registry";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { MAX_STROKES } from "../../paint/strokeInterpolate";
 import { EffectThumb } from "../../render/EffectThumb";
@@ -21,10 +12,12 @@ import { colors, type } from "../tokens";
 import { BrushPanel } from "./BrushPanel";
 import { EffectsPanel, THUMB_SIZE, type TileRef } from "./EffectsPanel";
 import { ExportPanel } from "./ExportPanel";
-import { ModPanel } from "./ModPanel";
+import { LayerInspector } from "./LayerInspector";
+import { LayersPanel } from "./LayersPanel";
 import { PanelSheet } from "./PanelSheet";
 import type { PanelId } from "./panels";
 import { PresetsPanel } from "./PresetsPanel";
+import type { MicView } from "./SourceEditor";
 import { useParamDrag } from "./useParamDrag";
 import type { useExportJob } from "./useExportJob";
 
@@ -34,16 +27,21 @@ type Props = {
   image: SkImage | null;
   selected: Layer | null;
   brush: Omit<ComponentProps<typeof BrushPanel>, "strokes" | "maxStrokes">;
-  mic: ComponentProps<typeof ModPanel>["mic"];
+  mic: MicView;
   onMicVisible: (visible: boolean) => void;
   onTile: (tile: TileRef) => void;
+  onSelect: (layerId: string) => void;
   onRemove: (layerId: string) => void;
-  onToggleMod: () => void;
+  onOpenEffects: () => void;
+  onNotice: (text: string) => void;
+  // cierra el panel (✕)
+  onClose: () => void;
   exports: ReturnType<typeof useExportJob>;
   onImportRecipe: () => void;
 };
 
-// el panel abierto del editor dentro de su hoja flotante
+// el panel abierto del editor dentro de su hoja flotante. Efectos y Capas comparten el inspector de
+// capa (parámetros y modulaciones)
 export function EditorPanels(props: Props) {
   const { panel, project, selected, exports } = props;
   const readOnly = useScene((s) => s.readOnly);
@@ -51,43 +49,50 @@ export function EditorPanels(props: Props) {
   const draft = useScene((s) => s.draft);
   const paramDrag = useParamDrag();
   const { layers, routes, sources, seed } = project.scene;
+  const warning = hasFastLuminanceRoute(layers, routes, sources) ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA" : null;
+  const renderInspector = (layer: Layer, onBack: () => void) => (
+    <LayerInspector
+      key={layer.id}
+      layer={layer}
+      routes={routes}
+      scene={sources}
+      mic={props.mic}
+      warning={warning}
+      onBack={onBack}
+      onRemove={props.onRemove}
+      onNotice={props.onNotice}
+      {...paramDrag}
+    />
+  );
 
   return (
-    <PanelSheet>
+    <PanelSheet key={panel} onClose={props.onClose}>
       {panel === "brush" ? (
         <BrushPanel {...props.brush} strokes={project.scene.paint.strokes.length} maxStrokes={MAX_STROKES} />
       ) : panel === "effects" ? (
         <EffectsPanel
           layers={layers}
           selectedLayerId={selected?.id ?? null}
-          warning={hasFastLuminanceRoute(layers, routes, sources) ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA" : null}
+          modulatedIds={new Set(routes.map((r) => r.target.layerId))}
+          warning={warning}
           renderThumb={(layer) => <EffectThumb image={props.image} layer={layer} seed={seed} size={THUMB_SIZE} />}
+          renderInspector={renderInspector}
           onTile={props.onTile}
-          onRemove={props.onRemove}
-          onReset={resetLayer}
-          onBlend={setBlend}
-          onSeed={rerollSeed}
-          {...paramDrag}
-          onModulate={props.onToggleMod}
         />
-      ) : panel === "mod" ? (
-        <ModPanel
-          layer={
-            selected
-              ? {
-                  id: selected.id,
-                  label: selected.kind === "effect" ? EFFECT_BY_ID[selected.effect].label : GENERATOR_BY_ID[selected.generator].label,
-                }
-              : null
-          }
+      ) : panel === "layers" ? (
+        <LayersPanel
+          layers={layers}
           routes={routes}
-          mic={props.mic}
-          onMicVisible={props.onMicVisible}
-          onRouteSource={setRouteSource}
-          onRouteAmount={setRouteAmount}
+          selectedLayerId={selected?.id ?? null}
+          onSelect={props.onSelect}
+          renderThumb={(layer, size) => <EffectThumb image={props.image} layer={layer} seed={seed} size={size} />}
+          renderInspector={renderInspector}
+          onOpenEffects={props.onOpenEffects}
           sources={sources}
           onSources={setSources}
           onTempo={setTempo}
+          mic={props.mic}
+          onMicVisible={props.onMicVisible}
         />
       ) : panel === "export" ? (
         <ExportPanel

@@ -1,4 +1,4 @@
-import { parseSources } from "../modulation/sources";
+import { parseSources, withRouteSettings } from "../modulation/sources";
 import { MAX_LAYERS } from "../engine/layerCost";
 import type { Scene, SynthFx } from "../domain/types";
 import { Invalid, parseLayer, parseRoute, type ValidationResult } from "./schema";
@@ -58,15 +58,16 @@ export function parseSynthFx(text: string): ValidationResult<SynthFx> {
     for (const r of routes) {
       if (!ids.has(r.target.layerId)) throw new Invalid(`la ruta ${r.id} apunta a una capa que no existe`);
     }
+    // las fuentes se completan con valores por defecto y se recortan a sus rangos
+    const sources = parseSources(o.sources);
     return {
       ok: true,
       value: {
         synthfx: 1,
         name: o.name.slice(0, 40),
         layers,
-        routes,
-        // las fuentes se completan con valores por defecto y se recortan a sus rangos
-        sources: parseSources(o.sources),
+        routes: routes.map((r) => withRouteSettings(r, sources)),
+        sources,
         seed: Math.floor(Math.abs(o.seed)) % 2 ** 31,
       },
     };
@@ -79,7 +80,7 @@ export function parseSynthFx(text: string): ValidationResult<SynthFx> {
 // aplica la receta a una escena: reemplaza capas, rutas, fuentes y semilla; conserva la pintura
 export function applySynthFx(scene: Scene, fx: SynthFx): void {
   scene.layers = fx.layers.map((l) => ({ ...l, params: { ...l.params } }));
-  scene.routes = fx.routes.map((r) => ({ ...r, target: { ...r.target } }));
+  scene.routes = fx.routes.map((r) => JSON.parse(JSON.stringify(r)) as typeof r);
   scene.sources = fx.sources;
   scene.seed = fx.seed;
 }

@@ -49,6 +49,21 @@ export type Route = {
   amount: number;
   curve: RouteCurve;
   mode: "add" | "replace";
+  // ajustes propios de esta modulación, uno por tipo de fuente (se conservan al cambiar de fuente).
+  // Sin ellos se usan los de la escena (proyectos anteriores)
+  settings?: RouteSettings;
+};
+
+// micrófono por modulación: la entrada y su calibración son de la escena; cada ruta decide cómo
+// responde. level = sigue el volumen; hit = pulso que decae en cada golpe
+export type MicRouteConfig = { mode: "level" | "hit"; gain: number; decay: number };
+export type AdsrTrigger = "touch" | "mic";
+export type RouteSettings = {
+  lfo?: SourceConfig["lfo"];
+  adsr?: SourceConfig["adsr"] & { trigger: AdsrTrigger };
+  sh?: SourceConfig["sh"];
+  seq?: SourceConfig["seq"];
+  mic?: MicRouteConfig;
 };
 
 // configuración de las fuentes. Una instancia de cada tipo por escena (sourceIndex = 0). Divisiones

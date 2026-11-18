@@ -1,6 +1,6 @@
 import type { Layer, Route, SourceConfig } from "../domain/types";
 import { curve01, curveSigned } from "./curves";
-import { adsrValue, lfoValue, seqValue, shValue } from "./sources";
+import { adsrValue, lfoValue, routeLfo, routeSeq, routeSh, seqValue, shValue } from "./sources";
 import { beatPhase } from "./tempo";
 
 // entradas en vivo del cuadro (no se guardan en el proyecto)
@@ -12,8 +12,9 @@ export type ModInputs = {
   gateOffAt: number | null;
   // inclinación filtrada y calibrada, -1..1
   orientation: { x: number; y: number };
-  // nivel del micrófono 0..1
+  // nivel del micrófono 0..1 y momento (s) del último golpe
   mic: number;
+  micHitAt: number | null;
   // pista gestual activa: muestras [x, y] intercaladas, duración e inicio de reproducción (s)
   track: { samples: number[]; durationMs: number; startAt: number } | null;
 };
@@ -24,8 +25,12 @@ export const NO_INPUTS: ModInputs = {
   gateOffAt: null,
   orientation: { x: 0, y: 0 },
   mic: 0,
+  micHitAt: null,
   track: null,
 };
+
+// duración de la compuerta del ADSR cuando lo dispara un golpe del micrófono
+export const MIC_HIT_GATE_S = 0.12;
 
 // fuentes bipolares: en modo suma mueven el parámetro hacia ambos lados
 function isBipolar(source: Route["source"]): boolean {
@@ -46,21 +51,36 @@ export function sourceValue(
   const bpm = sources.tempo.bpm;
   switch (route.source) {
     case "lfo":
-      return lfoValue(sources.lfo, bpm, t, seed);
-    case "adsr":
-      return adsrValue(sources.adsr, t, inputs.gateOnAt, inputs.gateOffAt);
+      return lfoValue(routeLfo(route, sources), bpm, t, seed);
+    case "adsr": {
+      const own = route.settings === undefined ? undefined : route.settings.adsr;
+      const cfg = own === undefined ? sources.adsr : own;
+      if (own !== undefined && own.trigger === "mic") {
+        const at = inputs.micHitAt;
+        return adsrValue(cfg, t, at, at === null ? null : at + MIC_HIT_GATE_S);
+      }
+      return adsrValue(cfg, t, inputs.gateOnAt, inputs.gateOffAt);
+    }
     case "sh":
-      return shValue(sources.sh, bpm, t, seed);
+      return shValue(routeSh(route, sources), bpm, t, seed);
     case "seq":
-      return seqValue(sources.seq, bpm, t, seed);
+      return seqValue(routeSeq(route, sources), bpm, t, seed);
     case "tempo":
       return beatPhase(bpm, t);
     case "orientation": {
       const v = route.target.param === "x" ? inputs.orientation.x : inputs.orientation.y;
       return Math.max(-1, Math.min(1, v * sources.orientation.sensitivity));
     }
-    case "mic":
-      return inputs.mic;
+    case "mic": {
+      const m = route.settings === undefined ? undefined : route.settings.mic;
+      if (m === undefined) return inputs.mic;
+      if (m.mode === "hit") {
+        const at = inputs.micHitAt;
+        if (at === null || t < at) return 0;
+        return Math.max(0, 1 - (t - at) / Math.max(m.decay, 1e-3));
+      }
+      return Math.min(1, inputs.mic * m.gain);
+    }
     case "track": {
       const tr = inputs.track;
       if (!tr || tr.samples.length < 2 || tr.durationMs <= 0) return route.target.param === "x" ? base.x : base.y;
@@ -90,9 +110,11 @@ export function evaluateAxis(
   let add = 0;
   let replace = 0;
   let hasReplace = false;
-  for (const r of routes) {
+  for (let i = 0; i < routes.length; i++) {
+    const r = routes[i];
     if (r.target.layerId !== layerId || r.target.param !== param) continue;
-    const v = sourceValue(r, sources, t, inputs, seed, base);
+    // cada ruta tiene su propio azar: dos S&H en capas distintas no se mueven igual
+    const v = sourceValue(r, sources, t, inputs, seed + i * 7919, base);
     if (r.mode === "replace") {
       hasReplace = true;
       const u = isBipolar(r.source) ? (v + 1) / 2 : v;

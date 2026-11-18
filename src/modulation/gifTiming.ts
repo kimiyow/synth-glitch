@@ -1,5 +1,5 @@
 import type { Layer, Route, SourceConfig } from "../domain/types";
-import { cycleHz } from "./sources";
+import { cycleHz, routeLfo, routeSeq, routeSh } from "./sources";
 
 // GIF: 12 fps, hasta 4 s (48 cuadros); 3 s si nada marca un periodo
 export const GIF_FPS = 12;
@@ -11,13 +11,16 @@ function routePeriod(route: Route, s: SourceConfig): number | null {
   const beat = 60 / s.tempo.bpm;
   switch (route.source) {
     case "lfo": {
-      const hz = cycleHz(s.lfo.rateHz, s.lfo.sync, s.lfo.division, s.tempo.bpm);
-      return s.lfo.depth > 0 && hz > 0 ? 1 / hz : null;
+      const lfo = routeLfo(route, s);
+      const hz = cycleHz(lfo.rateHz, lfo.sync, lfo.division, s.tempo.bpm);
+      return lfo.depth > 0 && hz > 0 ? 1 / hz : null;
     }
     case "sh":
-      return beat * s.sh.division;
-    case "seq":
-      return beat * s.seq.division * s.seq.steps.length;
+      return beat * routeSh(route, s).division;
+    case "seq": {
+      const seq = routeSeq(route, s);
+      return beat * seq.division * seq.steps.length;
+    }
     case "tempo":
       return beat;
     default:

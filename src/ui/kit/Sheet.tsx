@@ -1,41 +1,74 @@
 import { BlurView } from "expo-blur";
 import { createContext, useMemo, useState, type ReactNode } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { selectFeedback } from "../../platform/haptics";
 import { colors, radius, space, type } from "../tokens";
 import { useLayout } from "../useLayout";
+import { IconButton } from "./IconButton";
 
 // los deslizadores bloquean el desplazamiento de la hoja mientras se arrastran: si no, la hoja (que
 // en iOS rebota aunque el contenido quepa) se queda con el toque y el control salta
 export const SheetScrollLock = createContext<(locked: boolean) => void>(() => {});
 
-// hoja inferior con esquinas redondeadas y fondo translúcido. Solo se cierra con su propio botón
+// ancho de la tarjeta lateral (iPad en horizontal)
+export const SIDE_CARD_WIDTH = 380;
+
+// hoja con esquinas redondeadas y fondo translúcido que flota sobre el lienzo. Se cierra solo con
+// botones propios (nunca tocando fuera ni deslizando): ✕ la cierra; tocar la barrita la minimiza
+// para ver la imagen completa sin perder lo que se estaba editando. side: tarjeta a la derecha que
+// crece hasta el alto disponible (iPad horizontal)
 export function Sheet({
   title,
   children,
   maxHeight = 300,
+  side = false,
+  onClose,
 }: {
   title?: string;
   children: ReactNode;
   maxHeight?: number;
+  side?: boolean;
+  onClose?: () => void;
 }) {
   const [locked, setLocked] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const lock = useMemo(() => (on: boolean) => setLocked(on), []);
   const { regular, panelWidth } = useLayout();
   return (
-    <View style={[styles.root, regular && [styles.floating, { width: panelWidth }]]}>
+    <View style={[styles.root, side ? styles.side : regular && [styles.floating, { width: panelWidth }]]}>
       <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-      <View style={styles.handle} />
-      {title && <Text style={styles.title}>{title}</Text>}
-      <ScrollView
-        style={{ maxHeight }}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        alwaysBounceVertical={false}
-        scrollEnabled={!locked}
-      >
-        <SheetScrollLock.Provider value={lock}>{children}</SheetScrollLock.Provider>
-      </ScrollView>
+      <View style={styles.top}>
+        <View style={styles.topSide} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={minimized ? "Mostrar panel" : "Minimizar panel"}
+          hitSlop={{ top: 8, bottom: 8, left: 40, right: 40 }}
+          onPress={() => {
+            selectFeedback();
+            setMinimized((m) => !m);
+          }}
+          style={styles.handleHit}
+        >
+          <View style={[styles.handle, minimized && styles.handleMin]} />
+        </Pressable>
+        <View style={[styles.topSide, styles.topRight]}>
+          {onClose && <IconButton icon="xmark" label="Cerrar panel" size={28} bare onPress={onClose} />}
+        </View>
+      </View>
+      {title && !minimized && <Text style={styles.title}>{title}</Text>}
+      {/* minimizado: el contenido sigue montado (conserva su estado) pero no ocupa espacio */}
+      <View style={minimized ? styles.hidden : side ? styles.sideBody : undefined}>
+        <ScrollView
+          style={side ? styles.sideScroll : { maxHeight }}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          alwaysBounceVertical={false}
+          scrollEnabled={!locked}
+        >
+          <SheetScrollLock.Provider value={lock}>{children}</SheetScrollLock.Provider>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -59,14 +92,24 @@ const styles = StyleSheet.create({
     borderColor: colors.inkLine,
     marginBottom: space.sm,
   },
-  handle: {
-    alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    marginVertical: space.sm,
-    backgroundColor: colors.inkLineStrong,
+  side: {
+    width: SIDE_CARD_WIDTH,
+    maxHeight: "100%",
+    alignSelf: "flex-end",
+    marginRight: space.lg,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.inkLine,
   },
+  sideBody: { flexShrink: 1 },
+  sideScroll: { flexGrow: 0, flexShrink: 1 },
+  hidden: { height: 0, overflow: "hidden" },
+  top: { flexDirection: "row", alignItems: "center", height: 36, marginHorizontal: -space.sm },
+  topSide: { width: 36 },
+  topRight: { alignItems: "flex-end" },
+  handleHit: { flex: 1, height: 36, alignItems: "center", justifyContent: "center" },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.inkLineStrong },
+  handleMin: { width: 48, backgroundColor: colors.inkText },
   title: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600", marginBottom: space.sm },
   content: { gap: space.md, paddingBottom: space.xs },
 });

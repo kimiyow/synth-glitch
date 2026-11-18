@@ -11,7 +11,7 @@ function sceneWithStack(): Scene {
     { kind: "generator", id: "g", generator: "bars", params: { x: 0.5, y: 0.5 }, visible: true, blend: "screen", seed: 3 },
   ];
   scene.routes = [
-    { id: "a-x", source: "lfo", sourceIndex: 0, target: { layerId: "a", param: "x" }, amount: 0.5, curve: "lin", mode: "add" },
+    { id: "a-x", source: "lfo", sourceIndex: 0, target: { layerId: "a", param: "x" }, amount: 0.5, curve: "lin", mode: "add", settings: { lfo: { ...scene.sources.lfo } } },
   ];
   scene.paint.strokes = [{ id: "s", strokeSeed: 1, stamps: [] }];
   return scene;

@@ -1,5 +1,5 @@
 import type { EffectId, Layer, Route, SourceConfig } from "../domain/types";
-import { cycleHz } from "./sources";
+import { cycleHz, routeLfo, routeSeq, routeSh } from "./sources";
 
 // parámetros que cambian la luminancia de una zona amplia
 const LUMINANCE_PARAMS: Partial<Record<EffectId, readonly ("x" | "y")[]>> = {
@@ -12,9 +12,12 @@ const MAX_SAFE_HZ = 3;
 
 function sourceHz(route: Route, s: SourceConfig): number {
   const beatHz = s.tempo.bpm / 60;
-  if (route.source === "lfo") return s.lfo.depth > 0 ? cycleHz(s.lfo.rateHz, s.lfo.sync, s.lfo.division, s.tempo.bpm) : 0;
-  if (route.source === "sh") return beatHz / s.sh.division;
-  if (route.source === "seq") return beatHz / s.seq.division;
+  if (route.source === "lfo") {
+    const lfo = routeLfo(route, s);
+    return lfo.depth > 0 ? cycleHz(lfo.rateHz, lfo.sync, lfo.division, s.tempo.bpm) : 0;
+  }
+  if (route.source === "sh") return beatHz / routeSh(route, s).division;
+  if (route.source === "seq") return beatHz / routeSeq(route, s).division;
   if (route.source === "tempo") return beatHz;
   return 0;
 }

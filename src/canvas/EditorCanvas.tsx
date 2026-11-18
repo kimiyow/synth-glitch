@@ -16,6 +16,7 @@ import Animated, {
 import { FULL_CROP, type CropRect } from "../engine/crop";
 import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate } from "../modulation/evaluate";
+import { useModBus, type ModBus } from "./modBus";
 import {
   advanceStroke,
   MAX_SIZE,
@@ -44,9 +45,6 @@ export function brushScreenSize(size: number, displayedWidth: number) {
   return (MIN_SIZE + size * (MAX_SIZE - MIN_SIZE)) * displayedWidth;
 }
 
-// un golpe del micrófono mantiene el ADSR encendido este tiempo antes de soltarlo
-const MIC_HIT_GATE_S = 0.12;
-
 type Props = {
   // foto o base generativa; en clips, el cuadro actual del video
   image: SkImage | SharedValue<SkImage | null>;
@@ -56,6 +54,8 @@ type Props = {
   extraGesture?: GestureType;
   // micrófono: nivel 0..1 y contador de golpes, escritos desde JS
   mic?: { level: SharedValue<number>; hits: SharedValue<number> };
+  // señales en vivo compartidas con los paneles (vista en vivo de la modulación)
+  bus?: ModBus;
   // giro de los cuadros del video y su tamaño sin rotar
   rotation?: 0 | 90 | 180 | 270;
   sourceSize?: { width: number; height: number };
@@ -139,26 +139,28 @@ export function EditorCanvas(props: Props) {
     liveParams.set(committedKey ? committedKey.split(",").map(Number) : []);
   }, [committedKey, liveParams]);
 
-  const time = useSharedValue(0);
+  const ownBus = useModBus();
+  const bus = props.bus ?? ownBus;
+  const time = bus.time;
   useFrameCallback((info) => {
     time.set(info.timeSinceFirstFrame / 1000);
   });
   // ADSR: se dispara al apoyar cualquier dedo sobre la imagen y se suelta al levantarlo
-  const gateOn = useSharedValue<number | null>(null);
-  const gateOff = useSharedValue<number | null>(null);
+  const gateOn = bus.gateOn;
+  const gateOff = bus.gateOff;
   // micrófono: el nivel lo escribe JS; un golpe nuevo (contador) dispara el ADSR
   const noMic = useSharedValue(0);
   const micLevel = props.mic?.level ?? noMic;
   const micHits = props.mic?.hits ?? noMic;
   const working = props.working;
   const seenHits = useSharedValue(0);
+  // último golpe del micrófono: lo usan las modulaciones MIC en modo golpes y los ADSR por micrófono
+  const micHitAt = bus.micHitAt;
   useFrameCallback(() => {
     const h = micHits.get();
     if (h === seenHits.get()) return;
     seenHits.set(h);
-    const t = time.get();
-    gateOn.set(t);
-    gateOff.set(t + MIC_HIT_GATE_S);
+    micHitAt.set(time.get());
   });
   const chainLayers = chain.map((n) => ({ id: n.layerId, params: n.base }));
   const frame = useDerivedValue<FrameInputs>(() => {
@@ -174,6 +176,7 @@ export function EditorCanvas(props: Props) {
       gateOffAt: gateOff.get(),
       orientation: { x: 0, y: 0 },
       mic: micLevel.get(),
+      micHitAt: micHitAt.get(),
       track: null,
     };
     return { time: t, params: evaluate(chainLayers, routes, sources, t, inputs, seed) };
