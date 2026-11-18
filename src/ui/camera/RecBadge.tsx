@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
-    height: 26,
+    minHeight: 26,
     borderRadius: radius.pill,
     backgroundColor: colors.paper,
   },

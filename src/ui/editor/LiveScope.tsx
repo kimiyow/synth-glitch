@@ -26,8 +26,11 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
   const live = useLiveMod();
   const index = routes.findIndex((r) => r.id === route.id);
   const bipolar = route.source === "lfo" || route.source === "sh" || route.source === "orientation";
-  const signal = useSharedValue<number[]>([]);
-  const result = useSharedValue<number[]>([]);
+  // búfer circular intercalado [señal, resultado] de N muestras: cada cuadro escribe en su sitio
+  // (modify) en lugar de copiar dos arreglos
+  const buffer = useSharedValue<number[]>(new Array(N * 2).fill(0));
+  const head = useSharedValue(0);
+  const count = useSharedValue(0);
 
   useFrameCallback((info) => {
     const bus = live?.bus;
@@ -46,33 +49,42 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
     const v = sourceValue(route, sources, t, inputs, seed + Math.max(0, index) * 7919, base);
     const u = bipolar ? (v + 1) / 2 : v;
     const r = evaluateAxis(route.target.layerId, route.target.param, base, routes, sources, t, inputs, seed);
-    const s = signal.get();
-    const p = result.get();
-    const ns = s.length >= N ? s.slice(1) : s.slice();
-    const np = p.length >= N ? p.slice(1) : p.slice();
-    ns.push(Math.min(1, Math.max(0, u)));
-    np.push(r);
-    signal.set(ns);
-    result.set(np);
+    const i = head.get();
+    const su = Math.min(1, Math.max(0, u));
+    buffer.modify((b) => {
+      "worklet";
+      b[i * 2] = su;
+      b[i * 2 + 1] = r;
+      return b;
+    });
+    head.set((i + 1) % N);
+    count.set(Math.min(N, count.get() + 1));
   });
 
   const h = height - PAD * 2;
-  const toPoints = (vals: number[]) => {
+  // puntos de una pista (0 = señal, 1 = resultado), de la muestra más vieja a la más nueva
+  const toPoints = (track: 0 | 1) => {
     "worklet";
+    const b = buffer.get();
+    const n = count.get();
+    const h0 = head.get();
     const out = [];
-    const start = N - vals.length;
-    for (let i = 0; i < vals.length; i++) out.push({ x: ((start + i) / (N - 1)) * (width - 6), y: PAD + (1 - vals[i]) * h });
+    for (let k = 0; k < n; k++) {
+      const idx = (h0 - n + k + N) % N;
+      out.push({ x: ((N - n + k) / (N - 1)) * (width - 6), y: PAD + (1 - b[idx * 2 + track]) * h });
+    }
     return out;
   };
-  const signalPts = useDerivedValue(() => toPoints(signal.get()));
-  const resultPts = useDerivedValue(() => toPoints(result.get()));
-  const dotY = useDerivedValue(() => {
-    const s = signal.get();
-    return PAD + (1 - (s.length ? s[s.length - 1] : 0)) * h;
-  });
+  const last = (track: 0 | 1) => {
+    "worklet";
+    if (count.get() === 0) return 0;
+    return buffer.get()[((head.get() - 1 + N) % N) * 2 + track];
+  };
+  const signalPts = useDerivedValue(() => toPoints(0));
+  const resultPts = useDerivedValue(() => toPoints(1));
+  const dotY = useDerivedValue(() => PAD + (1 - last(0)) * h);
   const resultDotY = useDerivedValue(() => {
-    const p = result.get();
-    return PAD + (1 - (p.length ? p[p.length - 1] : 0)) * h;
+    return PAD + (1 - last(1)) * h;
   });
   const mid = bipolar ? PAD + h / 2 : PAD + h;
 

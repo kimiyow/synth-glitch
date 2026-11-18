@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 
 import { selectFeedback } from "../../platform/haptics";
-import { colors, radius, type } from "../tokens";
+import { colors, COMPACT_FONT_SCALE, radius, type } from "../tokens";
 
 // chip en forma de pastilla; seleccionado = invertido (blanco con texto negro)
 export function Pill({
@@ -28,7 +28,9 @@ export function Pill({
       }}
       style={({ pressed }) => [styles.root, selected && styles.on, disabled && styles.disabled, pressed && styles.pressed]}
     >
-      <Text style={[styles.text, selected && styles.textOn]}>{label}</Text>
+      <Text style={[styles.text, selected && styles.textOn]} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

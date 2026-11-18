@@ -109,6 +109,6 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   name: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600" },
   dur: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontVariant: ["tabular-nums"] },
-  apply: { flexDirection: "row", alignItems: "center", gap: 4, height: 30, paddingHorizontal: space.sm, borderRadius: radius.pill, backgroundColor: colors.inkRaised },
+  apply: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 30, paddingHorizontal: space.sm, borderRadius: radius.pill, backgroundColor: colors.inkRaised },
   applyText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
 });

@@ -81,7 +81,7 @@ export function Sheet({
           <View style={[styles.handle, minimized && styles.handleMin]} />
         </Pressable>
         <View style={styles.topRight}>
-          {onClose && <IconButton icon="xmark" label="Cerrar panel" size={28} bare onPress={onClose} />}
+          {onClose && <IconButton icon="xmark" label="Cerrar panel" size={32} bare onPress={onClose} />}
         </View>
       </View>
       {/* franja fija (p. ej. la vista en vivo de la modulación abierta): no se desplaza */}
@@ -112,8 +112,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    // con 0.9, el peor caso (blanco detrás) queda ≈ #2A2A2A: #9A9A9A sobre él ≈ 5:1
-    backgroundColor: "rgba(18,18,18,0.9)",
+    backgroundColor: colors.sheet,
     borderTopColor: colors.inkLine,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: space.lg,

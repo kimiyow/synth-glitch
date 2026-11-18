@@ -1,6 +1,6 @@
 import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import { Pressable, StyleSheet } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, type SharedValue } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming, type SharedValue } from "react-native-reanimated";
 
 import { tapFeedback } from "../../platform/haptics";
 
@@ -28,13 +28,15 @@ type Props = {
 // encoge; al grabar el punto se vuelve un cuadrado redondeado
 export function Shutter({ recording, disabled, progress, onTap, onHoldStart, onHoldEnd }: Props) {
   const pressed = useSharedValue(0);
+  // con "Reducir movimiento" el obturador no se encoge ni rebota: cambia de forma al instante
+  const reduced = useReducedMotion();
   const innerStyle = useAnimatedStyle(() => {
     const size = recording ? SQUARE : DOT;
     return {
-      width: withTiming(size, { duration: 180 }),
-      height: withTiming(size, { duration: 180 }),
-      borderRadius: withTiming(recording ? 7 : DOT / 2, { duration: 180 }),
-      transform: [{ scale: withSpring(pressed.get() ? 0.88 : 1, { damping: 15, stiffness: 300 }) }],
+      width: (reduced ? size : withTiming(size, { duration: 180 })),
+      height: (reduced ? size : withTiming(size, { duration: 180 })),
+      borderRadius: (reduced ? (recording ? 7 : DOT / 2) : withTiming(recording ? 7 : DOT / 2, { duration: 180 })),
+      transform: [{ scale: reduced ? 1 : withSpring(pressed.get() ? 0.88 : 1, { damping: 15, stiffness: 300 }) }],
     };
   });
 

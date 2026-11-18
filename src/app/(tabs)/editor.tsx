@@ -1,7 +1,7 @@
 import { useImage, useVideo } from "@shopify/react-native-skia";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -302,7 +302,12 @@ function ProjectView({ project }: { project: Project }) {
 
           {/* capa flotante sobre el lienzo: el panel nunca cambia el tamaño ni la posición de la
               imagen; fuera del panel los toques siguen llegando al lienzo */}
-          <View style={[styles.overlay, landscape && styles.overlaySide, recordingRoute !== null && styles.hidden]} pointerEvents="box-none">
+          {/* sube con el teclado (p. ej. al renombrar en Exportar) para que el campo quede a la vista */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={[styles.overlay, landscape && styles.overlaySide, recordingRoute !== null && styles.hidden]}
+            pointerEvents="box-none"
+          >
             {notice && (
               <Text style={styles.notice} pointerEvents="none">
                 {notice}
@@ -340,7 +345,7 @@ function ProjectView({ project }: { project: Project }) {
                 </GestureRecordContext.Provider>
               </LiveModContext.Provider>
             )}
-          </View>
+          </KeyboardAvoidingView>
         </View>
 
         {usesGyro && <OrientationSensor bus={bus} />}

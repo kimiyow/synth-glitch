@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   chosenText: { flex: 1, gap: 2 },
   chosenLabel: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "700", letterSpacing: 0.8 },
   chosenWhat: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.4 },
-  change: { height: 32, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.inkRaised, justifyContent: "center" },
+  change: { minHeight: 32, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.inkRaised, justifyContent: "center" },
   changeText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
   groupLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   what: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, marginTop: -space.xs },

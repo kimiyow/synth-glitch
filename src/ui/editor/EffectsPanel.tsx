@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: colors.scrim,
   },
   modBadge: {
     position: "absolute",
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: colors.scrim,
   },
   badgeSelected: { backgroundColor: colors.paper },
   badgeText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, fontWeight: "700" },

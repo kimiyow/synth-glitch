@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { cropRectFor } from "../../engine/crop";
 import type { CameraAspect } from "../../state/settings";
 import { CornerMarks } from "../CornerMarks";
+import { colors } from "../tokens";
 
 // máscara sobre el visor 3:4 (el sensor entrega 4:3): oscurece lo que queda fuera del recorte
 // elegido y marca sus esquinas. Usa el mismo cálculo que el proyecto
@@ -31,8 +32,8 @@ export function AspectMask({ width, height, aspect }: { width: number; height: n
 }
 
 const styles = StyleSheet.create({
-  shade: { position: "absolute", backgroundColor: "rgba(0,0,0,0.7)" },
+  shade: { position: "absolute", backgroundColor: colors.scrim },
   box: { position: "absolute" },
-  lineV: { position: "absolute", top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.22)" },
-  lineH: { position: "absolute", left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.22)" },
+  lineV: { position: "absolute", top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: colors.inkLineStrong },
+  lineH: { position: "absolute", left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: colors.inkLineStrong },
 });

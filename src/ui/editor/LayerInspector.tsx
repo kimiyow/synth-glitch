@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: space.md,
-    height: 30,
+    minHeight: 30,
     borderRadius: radius.pill,
     backgroundColor: colors.inkRaised,
   },

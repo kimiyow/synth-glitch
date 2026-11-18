@@ -5,7 +5,7 @@ import type { SFSymbol } from "expo-symbols";
 
 import { Icon } from "./kit/Icon";
 import { SheetScrollLock } from "./kit/Sheet";
-import { colors, type } from "./tokens";
+import { colors, COMPACT_FONT_SCALE, type } from "./tokens";
 
 type Props = {
   label: string;
@@ -63,11 +63,11 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
       <View style={styles.header}>
         <View style={styles.labelRow}>
           {badge && <Icon name={badge} size={11} color={colors.inkText} />}
-          <Text style={styles.label} numberOfLines={1}>
+          <Text style={styles.label} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
             {label}
           </Text>
         </View>
-        <Text style={[styles.value, active && styles.valueOn]}>{valueText ?? `${Math.round(v * 100)}`}</Text>
+        <Text style={[styles.value, active && styles.valueOn]} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>{valueText ?? `${Math.round(v * 100)}`}</Text>
       </View>
       <View
         accessibilityRole="adjustable"

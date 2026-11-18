@@ -2,7 +2,7 @@ import type { SFSymbol } from "expo-symbols";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { selectFeedback } from "../../platform/haptics";
-import { colors, radius, type } from "../tokens";
+import { colors, COMPACT_FONT_SCALE, radius, type } from "../tokens";
 import { Icon } from "./Icon";
 
 export type IconTile<T extends string> = { id: T; label: string; icon: SFSymbol; hint?: string };
@@ -37,7 +37,7 @@ export function IconTiles<T extends string>({
             style={({ pressed }) => [styles.tile, on && styles.tileOn, pressed && styles.pressed]}
           >
             <Icon name={t.icon} size={16} color={on ? colors.paperText : colors.inkText} />
-            <Text style={[styles.text, on && styles.textOn]} numberOfLines={1}>
+            <Text style={[styles.text, on && styles.textOn]} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
               {t.label}
             </Text>
           </Pressable>
@@ -49,9 +49,9 @@ export function IconTiles<T extends string>({
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 3 },
-  tile: { flex: 1, height: 52, borderRadius: radius.sm, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 2 },
+  tile: { flex: 1, minHeight: 52, paddingVertical: 6, borderRadius: radius.sm, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 2 },
   tileOn: { backgroundColor: colors.paper },
   pressed: { opacity: 0.6 },
-  text: { color: colors.inkText, fontFamily: type.family, fontSize: 10, letterSpacing: 0.4 },
+  text: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.4 },
   textOn: { color: colors.paperText, fontWeight: "700" },
 });

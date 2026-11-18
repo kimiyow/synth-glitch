@@ -2,7 +2,7 @@ import type { SFSymbol } from "expo-symbols";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { tapFeedback } from "../../platform/haptics";
-import { colors, radius, space, type } from "../tokens";
+import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
 import { Icon } from "./Icon";
 
 export type GridAction<T extends string> = {
@@ -41,11 +41,11 @@ export function ActionGrid<T extends string>({
             style={({ pressed }) => [styles.tile, off && styles.off, pressed && styles.pressed]}
           >
             <Icon name={a.icon} size={20} />
-            <Text style={styles.label} numberOfLines={1}>
+            <Text style={styles.label} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
               {a.label}
             </Text>
             {a.reason && (
-              <Text style={styles.reason} numberOfLines={1}>
+              <Text style={styles.reason} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
                 {a.reason}
               </Text>
             )}

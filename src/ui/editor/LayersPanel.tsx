@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { moveLayer, toggleLayerVisible } from "../../actions/sceneEdits";
 import type { Layer, Route, SourceConfig } from "../../domain/types";
@@ -42,6 +43,7 @@ type RowProps = {
 function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb, onOpen, onDragStart, onDragMove, onDragEnd, onMove }: RowProps) {
   const def = layerDef(layer);
   const lifted = dragging !== null;
+  const reduced = useReducedMotion();
   // la manija arrastra en el hilo de JS (pocas filas); bloquea el desplazamiento de la hoja
   const pan = Gesture.Pan()
     .minDistance(0)
@@ -55,7 +57,7 @@ function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb
         accessibilityRole="button"
         accessibilityLabel={`Capa ${index + 1}, ${def.label}${mods.length ? `, ${mods.length} modulaciones` : ""}${layer.visible ? "" : ", oculta"}`}
         onPress={onOpen}
-        style={({ pressed }) => [styles.row, selected && styles.rowSelected, lifted && styles.rowDragging, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.row, selected && styles.rowSelected, lifted && styles.rowDragging, lifted && !reduced && styles.rowGrow, pressed && styles.pressed]}
       >
         <View style={[styles.thumb, !layer.visible && styles.hidden]}>{thumb}</View>
         <View style={styles.rowText}>
@@ -251,7 +253,9 @@ const styles = StyleSheet.create({
   sectionText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   rowWrap: { height: ROW_H },
   rowLifted: { zIndex: 10, shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
-  rowDragging: { backgroundColor: colors.inkRaised, transform: [{ scale: 1.02 }] },
+  rowDragging: { backgroundColor: colors.inkRaised },
+  // la fila levantada crece un poco (no con "Reducir movimiento")
+  rowGrow: { transform: [{ scale: 1.02 }] },
   rowTitleHidden: { color: colors.inkMute, textDecorationLine: "line-through" },
   handle: { width: 36, height: 44, alignItems: "center", justifyContent: "center", marginRight: -space.sm },
   count: { color: colors.inkMute, fontWeight: "400" },
@@ -260,7 +264,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     gap: 6,
-    height: 32,
+    minHeight: 32,
     paddingHorizontal: space.md,
     borderRadius: radius.pill,
     backgroundColor: colors.inkRaised,

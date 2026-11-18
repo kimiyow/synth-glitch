@@ -8,6 +8,7 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useFrameCallback,
+  useReducedMotion,
   useSharedValue,
   withDelay,
   withTiming,
@@ -44,10 +45,12 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
   useStageScreen();
   const insets = useSafeAreaInsets();
   // aviso al entrar: se ve 2.5 s y se desvanece (nunca recibe toques)
+  const reduced = useReducedMotion();
   const hint = useSharedValue(1);
   useEffect(() => {
-    hint.set(withDelay(HINT_MS, withTiming(0, { duration: 600 })));
-  }, [hint]);
+    // con "Reducir movimiento" el aviso desaparece de golpe, sin fundido
+    hint.set(withDelay(HINT_MS, withTiming(0, { duration: reduced ? 0 : 600 })));
+  }, [hint, reduced]);
   const hintStyle = useAnimatedStyle(() => ({ opacity: hint.get() }));
   const [blackout, setBlackout] = useState(false);
   const toggleBlackout = () => setBlackout((b) => !b);
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
     borderRadius: radius.md,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: colors.scrim,
   },
   hintRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
   hintText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },

@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   micRow: { flexDirection: "row", alignItems: "center", gap: space.md },
   btn: {
     minWidth: 44,
-    height: 34,
+    minHeight: 34,
     paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
