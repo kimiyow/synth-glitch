@@ -1,5 +1,5 @@
 import { BlurView } from "expo-blur";
-import { createContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { selectFeedback } from "../../platform/haptics";
@@ -10,6 +10,16 @@ import { IconButton } from "./IconButton";
 // los deslizadores bloquean el desplazamiento de la hoja mientras se arrastran: si no, la hoja (que
 // en iOS rebota aunque el contenido quepa) se queda con el toque y el control salta
 export const SheetScrollLock = createContext<(locked: boolean) => void>(() => {});
+
+// lo que un panel puede pedirle a su hoja: fijar algo arriba (fuera del desplazamiento) y llevar
+// un elemento a la vista. null fuera de una hoja
+export type SheetControls = {
+  pin: (node: ReactNode) => void;
+  scrollIntoView: (target: RefObject<ComponentRef<typeof View> | null>) => void;
+};
+export const SheetPin = createContext<SheetControls | null>(null);
+// alto que se le resta al desplazamiento mientras hay algo fijado (la hoja crece el resto)
+const PIN_ALLOWANCE = 48;
 
 // ancho de la tarjeta lateral (iPad en horizontal)
 export const SIDE_CARD_WIDTH = 380;
@@ -35,6 +45,21 @@ export function Sheet({
   const [minimized, setMinimized] = useState(false);
   const lock = useMemo(() => (on: boolean) => setLocked(on), []);
   const { regular, panelWidth } = useLayout();
+  const [pinned, setPinned] = useState<ReactNode>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const contentRef = useRef<ComponentRef<typeof View>>(null);
+  const controls = useMemo<SheetControls>(
+    () => ({
+      pin: (node) => setPinned(node),
+      scrollIntoView: (target) => {
+        const node = target.current;
+        const content = contentRef.current;
+        if (!node || !content) return;
+        node.measureLayout(content, (_x, y) => scrollRef.current?.scrollTo({ y: Math.max(0, y - space.xs), animated: true }));
+      },
+    }),
+    [],
+  );
   return (
     <View style={[styles.root, side ? styles.side : regular && [styles.floating, { width: panelWidth }]]}>
       <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
@@ -59,16 +84,23 @@ export function Sheet({
           {onClose && <IconButton icon="xmark" label="Cerrar panel" size={28} bare onPress={onClose} />}
         </View>
       </View>
+      {/* franja fija (p. ej. la vista en vivo de la modulación abierta): no se desplaza */}
+      {pinned && !minimized && <View style={styles.pinned}>{pinned}</View>}
       {/* minimizado: el contenido sigue montado (conserva su estado) pero no ocupa espacio */}
       <View style={minimized ? styles.hidden : side ? styles.sideBody : undefined}>
         <ScrollView
-          style={side ? styles.sideScroll : { maxHeight }}
+          ref={scrollRef}
+          style={side ? styles.sideScroll : { maxHeight: pinned ? maxHeight - PIN_ALLOWANCE : maxHeight }}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           alwaysBounceVertical={false}
           scrollEnabled={!locked}
         >
-          <SheetScrollLock.Provider value={lock}>{children}</SheetScrollLock.Provider>
+          <View ref={contentRef} style={styles.contentInner} collapsable={false}>
+            <SheetPin.Provider value={controls}>
+              <SheetScrollLock.Provider value={lock}>{children}</SheetScrollLock.Provider>
+            </SheetPin.Provider>
+          </View>
         </ScrollView>
       </View>
     </View>
@@ -104,6 +136,8 @@ const styles = StyleSheet.create({
     borderColor: colors.inkLine,
   },
   sideBody: { flexShrink: 1 },
+  pinned: { paddingBottom: space.sm, marginBottom: space.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.inkLine },
+  contentInner: { gap: space.md },
   sideScroll: { flexGrow: 0, flexShrink: 1 },
   hidden: { height: 0, overflow: "hidden" },
   top: { flexDirection: "row", alignItems: "center", height: 36, marginRight: -space.sm },
