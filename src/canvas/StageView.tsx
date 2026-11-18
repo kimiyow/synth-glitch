@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState, type ComponentProps } from "react";
-import { Modal, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
@@ -17,7 +17,10 @@ import Animated, {
 import { DEV_TOOLS_ENABLED } from "../dev/devTools";
 import { FULL_SCALE, stepRenderScale } from "../engine/renderScale";
 import { useStageScreen } from "../platform/screen";
+import type { ScenePreset } from "../domain/types";
+import { SCENE_FADE_BEATS, type SceneFadeBeats } from "../state/settings";
 import { Icon } from "../ui/kit/Icon";
+import { Pill } from "../ui/kit/Pill";
 import { colors, radius, space, type } from "../ui/tokens";
 import { ALL_ORIENTATIONS } from "../ui/useLayout";
 import { EditorCanvas } from "./EditorCanvas";
@@ -41,7 +44,25 @@ type CanvasProps = Omit<ComponentProps<typeof EditorCanvas>, "brush" | "extraGes
 // encendida y brillo al máximo (se restaura al salir). Para salir se mantiene 2 s el punto de la
 // esquina superior izquierda; doble toque con dos dedos alterna el blackout (la salida se detiene
 // sin cerrar el modo)
-export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: CanvasProps; onExit: () => void }) {
+export function StageView({
+  mode,
+  canvas,
+  onExit,
+  scenes,
+  onScene,
+  fadeBeats,
+  onFadeBeats,
+}: {
+  mode: StageMode;
+  canvas: CanvasProps;
+  onExit: () => void;
+  // escenas disparables (tira inferior en modo interactivo)
+  scenes: readonly ScenePreset[];
+  onScene: (preset: ScenePreset) => void;
+  fadeBeats: SceneFadeBeats;
+  onFadeBeats: (beats: SceneFadeBeats) => void;
+}) {
+  const [current, setCurrent] = useState<string | null>(null);
   useStageScreen();
   const insets = useSafeAreaInsets();
   // aviso al entrar: se ve 2.5 s y se desvanece (nunca recibe toques)
@@ -123,7 +144,34 @@ export function StageView({ mode, canvas, onExit }: { mode: StageMode; canvas: C
             <View style={StyleSheet.absoluteFill} accessibilityLabel="Modo escenario bloqueado" />
           </GestureDetector>
         )}
-        <Animated.View style={[styles.hint, { bottom: insets.bottom + 24 }, hintStyle]} pointerEvents="none">
+        {/* tira de escenas: tocar dispara con la transición elegida; la primera ficha la cambia */}
+        {mode === "interactive" && !blackout && scenes.length > 0 && (
+          <View style={[styles.strip, { bottom: insets.bottom + 12, left: insets.left, right: insets.right }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Transición: ${fadeBeats === 0 ? "corte" : `${fadeBeats} tiempos`}. Toca para cambiarla`}
+                onPress={() => onFadeBeats(SCENE_FADE_BEATS[(SCENE_FADE_BEATS.indexOf(fadeBeats) + 1) % SCENE_FADE_BEATS.length])}
+                style={({ pressed }) => [styles.fadeChip, pressed && styles.pressed]}
+              >
+                <Icon name="arrow.left.arrow.right" size={12} />
+                <Text style={styles.fadeText}>{fadeBeats === 0 ? "CORTE" : `${fadeBeats} T`}</Text>
+              </Pressable>
+              {scenes.map((s) => (
+                <Pill
+                  key={s.id}
+                  label={s.name.toUpperCase()}
+                  selected={s.id === current}
+                  onPress={() => {
+                    setCurrent(s.id);
+                    onScene(s);
+                  }}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        <Animated.View style={[styles.hint, { bottom: insets.bottom + (mode === "interactive" && scenes.length > 0 ? 72 : 24) }, hintStyle]} pointerEvents="none">
           <View style={styles.hintRow}>
             <Icon name="circle" size={12} />
             <Text style={styles.hintText}>MANTÉN 2 S LA ESQUINA PARA SALIR</Text>
@@ -193,6 +241,21 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.scrim,
   },
+  strip: { position: "absolute" },
+  stripRow: { gap: 6, paddingHorizontal: space.lg, alignItems: "center" },
+  fadeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: 30,
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.scrim,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.inkLineStrong,
+  },
+  fadeText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
+  pressed: { opacity: 0.6 },
   hintRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
   hintText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
 });

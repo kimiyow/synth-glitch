@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { applyScenePreset, removeScenePreset, saveScenePreset } from "../../actions/scenePresets";
+import { removeScenePreset, saveScenePreset } from "../../actions/scenePresets";
 import { applySceneVariation } from "../../actions/sceneEdits";
 import type { Layer, Route, ScenePreset, SourceConfig } from "../../domain/types";
 import { FACTORY_PRESETS } from "../../engine/factoryPresets";
 import { mutateScene, newMutationSeed, randomScene, type MutationLevel } from "../../engine/mutate";
 import { selectFeedback, tapFeedback } from "../../platform/haptics";
-import { useSettings } from "../../state/appSettings";
-import { MAX_SCENE_PRESETS } from "../../state/settings";
+import { settingsStore, useSettings } from "../../state/appSettings";
+import { MAX_SCENE_PRESETS, type SceneFadeBeats } from "../../state/settings";
 import { ActionGrid, type GridAction } from "../kit/ActionGrid";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
@@ -28,9 +28,18 @@ type Props = {
   // tras aleatorizar o aplicar un preset, la capa que queda seleccionada
   onSelect: (layerId: string) => void;
   onNotice: (text: string) => void;
+  // aplica la escena con la transición elegida (crossfade al ritmo o corte)
+  onTriggerScene: (preset: ScenePreset) => void;
 };
 
 type PresetAction = "import" | "share" | "save" | "mutate" | "random";
+
+const FADE_OPTIONS: { id: SceneFadeBeats; label: string }[] = [
+  { id: 0, label: "CORTE" },
+  { id: 1, label: "1 TIEMPO" },
+  { id: 2, label: "2 TIEMPOS" },
+  { id: 4, label: "4 TIEMPOS" },
+];
 
 const LEVELS: { id: MutationLevel; label: string }[] = [
   { id: "subtle", label: "SUTIL" },
@@ -44,16 +53,15 @@ type Explore = { kind: "mutate"; base: { layers: Layer[]; routes: Route[] }; see
 
 // panel Presets: recetas .synthfx y exploración (mutar, aleatorizar). Cada variación es un cambio
 // deshacible y muestra su semilla
-export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport, onShare, onSelect, onNotice }: Props) {
+export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport, onShare, onSelect, onNotice, onTriggerScene }: Props) {
   const [explore, setExplore] = useState<Explore | null>(null);
   const userScenes = useSettings((s) => s.scenes);
+  const sceneFade = useSettings((s) => s.sceneFade);
   const apply = (p: ScenePreset) => {
     if (readOnly) return;
     selectFeedback();
-    const last = applyScenePreset(p);
-    if (last) onSelect(last);
     setExplore(null);
-    onNotice(`${p.name.toUpperCase()} APLICADO`);
+    onTriggerScene(p);
   };
   const bpm = sources.tempo.bpm;
 
@@ -132,6 +140,8 @@ export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport
       <Text style={styles.section}>
         ESCENAS <Text style={styles.seed}>{userScenes.length}/{MAX_SCENE_PRESETS}</Text>
       </Text>
+      {/* transición al tocar una escena, en tiempos del reloj */}
+      <Segmented options={FADE_OPTIONS} value={sceneFade} onChange={(b) => settingsStore.getState().update({ sceneFade: b })} />
       <View style={styles.list}>
         {[...FACTORY_PRESETS, ...userScenes].map((p) => (
           <SceneRow key={p.id} preset={p} disabled={readOnly || busy} onApply={() => apply(p)} onDelete={p.builtIn ? undefined : () => removeScenePreset(p.id)} />

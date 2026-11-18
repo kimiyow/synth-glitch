@@ -18,9 +18,14 @@ export type AppSettings = {
   gestures: GesturePreset[];
   // presets de escena del usuario (capas + modulaciones, sin foto ni pintura)
   scenes: ScenePreset[];
+  // transición al disparar una escena, en tiempos del reloj (0 = corte)
+  sceneFade: SceneFadeBeats;
 };
 
-export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false, onboardingSeen: false, gestures: [], scenes: [] };
+export type SceneFadeBeats = 0 | 1 | 2 | 4;
+export const SCENE_FADE_BEATS: readonly SceneFadeBeats[] = [0, 1, 2, 4];
+
+export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false, onboardingSeen: false, gestures: [], scenes: [], sceneFade: 2 };
 
 // presets de escena del usuario que se conservan
 export const MAX_SCENE_PRESETS = 30;
@@ -76,6 +81,7 @@ export function parseSettings(raw: unknown): AppSettings {
     onboardingSeen: typeof o.onboardingSeen === "boolean" ? o.onboardingSeen : DEFAULT_SETTINGS.onboardingSeen,
     gestures: parseGestures(o.gestures),
     scenes: parseScenes(o.scenes),
+    sceneFade: SCENE_FADE_BEATS.includes(o.sceneFade as SceneFadeBeats) ? (o.sceneFade as SceneFadeBeats) : DEFAULT_SETTINGS.sceneFade,
   };
 }
 
@@ -92,9 +98,9 @@ export function createSettingsStore(io: { load: () => unknown; save: (settings: 
     ...initial,
     update(patch) {
       set(patch);
-      const { cameraAspect, holdHintSeen, onboardingSeen, gestures, scenes } = get();
+      const { cameraAspect, holdHintSeen, onboardingSeen, gestures, scenes, sceneFade } = get();
       try {
-        io.save({ cameraAspect, holdHintSeen, onboardingSeen, gestures, scenes });
+        io.save({ cameraAspect, holdHintSeen, onboardingSeen, gestures, scenes, sceneFade });
       } catch {
         // no guardar un ajuste no debe romper la app; se reintenta en el próximo cambio
       }

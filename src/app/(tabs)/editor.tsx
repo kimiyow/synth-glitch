@@ -20,19 +20,22 @@ import {
 } from "../../actions/sceneEdits";
 import { EditorCanvas } from "../../canvas/EditorCanvas";
 import { MIN_GESTURE_MS } from "../../actions/gestureLibrary";
+import { applyScenePreset } from "../../actions/scenePresets";
+import type { SceneFade } from "../../canvas/FadeOutScene";
 import { GestureRecorder } from "../../canvas/GestureRecorder";
 import { OrientationSensor } from "../../canvas/OrientationSensor";
 import { LiveModContext, useModBus } from "../../canvas/modBus";
 import { StageView, type StageMode } from "../../canvas/StageView";
 import { useSlowFrames } from "../../canvas/useSlowFrames";
-import type { Project } from "../../domain/types";
+import type { Project, ScenePreset } from "../../domain/types";
+import { FACTORY_PRESETS } from "../../engine/factoryPresets";
 import { croppedSize } from "../../engine/crop";
 import { isCostHigh, MAX_LAYERS } from "../../engine/layerCost";
 import { MAX_STROKES, type BrushTool } from "../../paint/strokeInterpolate";
 import { useMicMeter } from "../../platform/useMicMeter";
 import { PREVIEW_FILE } from "../../project/storage";
 import { projectFs, sceneStore, useScene } from "../../state/activeScene";
-import { settingsStore } from "../../state/appSettings";
+import { settingsStore, useSettings } from "../../state/appSettings";
 import { EditorPanels } from "../../ui/editor/EditorPanels";
 import { EditorToolbar } from "../../ui/editor/EditorToolbar";
 import { EditorTopBar } from "../../ui/editor/EditorTopBar";
@@ -171,6 +174,35 @@ function ProjectView({ project }: { project: Project }) {
   // señales en vivo que el lienzo escribe y la vista en vivo de cada modulación lee
   const bus = useModBus();
 
+  // escenas disparables: aplicar un preset (deshacible) y fundir desde la escena anterior durante
+  // n tiempos del reloj (0 = corte). Lo usan el panel Presets y la tira del modo escenario
+  const sceneFade = useSettings((s) => s.sceneFade);
+  const userScenes = useSettings((s) => s.scenes);
+  const scenes = [...FACTORY_PRESETS, ...userScenes];
+  const [fade, setFade] = useState<SceneFade | null>(null);
+  const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (fadeTimer.current) clearTimeout(fadeTimer.current);
+    },
+    [],
+  );
+  const triggerScene = (preset: ScenePreset) => {
+    if (readOnly) return;
+    const outgoing = { layers: project.scene.layers, routes: project.scene.routes };
+    const last = applyScenePreset(preset);
+    if (last) setSelectedId(last);
+    if (fadeTimer.current) clearTimeout(fadeTimer.current);
+    if (sceneFade > 0 && image && outgoing.layers.length > 0) {
+      const duration = (sceneFade * 60) / project.scene.sources.tempo.bpm;
+      setFade({ ...outgoing, start: bus.time.get(), duration });
+      fadeTimer.current = setTimeout(() => setFade(null), duration * 1000 + 80);
+    } else {
+      setFade(null);
+    }
+    setNotice(preset.name.toUpperCase());
+  };
+
   // GIRO: el sensor solo se enciende si alguna capa lo usa. El botón de la barra lo activa o quita
   // en la capa seleccionada; al activarlo, la posición actual del teléfono es el centro
   const usesGyro = focused && project.scene.routes.some((r) => r.source === "orientation" && r.amount !== 0);
@@ -204,6 +236,7 @@ function ProjectView({ project }: { project: Project }) {
   );
   const canvasProps = {
     bus,
+    fadeFrom: fade,
     // solo se usa cuando la imagen ya cargó (ambos lienzos van dentro de image && …)
     image: isClip ? video.currentFrame : image!,
     mic: { level: mic.level, hits: mic.hits },
@@ -339,6 +372,7 @@ function ProjectView({ project }: { project: Project }) {
                     onNotice={setNotice}
                     onClose={() => setOverlays([])}
                   onStartStage={startStage}
+                  onTriggerScene={triggerScene}
                     exports={exports}
                     onImportRecipe={() => void onImportRecipe()}
                   />
@@ -355,6 +389,10 @@ function ProjectView({ project }: { project: Project }) {
             // en escenario el gesto X/Y actúa sobre el efecto seleccionado aunque la herramienta
             // sea el pincel
             canvas={{ ...canvasProps, xyLayerId: readOnly ? null : (selected?.id ?? null) }}
+            scenes={readOnly ? [] : scenes}
+            onScene={triggerScene}
+            fadeBeats={sceneFade}
+            onFadeBeats={(b) => settingsStore.getState().update({ sceneFade: b })}
             onExit={() => setStage(null)}
           />
         )}

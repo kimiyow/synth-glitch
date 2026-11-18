@@ -16,6 +16,7 @@ import Animated, {
 import { FULL_CROP, type CropRect } from "../engine/crop";
 import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate } from "../modulation/evaluate";
+import { FadeOutScene, type SceneFade } from "./FadeOutScene";
 import { oriInput, recInput, useModBus, type ModBus } from "./modBus";
 import {
   advanceStroke,
@@ -56,6 +57,8 @@ type Props = {
   mic?: { level: SharedValue<number>; hits: SharedValue<number> };
   // señales en vivo compartidas con los paneles (vista en vivo de la modulación)
   bus?: ModBus;
+  // crossfade en curso: la escena anterior se desvanece encima de la actual
+  fadeFrom?: SceneFade | null;
   // giro de los cuadros del video y su tamaño sin rotar
   rotation?: 0 | 90 | 180 | 270;
   sourceSize?: { width: number; height: number };
@@ -344,6 +347,23 @@ export function EditorCanvas(props: Props) {
                   rotation={rotation}
                   sourceSize={props.sourceSize}
                 />
+                {props.fadeFrom && (
+                  <FadeOutScene
+                    // cada fundido es una escena distinta: se monta de nuevo
+                    key={props.fadeFrom.start}
+                    fade={props.fadeFrom}
+                    bus={bus}
+                    micLevel={micLevel}
+                    image={sceneImage}
+                    width={base.width}
+                    height={base.height}
+                    sources={sources}
+                    seed={seed}
+                    crop={crop}
+                    rotation={rotation}
+                    sourceSize={props.sourceSize}
+                  />
+                )}
               </Group>
             </Group>
           </Canvas>

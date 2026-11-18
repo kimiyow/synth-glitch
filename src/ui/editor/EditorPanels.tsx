@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { applyGesturePreset, ensureGestureRoute, removeGesturePreset, saveGesturePreset } from "../../actions/gestureLibrary";
 import { setSources, setTempo } from "../../actions/sceneEdits";
 import type { StageMode } from "../../canvas/StageView";
-import type { Layer, Project } from "../../domain/types";
+import type { Layer, Project, ScenePreset } from "../../domain/types";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { MAX_STROKES } from "../../paint/strokeInterpolate";
 import { EffectThumb } from "../../render/EffectThumb";
@@ -41,6 +41,8 @@ type Props = {
   onClose: () => void;
   // entra al modo escenario con el modo elegido
   onStartStage: (mode: StageMode) => void;
+  // aplica una escena con la transición elegida
+  onTriggerScene: (preset: ScenePreset) => void;
   exports: ReturnType<typeof useExportJob>;
   onImportRecipe: () => void;
 };
@@ -149,6 +151,7 @@ export function EditorPanels(props: Props) {
           sources={sources}
           onSelect={props.onSelect}
           onNotice={props.onNotice}
+          onTriggerScene={props.onTriggerScene}
           onImport={props.onImportRecipe}
           onShare={() => void exports.onShareRecipe()}
         />
