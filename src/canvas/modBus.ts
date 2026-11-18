@@ -13,7 +13,17 @@ export type ModBus = {
   recRoute: SharedValue<string>;
   recX: SharedValue<number>;
   recY: SharedValue<number>;
+  // GIRO: inclinación filtrada (-1..1), contador para recalibrar la neutral y si hay sensor (1/0)
+  oriX: SharedValue<number>;
+  oriY: SharedValue<number>;
+  oriCalibrate: SharedValue<number>;
+  oriAvailable: SharedValue<number>;
 };
+
+export function oriInput(bus: ModBus): { x: number; y: number } {
+  "worklet";
+  return { x: bus.oriX.get(), y: bus.oriY.get() };
+}
 
 // entrada de grabación para evaluate(), leída en el hilo de UI
 export function recInput(bus: ModBus): { routeId: string; x: number; y: number } | null {
@@ -30,7 +40,11 @@ export function useModBus(): ModBus {
   const recRoute = useSharedValue("");
   const recX = useSharedValue(0.5);
   const recY = useSharedValue(0.5);
-  return { time, gateOn, gateOff, micHitAt, recRoute, recX, recY };
+  const oriX = useSharedValue(0);
+  const oriY = useSharedValue(0);
+  const oriCalibrate = useSharedValue(0);
+  const oriAvailable = useSharedValue(1);
+  return { time, gateOn, gateOff, micHitAt, recRoute, recX, recY, oriX, oriY, oriCalibrate, oriAvailable };
 }
 
 // lo que necesita la vista en vivo además del bus: nivel del micrófono y semilla de la escena

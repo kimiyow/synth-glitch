@@ -72,6 +72,7 @@ export type RouteSettings = {
   sh?: SourceConfig["sh"];
   seq?: SourceConfig["seq"];
   mic?: MicRouteConfig;
+  orientation?: SourceConfig["orientation"];
 };
 
 // configuración de las fuentes. Una instancia de cada tipo por escena (sourceIndex = 0). Divisiones

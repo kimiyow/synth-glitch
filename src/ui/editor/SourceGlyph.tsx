@@ -43,6 +43,10 @@ function samples(route: Route, scene: SourceConfig): { values: number[]; bipolar
     case "tempo":
       at(SAMPLES, (u) => (u * 4) % 1);
       return { values: out, bipolar: false };
+    case "orientation":
+      // una inclinación de ida y vuelta, suave
+      at(SAMPLES, (u) => Math.sin(u * Math.PI * 2) * 0.7);
+      return { values: out, bipolar: true };
     case "track": {
       // recorrido horizontal del gesto grabado (plano si aún no hay)
       const s = route.settings?.gesture?.samples ?? [];

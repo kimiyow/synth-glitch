@@ -56,7 +56,7 @@ export function LayerInspector(props: Props) {
     return () => clearTimeout(id);
   }, [confirmRemove]);
 
-  const modulated = (axis: "x" | "y") => mods.some((r) => (r.target.param === axis || r.source === "track") && r.amount !== 0);
+  const modulated = (axis: "x" | "y") => mods.some((r) => (r.target.param === axis || r.source === "track" || r.source === "orientation") && r.amount !== 0);
 
   const add = () => {
     const xCount = mods.filter((r) => r.target.param === "x").length;

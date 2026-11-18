@@ -1,7 +1,7 @@
 import { Canvas, Circle, Line, Points, vec } from "@shopify/react-native-skia";
 import { useDerivedValue, useFrameCallback, useSharedValue } from "react-native-reanimated";
 
-import { recInput, useLiveMod } from "../../canvas/modBus";
+import { oriInput, recInput, useLiveMod } from "../../canvas/modBus";
 import type { Route, SourceConfig } from "../../domain/types";
 import { evaluateAxis, sourceValue, type ModInputs } from "../../modulation/evaluate";
 import { colors } from "../tokens";
@@ -25,7 +25,7 @@ type Props = {
 export function LiveScope({ route, routes, sources, base, width, height }: Props) {
   const live = useLiveMod();
   const index = routes.findIndex((r) => r.id === route.id);
-  const bipolar = route.source === "lfo" || route.source === "sh";
+  const bipolar = route.source === "lfo" || route.source === "sh" || route.source === "orientation";
   const signal = useSharedValue<number[]>([]);
   const result = useSharedValue<number[]>([]);
 
@@ -36,7 +36,7 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
       touch: {},
       gateOnAt: bus ? bus.gateOn.get() : null,
       gateOffAt: bus ? bus.gateOff.get() : null,
-      orientation: { x: 0, y: 0 },
+      orientation: bus ? oriInput(bus) : { x: 0, y: 0 },
       mic: live ? live.micLevel.get() : 0,
       micHitAt: bus ? bus.micHitAt.get() : null,
       track: null,

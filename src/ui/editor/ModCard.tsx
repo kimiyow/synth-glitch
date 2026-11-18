@@ -10,6 +10,7 @@ import { Icon } from "../kit/Icon";
 import { IconTiles, type IconTile } from "../kit/IconTiles";
 import { Segmented } from "../kit/Segmented";
 import { SheetPin } from "../kit/Sheet";
+import { useLiveMod } from "../../canvas/modBus";
 import { colors, radius, space, type } from "../tokens";
 import { LiveScope } from "./LiveScope";
 import { SourceGlyph } from "./SourceGlyph";
@@ -24,6 +25,7 @@ export const MOD_SOURCES: { id: SourceId; label: string; icon: SFSymbol; what: s
   { id: "tempo", label: "PULSO", icon: "metronome", what: "Una rampa en cada tiempo del reloj" },
   { id: "mic", label: "MIC", icon: "mic", what: "Responde al sonido del micrófono" },
   { id: "track", label: "GESTO", icon: "hand.draw", what: "Repite en bucle un movimiento que grabas con el dedo" },
+  { id: "orientation", label: "GIRO", icon: "gyroscope", what: "Inclina el teléfono para mover el efecto" },
 ];
 export const SOURCE_LABEL = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.label])) as Record<SourceId, string>;
 export const SOURCE_ICON = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.icon])) as Record<SourceId, SFSymbol>;
@@ -32,7 +34,7 @@ export const SOURCE_ICON = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.ic
 const tilesFor = (ids: SourceId[]): IconTile<SourceId>[] =>
   ids.map((id) => MOD_SOURCES.find((s) => s.id === id)).flatMap((s) => (s ? [{ id: s.id, label: s.label, icon: s.icon, hint: s.what }] : []));
 const AUTO_TILES = tilesFor(["lfo", "sh", "seq", "tempo"]);
-const REACT_TILES = tilesFor(["adsr", "mic", "track"]);
+const REACT_TILES = tilesFor(["adsr", "mic", "track", "orientation"]);
 const inGroup = (tiles: IconTile<SourceId>[], id: SourceId) => (tiles.some((t) => t.id === id) ? id : null);
 const CURVES: readonly Chip<RouteCurve>[] = [
   { id: "lin", label: "LINEAL" },
@@ -65,10 +67,11 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
   const [scopeW, setScopeW] = useState(0);
   const [more, setMore] = useState(false);
   const sheet = useContext(SheetPin);
+  const live = useLiveMod();
   const cardRef = useRef<ComponentRef<typeof View>>(null);
   const src = MOD_SOURCES.find((s) => s.id === route.source) ?? MOD_SOURCES[0];
   // el gesto mueve los dos parámetros (horizontal → el primero, vertical → el segundo)
-  const isGesture = route.source === "track";
+  const isGesture = route.source === "track" || route.source === "orientation";
   const paramName = isGesture ? `${params.x} + ${params.y}` : params[route.target.param];
   const patch = <K extends keyof RouteSettings>(key: K, label: string, p: Partial<NonNullable<RouteSettings[K]>>) =>
     patchModulationSettings(route.id, key, label, p);
@@ -131,7 +134,15 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
           </View>
           <View style={styles.group}>
             <Text style={styles.groupLabel}>REACCIONA A TI</Text>
-            <IconTiles tiles={REACT_TILES} value={inGroup(REACT_TILES, route.source)} onChange={(s) => setModulationSource(route.id, s)} />
+            <IconTiles
+              tiles={REACT_TILES}
+              value={inGroup(REACT_TILES, route.source)}
+              onChange={(s) => {
+                setModulationSource(route.id, s);
+                // GIRO toma como centro la posición actual del teléfono
+                if (s === "orientation") live?.bus.oriCalibrate.set(live.bus.oriCalibrate.get() + 1);
+              }}
+            />
           </View>
           <Text style={styles.what}>{src.what}</Text>
 

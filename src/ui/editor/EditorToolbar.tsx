@@ -21,13 +21,15 @@ type Props = {
   activeTool: "brush" | "effects";
   openPanel: string | null;
   disabled: Partial<Record<ToolButtonId, boolean>>;
+  // interruptores encendidos (p. ej. Giro en la capa seleccionada)
+  on?: Partial<Record<ToolButtonId, boolean>>;
   onPress: (id: ToolButtonId) => void;
   // iPad: riel vertical a la izquierda en lugar de la barra inferior
   rail?: boolean;
 };
 
 // barra de herramientas modular: sustituye a las pestañas mientras hay un proyecto abierto
-export function EditorToolbar({ activeTool, openPanel, disabled, onPress, rail = false }: Props) {
+export function EditorToolbar({ activeTool, openPanel, disabled, on = {}, onPress, rail = false }: Props) {
   const insets = useSafeAreaInsets();
   const { sideInset } = useLayout();
   return (
@@ -43,7 +45,7 @@ export function EditorToolbar({ activeTool, openPanel, disabled, onPress, rail =
           key={id}
           icon={icon}
           label={label}
-          active={id === activeTool || id === openPanel}
+          active={id === activeTool || id === openPanel || on[id] === true}
           disabled={disabled[id] === true}
           onPress={() => onPress(id)}
         />

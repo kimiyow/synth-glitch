@@ -1,5 +1,6 @@
 import type { Layer, Route, SourceConfig } from "../domain/types";
 import { curve01, curveSigned } from "./curves";
+import { shapeTilt } from "./orientation";
 import { adsrValue, gestureValue, lfoValue, routeLfo, routeSeq, routeSh, seqValue, shValue } from "./sources";
 import { beatPhase } from "./tempo";
 
@@ -73,8 +74,11 @@ export function sourceValue(
     case "tempo":
       return beatPhase(bpm, t);
     case "orientation": {
-      const v = route.target.param === "x" ? inputs.orientation.x : inputs.orientation.y;
-      return Math.max(-1, Math.min(1, v * sources.orientation.sensitivity));
+      // GIRO mueve los dos ejes: lateral → x, frontal → y (o cruzados)
+      const own = route.settings === undefined ? undefined : route.settings.orientation;
+      const o = own === undefined ? sources.orientation : own;
+      const lateral = o.swapAxes ? param === "y" : param === "x";
+      return shapeTilt(lateral ? inputs.orientation.x : inputs.orientation.y, o.deadzone, o.sensitivity);
     }
     case "mic": {
       const m = route.settings === undefined ? undefined : route.settings.mic;
@@ -126,8 +130,8 @@ export function evaluateAxis(
   let pull = 0;
   for (let i = 0; i < routes.length; i++) {
     const r = routes[i];
-    // un gesto mueve los dos ejes de su capa
-    if (r.target.layerId !== layerId || (r.target.param !== param && r.source !== "track")) continue;
+    // el gesto y el giro mueven los dos ejes de su capa
+    if (r.target.layerId !== layerId || (r.target.param !== param && r.source !== "track" && r.source !== "orientation")) continue;
     // cada ruta tiene su propio azar: dos S&H en capas distintas no se mueven igual
     const v = sourceValue(r, sources, t, inputs, seed + i * 7919, base, param);
     if (r.mode === "replace") {

@@ -16,7 +16,7 @@ import Animated, {
 import { FULL_CROP, type CropRect } from "../engine/crop";
 import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate } from "../modulation/evaluate";
-import { recInput, useModBus, type ModBus } from "./modBus";
+import { oriInput, recInput, useModBus, type ModBus } from "./modBus";
 import {
   advanceStroke,
   MAX_SIZE,
@@ -174,7 +174,7 @@ export function EditorCanvas(props: Props) {
       touch,
       gateOnAt: gateOn.get(),
       gateOffAt: gateOff.get(),
-      orientation: { x: 0, y: 0 },
+      orientation: oriInput(bus),
       mic: micLevel.get(),
       micHitAt: micHitAt.get(),
       track: null,

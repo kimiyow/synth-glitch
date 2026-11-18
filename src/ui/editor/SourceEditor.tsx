@@ -12,6 +12,7 @@ import { SheetScrollLock } from "../kit/Sheet";
 import { Slider } from "../Slider";
 import { colors, radius, space, type } from "../tokens";
 import { useGestureRecord } from "./gestureRecord";
+import { useLiveMod } from "../../canvas/modBus";
 
 // estado del micrófono (lo da el adaptador de plataforma)
 export type MicView = {
@@ -40,7 +41,7 @@ type RouteProps = {
 
 // true si la fuente tiene ajustes avanzados (para mostrar "Más ajustes")
 export function hasAdvanced(route: Route): boolean {
-  return route.source === "lfo" || route.source === "adsr" || route.source === "sh" || route.source === "seq" || route.source === "track";
+  return ["lfo", "adsr", "sh", "seq", "track", "orientation"].includes(route.source);
 }
 
 // ajustes propios de la fuente de una modulación
@@ -145,6 +146,48 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
     return <StepBars steps={seq.steps} onCommit={(steps) => patch("seq", "pasos", { steps })} />;
   }
 
+  if (route.source === "orientation") {
+    const o = own.orientation ?? scene.orientation;
+    if (advanced) {
+      return (
+        <View style={styles.root}>
+          <CommitSlider
+            label="Zona muerta"
+            format={(v) => `${Math.round(v * 100)} %`}
+            toValue={(u) => Math.round(u * 30) / 100}
+            fromValue={(v) => v / 0.3}
+            value={o.deadzone}
+            onCommit={(deadzone) => patch("orientation", "zona muerta del giro", { deadzone })}
+          />
+          <Segmented
+            options={[
+              { id: "normal", label: "↔ X · ↕ Y" },
+              { id: "swap", label: "↔ Y · ↕ X" },
+            ]}
+            value={o.swapAxes ? "swap" : "normal"}
+            onChange={(v) => patch("orientation", "ejes del giro", { swapAxes: v === "swap" })}
+          />
+        </View>
+      );
+    }
+    return (
+      <View style={styles.root}>
+        <View style={styles.micRow}>
+          <Text style={[styles.note, styles.flex]}>INCLINA EL TELÉFONO</Text>
+          <RecalibrateButton />
+        </View>
+        <CommitSlider
+          label="Sensibilidad"
+          format={(v) => `×${v.toFixed(2)}`}
+          toValue={(u) => Math.round(0.25 * Math.pow(16, u) * 100) / 100}
+          fromValue={(g) => Math.log(g / 0.25) / Math.log(16)}
+          value={o.sensitivity}
+          onCommit={(sensitivity) => patch("orientation", "sensibilidad del giro", { sensitivity })}
+        />
+      </View>
+    );
+  }
+
   if (route.source === "track") {
     const g = own.gesture;
     if (advanced) {
@@ -201,6 +244,20 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
 
   // tempo (pulso): sin ajustes propios
   return null;
+}
+
+// fija como centro la posición actual del teléfono
+function RecalibrateButton() {
+  const live = useLiveMod();
+  return (
+    <Btn
+      label="RECALIBRAR"
+      onPress={() => {
+        const bus = live?.bus;
+        if (bus) bus.oriCalibrate.set(bus.oriCalibrate.get() + 1);
+      }}
+    />
+  );
 }
 
 // grabar, regrabar y guardar en la biblioteca el gesto de una modulación GESTO

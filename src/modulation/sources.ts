@@ -127,6 +127,8 @@ export function defaultRouteSetting(source: SourceId, scene: SourceConfig): Rout
       return { mic: { ...DEFAULT_MIC_ROUTE } };
     case "track":
       return { gesture: { durationMs: 0, samples: [], loop: "smooth" } };
+    case "orientation":
+      return { orientation: { ...scene.orientation } };
     default:
       return {};
   }
@@ -149,6 +151,7 @@ export function parseRouteSettings(raw: unknown): RouteSettings | undefined {
   if (r.lfo !== undefined) out.lfo = full.lfo;
   if (r.adsr !== undefined) out.adsr = { ...full.adsr, trigger: o(r.adsr).trigger === "mic" ? "mic" : "touch" };
   if (r.sh !== undefined) out.sh = full.sh;
+  if (r.orientation !== undefined) out.orientation = full.orientation;
   if (r.seq !== undefined) out.seq = full.seq;
   if (r.gesture !== undefined) {
     const g = o(r.gesture);

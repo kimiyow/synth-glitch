@@ -6,10 +6,22 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } fro
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { confirmLeave } from "../../actions/leaveGuard";
-import { addTileLayer, calibrateMic, commitStroke, commitXY, findTileLayer, removeLayer, resetLayer, setGestureClip } from "../../actions/sceneEdits";
+import {
+  addModulation,
+  addTileLayer,
+  calibrateMic,
+  commitStroke,
+  commitXY,
+  findTileLayer,
+  removeLayer,
+  removeModulation,
+  resetLayer,
+  setGestureClip,
+} from "../../actions/sceneEdits";
 import { EditorCanvas } from "../../canvas/EditorCanvas";
 import { MIN_GESTURE_MS } from "../../actions/gestureLibrary";
 import { GestureRecorder } from "../../canvas/GestureRecorder";
+import { OrientationSensor } from "../../canvas/OrientationSensor";
 import { LiveModContext, useModBus } from "../../canvas/modBus";
 import { StageView, type StageMode } from "../../canvas/StageView";
 import { useSlowFrames } from "../../canvas/useSlowFrames";
@@ -111,7 +123,7 @@ function ProjectView({ project }: { project: Project }) {
   const showCostWarning = layers.length > 0 && (isCostHigh(layers) || slowFrames);
 
   const onToolPress = (id: ToolButtonId) => {
-    if (id === "gyro") return setNotice("GIRO · PRÓXIMAMENTE");
+    if (id === "gyro") return toggleGyro();
     if (id === "brush" && isClip) return setNotice("PINCEL · SOLO FOTOS");
     if (id === "brush" && strokes.length >= MAX_STROKES) setNotice(`LÍMITE DE ${MAX_STROKES} TRAZOS`);
     if (id === "brush" || id === "effects") setActiveTool(id);
@@ -158,6 +170,22 @@ function ProjectView({ project }: { project: Project }) {
   // props del lienzo que comparten el editor y el modo escenario (mismo árbol, mismos valores)
   // señales en vivo que el lienzo escribe y la vista en vivo de cada modulación lee
   const bus = useModBus();
+
+  // GIRO: el sensor solo se enciende si alguna capa lo usa. El botón de la barra lo activa o quita
+  // en la capa seleccionada; al activarlo, la posición actual del teléfono es el centro
+  const usesGyro = focused && project.scene.routes.some((r) => r.source === "orientation" && r.amount !== 0);
+  const gyroRoute = selected ? project.scene.routes.find((r) => r.target.layerId === selected.id && r.source === "orientation") : undefined;
+  const toggleGyro = () => {
+    if (readOnly) return;
+    if (!selected) return setNotice("ELIGE UNA CAPA EN EFECTOS O CAPAS");
+    if (gyroRoute) {
+      removeModulation(gyroRoute.id);
+      return setNotice("GIRO DESACTIVADO");
+    }
+    if (!addModulation(project.scene.routes, selected.id, "x", "orientation")) return setNotice("MÁXIMO 4 MODULACIONES POR CAPA");
+    bus.oriCalibrate.set(bus.oriCalibrate.get() + 1);
+    setNotice("GIRO ACTIVO · INCLINA EL TELÉFONO");
+  };
 
   // grabación de un gesto: el panel se oculta (sin desmontarse) y una capa sobre el lienzo captura
   // el dedo; al soltar, el gesto queda en su modulación y se repite en bucle
@@ -214,7 +242,8 @@ function ProjectView({ project }: { project: Project }) {
       <EditorToolbar
         activeTool={activeTool}
         openPanel={openPanel}
-        disabled={{ brush: isClip, gyro: true }}
+        disabled={{ brush: isClip, gyro: readOnly }}
+        on={{ gyro: gyroRoute !== undefined }}
         onPress={onToolPress}
         rail={regular}
       />
@@ -314,6 +343,7 @@ function ProjectView({ project }: { project: Project }) {
           </View>
         </View>
 
+        {usesGyro && <OrientationSensor bus={bus} />}
         {stage && image && (
           <StageView
             mode={stage}
