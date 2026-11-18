@@ -215,7 +215,7 @@ function ProjectView({ project }: { project: Project }) {
             onMore={openMore}
           />
         </Animated.View>
-        <View style={regular ? styles.workRow : styles.workCol}>
+        <View style={styles.work}>
           <View style={styles.canvasArea}>
             {image ? (
               !stage && (
@@ -237,34 +237,41 @@ function ProjectView({ project }: { project: Project }) {
               </View>
             )}
             {showCostWarning && <Text style={styles.warning}>RENDIMIENTO BAJO · {layers.length} CAPAS</Text>}
-            {notice && <Text style={styles.notice}>{notice}</Text>}
           </View>
 
-          {openPanel && (
-            <EditorPanels
-              panel={openPanel}
-              side={regular}
-              project={project}
-              image={image}
-              selected={selected}
-              brush={{
-                tool: brushTool,
-                size: brushSize,
-                spacing: brushSpacing,
-                onTool: setBrushTool,
-                onSize: setBrushSize,
-                onSpacing: setBrushSpacing,
-                onPreview: setSizePreview,
-              }}
-              mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
-              onMicVisible={setMicVisible}
-              onTile={onTile}
-              onRemove={onRemove}
-              onToggleMod={() => togglePanel("mod")}
-              exports={exports}
-              onImportRecipe={() => void onImportRecipe()}
-            />
-          )}
+          {/* capa flotante sobre el lienzo: el panel nunca cambia el tamaño ni la posición de la
+              imagen; fuera del panel los toques siguen llegando al lienzo */}
+          <View style={styles.overlay} pointerEvents="box-none">
+            {notice && (
+              <Text style={styles.notice} pointerEvents="none">
+                {notice}
+              </Text>
+            )}
+            {openPanel && (
+              <EditorPanels
+                panel={openPanel}
+                project={project}
+                image={image}
+                selected={selected}
+                brush={{
+                  tool: brushTool,
+                  size: brushSize,
+                  spacing: brushSpacing,
+                  onTool: setBrushTool,
+                  onSize: setBrushSize,
+                  onSpacing: setBrushSpacing,
+                  onPreview: setSizePreview,
+                }}
+                mic={{ state: mic.state, db: mic.db, calibrating, onCalibrate: () => void calibrate() }}
+                onMicVisible={setMicVisible}
+                onTile={onTile}
+                onRemove={onRemove}
+                onToggleMod={() => togglePanel("mod")}
+                exports={exports}
+                onImportRecipe={() => void onImportRecipe()}
+              />
+            )}
+          </View>
         </View>
 
         {stage && image && (
@@ -286,15 +293,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
   rootRail: { flexDirection: "row" },
   main: { flex: 1 },
-  workCol: { flex: 1 },
-  workRow: { flex: 1, flexDirection: "row" },
+  work: { flex: 1 },
+  overlay: { ...StyleSheet.absoluteFill, justifyContent: "flex-end" },
   canvasArea: { flex: 1, marginHorizontal: 18, marginBottom: 8 },
   noImage: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface, borderRadius: 12 },
   label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   notice: {
-    position: "absolute",
-    bottom: 12,
     alignSelf: "center",
+    marginBottom: 20,
     color: colors.paperText,
     backgroundColor: colors.paper,
     fontFamily: type.family,

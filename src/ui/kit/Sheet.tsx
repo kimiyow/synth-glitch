@@ -6,11 +6,7 @@ import { colors, radius, space, type } from "../tokens";
 import { useLayout } from "../useLayout";
 
 // los deslizadores bloquean el desplazamiento de la hoja mientras se arrastran: si no, la hoja (que
-// en iOS rebota aunque el contenido quepa) se queda con el toque y el control salta ancho del panel
-// lateral en iPad. Los popovers de 340 pt quedaban chicos y encima del lienzo: el panel se acopla a
-// la derecha y el lienzo le deja sitio
-export const SIDE_PANEL_WIDTH = 400;
-
+// en iOS rebota aunque el contenido quepa) se queda con el toque y el control salta
 export const SheetScrollLock = createContext<(locked: boolean) => void>(() => {});
 
 // hoja inferior con esquinas redondeadas y fondo translúcido. Solo se cierra con su propio botón
@@ -18,24 +14,21 @@ export function Sheet({
   title,
   children,
   maxHeight = 300,
-  side = false,
 }: {
   title?: string;
   children: ReactNode;
   maxHeight?: number;
-  // iPad: panel lateral fijo a la derecha, de toda la altura, sin tapar el lienzo
-  side?: boolean;
 }) {
   const [locked, setLocked] = useState(false);
   const lock = useMemo(() => (on: boolean) => setLocked(on), []);
   const { regular, panelWidth } = useLayout();
   return (
-    <View style={[styles.root, side ? styles.side : regular && [styles.floating, { width: panelWidth }]]}>
+    <View style={[styles.root, regular && [styles.floating, { width: panelWidth }]]}>
       <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-      {!side && <View style={styles.handle} />}
+      <View style={styles.handle} />
       {title && <Text style={styles.title}>{title}</Text>}
       <ScrollView
-        style={side ? styles.sideScroll : { maxHeight }}
+        style={{ maxHeight }}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical={false}
@@ -58,18 +51,6 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: space.lg,
     paddingBottom: space.md,
-  },
-  sideScroll: { flexGrow: 0, flexShrink: 1 },
-  side: {
-    width: SIDE_PANEL_WIDTH,
-    alignSelf: "flex-start",
-    maxHeight: "100%",
-    marginRight: space.md,
-    marginBottom: space.md,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.inkLine,
-    paddingTop: space.sm,
   },
   floating: {
     alignSelf: "center",

@@ -30,7 +30,6 @@ import type { useExportJob } from "./useExportJob";
 
 type Props = {
   panel: PanelId;
-  side: boolean;
   project: Project;
   image: SkImage | null;
   selected: Layer | null;
@@ -44,7 +43,7 @@ type Props = {
   onImportRecipe: () => void;
 };
 
-// el panel abierto del editor dentro de su hoja (iPhone) o panel lateral (iPad)
+// el panel abierto del editor dentro de su hoja flotante
 export function EditorPanels(props: Props) {
   const { panel, project, selected, exports } = props;
   const readOnly = useScene((s) => s.readOnly);
@@ -54,7 +53,7 @@ export function EditorPanels(props: Props) {
   const { layers, routes, sources, seed } = project.scene;
 
   return (
-    <PanelSheet side={props.side}>
+    <PanelSheet>
       {panel === "brush" ? (
         <BrushPanel {...props.brush} strokes={project.scene.paint.strokes.length} maxStrokes={MAX_STROKES} />
       ) : panel === "effects" ? (
