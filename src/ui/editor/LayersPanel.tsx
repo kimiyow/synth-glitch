@@ -6,6 +6,7 @@ import { useReducedMotion } from "react-native-reanimated";
 import { moveLayer, toggleLayerVisible } from "../../actions/sceneEdits";
 import type { Layer, Route, SourceConfig } from "../../domain/types";
 import { selectFeedback, tapFeedback } from "../../platform/haptics";
+import { confirmDelete } from "../../state/confirm";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
 import { SheetScrollLock } from "../kit/Sheet";
@@ -38,9 +39,10 @@ type RowProps = {
   onDragEnd: () => void;
   // VoiceOver: subir o bajar una posición
   onMove: (to: number) => void;
+  onRemove: () => void;
 };
 
-function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb, onOpen, onDragStart, onDragMove, onDragEnd, onMove }: RowProps) {
+function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb, onOpen, onDragStart, onDragMove, onDragEnd, onMove, onRemove }: RowProps) {
   const def = layerDef(layer);
   const lifted = dragging !== null;
   const reduced = useReducedMotion();
@@ -83,6 +85,21 @@ function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb
           bare
           onPress={() => toggleLayerVisible(layer.id)}
         />
+        <IconButton
+          icon="trash"
+          label={`Quitar ${def.label}`}
+          size={36}
+          bare
+          onPress={() => {
+            const n = mods.length;
+            void confirmDelete({
+              section: "CAPA",
+              title: `¿Quitar ${def.label}?`,
+              message: n > 0 ? `También se quitan sus ${n === 1 ? "modulación" : `${n} modulaciones`}. Puedes deshacerlo con ↶.` : "Puedes deshacerlo con ↶.",
+              label: "Quitar capa",
+            }).then((ok) => ok && onRemove());
+          }}
+        />
         {count > 1 && (
           <GestureDetector gesture={pan}>
             <View
@@ -119,6 +136,7 @@ type Props = {
   mic: MicView;
   // la vista del micrófono está abierta: el medidor necesita el micrófono encendido
   onMicVisible: (visible: boolean) => void;
+  onRemove: (layerId: string) => void;
 };
 
 // panel Capas: la pila de la escena como en un editor de video. Cada capa abre su inspector
@@ -219,6 +237,7 @@ export function LayersPanel(props: Props) {
               offset={shiftFor(i)}
               dragging={drag?.id === layer.id ? drag.dy : null}
               thumb={props.renderThumb(layer, ROW_THUMB)}
+              onRemove={() => props.onRemove(layer.id)}
               onOpen={() => {
                 selectFeedback();
                 props.onSelect(layer.id);

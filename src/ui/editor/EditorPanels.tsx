@@ -115,6 +115,7 @@ export function EditorPanels(props: Props) {
           onTempo={setTempo}
           mic={props.mic}
           onMicVisible={props.onMicVisible}
+          onRemove={props.onRemove}
         />
       ) : panel === "export" ? (
         <ExportPanel
