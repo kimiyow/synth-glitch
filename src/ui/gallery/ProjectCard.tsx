@@ -31,7 +31,15 @@ export function ProjectCard({ project, width, active, onOpen, onMore }: Props) {
     >
       <View style={[styles.thumb, { width, height: Math.round((width * 4) / 3) }]}>
         {project.thumbUri ? (
-          <Image source={{ uri: project.thumbUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="none" />
+          // thumb.jpg se reescribe en el mismo archivo al guardar: la clave con la fecha del guardado
+          // obliga a leer la versión nueva en lugar de reutilizar la anterior
+          <Image
+            source={{ uri: project.thumbUri, cacheKey: `${project.id}-${project.updatedAt}` }}
+            recyclingKey={`${project.id}-${project.updatedAt}`}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory"
+          />
         ) : (
           <Text style={styles.noThumb}>SIN MINIATURA</Text>
         )}

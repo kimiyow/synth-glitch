@@ -1,6 +1,6 @@
 import { askConfirm } from "../state/confirm";
 
-import { PREVIEW_LONG_SIDE, renderSceneJpeg, THUMB_LONG_SIDE } from "../render/renderPreviews";
+import { PREVIEW_LONG_SIDE, renderSceneJpeg, sceneFrameAt, THUMB_LONG_SIDE } from "../render/renderPreviews";
 import { writeImages } from "../project/storage";
 import { projectFs, sceneStore } from "../state/activeScene";
 import { loadOriginal } from "./exportActions";
@@ -23,8 +23,11 @@ export async function saveActiveProject(): Promise<Result> {
     const image = await loadOriginal(project);
     try {
       const isClip = project.scene.media.kind === "clip";
-      const preview = isClip ? undefined : await renderSceneJpeg(image, project.scene, PREVIEW_LONG_SIDE);
-      const thumb = await renderSceneJpeg(image, project.scene, THUMB_LONG_SIDE, 80);
+      // con sus modulaciones aplicadas (como el JPG exportado), no solo los valores base: un GESTO
+      // o un reemplazo cambian lo que se ve
+      const frame = sceneFrameAt(project.scene, 0);
+      const preview = isClip ? undefined : await renderSceneJpeg(image, project.scene, PREVIEW_LONG_SIDE, 90, frame);
+      const thumb = await renderSceneJpeg(image, project.scene, THUMB_LONG_SIDE, 80, frame);
       writeImages(projectFs, project.id, { preview, thumb });
     } finally {
       image.dispose();
