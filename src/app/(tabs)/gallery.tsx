@@ -13,12 +13,22 @@ import {
   openProjectById,
   renameProjectById,
 } from "../../actions/projectActions";
+import { reportError } from "../../ui/errors";
 import { ProjectActionsSheet } from "../../ui/gallery/ProjectActionsSheet";
 import { ProjectCard } from "../../ui/gallery/ProjectCard";
 import { colors, type } from "../../ui/tokens";
 import { useLayout } from "../../ui/useLayout";
 
 const GAP = 12;
+
+// lee los proyectos; si falla, la hoja de error ofrece reintentar la misma lectura
+function loadGallery(set: (projects: ProjectSummary[]) => void) {
+  try {
+    set(listAllProjects());
+  } catch (error) {
+    void reportError({ title: "No se pudo leer la Galería", error, retry: () => loadGallery(set) });
+  }
+}
 
 export default function GalleryScreen() {
   const { width } = useWindowDimensions();
@@ -31,13 +41,7 @@ export default function GalleryScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const activeId = useScene((s) => s.project?.id ?? null);
 
-  const refresh = useCallback(() => {
-    try {
-      setProjects(listAllProjects());
-    } catch (error) {
-      setMessage(`NO SE PUDO LEER LA GALERÍA · ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }, []);
+  const refresh = useCallback(() => loadGallery(setProjects), []);
 
   useFocusEffect(refresh);
 
@@ -56,7 +60,7 @@ export default function GalleryScreen() {
       setMessage(null);
       router.push("/project");
     } else {
-      setMessage(result.error);
+      void reportError({ title: "No se pudo abrir el proyecto", error: result.error, retry: () => open(project) });
     }
   };
 

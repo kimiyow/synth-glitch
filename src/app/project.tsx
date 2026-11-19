@@ -44,6 +44,7 @@ import type { TileRef } from "../ui/editor/EffectsPanel";
 import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../ui/editor/panels";
 import { useExportJob } from "../ui/editor/useExportJob";
 import { askConfirm } from "../state/confirm";
+import { announce } from "../ui/errors";
 import { colors, type } from "../ui/tokens";
 import { useLayout } from "../ui/useLayout";
 
@@ -98,6 +99,8 @@ function ProjectView({ project }: { project: Project }) {
   const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
     if (!notice) return;
+    // el aviso no mueve el foco: VoiceOver lo lee aparte
+    announce(notice);
     const id = setTimeout(() => setNotice(null), 2000);
     return () => clearTimeout(id);
   }, [notice]);

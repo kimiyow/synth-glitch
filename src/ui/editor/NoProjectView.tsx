@@ -7,6 +7,7 @@ import { GENERATORS } from "../../engine/registry";
 import { pickMediaFromLibrary } from "../../platform/pickMedia";
 import { EffectThumb } from "../../render/EffectThumb";
 import { blankImage, generatorLayer } from "../../render/renderPreviews";
+import { reportError } from "../errors";
 import { EditorEmpty, GEN_THUMB, type GenerativeAspect } from "./EditorEmpty";
 
 // editor sin proyecto. las importaciones no se recortan (aspecto libre); crear sin imagen usa un
@@ -25,10 +26,10 @@ export function NoProjectView() {
         const { uri, type: kind } = picked.media;
         const result = kind === "clip" ? await createProjectFromClip(uri, "free") : await createProjectFromPhoto(uri, "free");
         if (result.ok) router.push("/project");
-        else setMessage(`ERROR · ${result.error}`);
+        else void reportError({ title: "No se pudo importar", error: result.error, retry: importMedia });
       }
     } catch (error) {
-      setMessage(`ERROR · ${error instanceof Error ? error.message : String(error)}`);
+      void reportError({ title: "No se pudo importar", error, retry: importMedia });
     } finally {
       setBusy(false);
     }
@@ -39,7 +40,7 @@ export function NoProjectView() {
     setMessage(null);
     const result = await createGenerativeProject(aspect, generator);
     if (result.ok) router.push("/project");
-    else setMessage(`ERROR · ${result.error}`);
+    else void reportError({ title: "No se pudo crear el proyecto", error: result.error, retry: () => create(aspect, generator) });
     setBusy(false);
   };
 

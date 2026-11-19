@@ -56,7 +56,7 @@ export function confirmLeave(): Promise<boolean> {
     if (id === "discard") return true;
     if (id !== "save") return false;
     const r = await saveActiveProject();
-    if (!r.ok) await askConfirm({ section: "PROYECTO", title: "No se pudo guardar", message: r.error, actions: [], cancelLabel: "Entendido" });
+    if (!r.ok) await askConfirm({ section: "ERROR", title: "No se pudo guardar el proyecto", message: r.error, actions: [], cancelLabel: "Entendido" });
     return r.ok;
   });
 }

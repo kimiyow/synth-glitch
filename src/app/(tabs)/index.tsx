@@ -14,6 +14,7 @@ import { AspectMask } from "../../ui/camera/AspectMask";
 import { AspectPicker } from "../../ui/camera/AspectPicker";
 import { RecBadge } from "../../ui/camera/RecBadge";
 import { Shutter } from "../../ui/camera/Shutter";
+import { reportError } from "../../ui/errors";
 import { PermissionScreen } from "../../ui/PermissionScreen";
 import { colors, radius, space, type } from "../../ui/tokens";
 
@@ -91,7 +92,7 @@ function CameraCapture() {
       setMessage(null);
       router.push("/project");
     } else {
-      setMessage(`ERROR · ${result.error}`);
+      void reportError({ title: "No se pudo crear el proyecto", error: result.error });
     }
   };
 
@@ -128,7 +129,7 @@ function CameraCapture() {
     try {
       uri = (await camera.recordAsync({ maxDuration: MAX_CLIP_S }))?.uri;
     } catch (error) {
-      setMessage(`ERROR · ${error instanceof Error ? error.message : String(error)}`);
+      void reportError({ title: "No se pudo grabar el clip", error });
     }
     const elapsed = Date.now() - startedAt;
     holding.current = false;

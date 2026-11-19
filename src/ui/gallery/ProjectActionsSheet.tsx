@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { errorCause } from "../errors";
 import { Button } from "../kit/Button";
 
 import { ALL_ORIENTATIONS, useLayout } from "../useLayout";
@@ -53,7 +54,7 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
     if (!project) return;
     const result = action(project.id);
     if (result.ok) onClose();
-    else setError(result.error);
+    else setError(errorCause(result.error));
   };
 
   return (

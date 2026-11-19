@@ -4,9 +4,8 @@ import { exportGif, exportJpeg, importRecipe, shareRecipe } from "../../actions/
 import { saveActiveProject } from "../../actions/leaveGuard";
 import type { Project } from "../../domain/types";
 import { shareFile } from "../../platform/photos";
+import { reportError } from "../errors";
 import type { ExportAction, ExportJob } from "./ExportPanel";
-
-const errorText = (error: unknown) => `ERROR · ${error instanceof Error ? error.message : String(error)}`;
 
 // salidas del panel Exportar y del panel Presets. vive en la pantalla y no en el panel, así un GIF
 // sigue aunque se cierre el panel
@@ -16,20 +15,22 @@ export function useExportJob(project: Project, previewTime: () => number, notify
   const [recipeBusy, setRecipeBusy] = useState(false);
   const gifCancel = useRef(false);
 
-  const onExportAction = async (action: ExportAction) => {
+  const onExportAction = async (action: ExportAction): Promise<void> => {
+    const retry = () => onExportAction(action);
     if (action === "project") {
       const r = await saveActiveProject();
-      return notify(r.ok ? "PROYECTO GUARDADO" : `ERROR · ${r.error}`);
+      if (r.ok) return notify("PROYECTO GUARDADO");
+      return reportError({ title: "No se pudo guardar el proyecto", error: r.error, retry });
     }
     if (action === "share") {
-      if (lastExport) await shareFile(lastExport).catch((e: unknown) => notify(`ERROR · ${String(e)}`));
+      if (lastExport) await shareFile(lastExport).catch((error: unknown) => reportError({ title: "No se pudo compartir", error, retry }));
       return;
     }
     if (action === "jpg") {
       setJob({ label: "Exportando JPG…", progress: null });
       const r = await exportJpeg(project, previewTime());
       setJob(null);
-      if (!r.ok) return notify(`ERROR · ${r.error}`);
+      if (!r.ok) return reportError({ title: "No se pudo exportar el JPG", error: r.error, retry });
       setLastExport(r.uri);
       notify(`JPG GUARDADO EN FOTOS · ${(r.ms / 1000).toFixed(1)} S`);
     }
@@ -44,7 +45,7 @@ export function useExportJob(project: Project, previewTime: () => number, notify
         isCancelled: () => gifCancel.current,
       });
       setJob(null);
-      if (!r.ok) return notify("cancelled" in r ? "GIF CANCELADO" : `ERROR · ${r.error}`);
+      if (!r.ok) return "cancelled" in r ? notify("GIF CANCELADO") : reportError({ title: "No se pudo crear el GIF", error: r.error, retry });
       setLastExport(r.uri);
       notify(`GIF GUARDADO EN FOTOS · ${(r.ms / 1000).toFixed(1)} S`);
     }
@@ -57,13 +58,13 @@ export function useExportJob(project: Project, previewTime: () => number, notify
       const r = await importRecipe();
       if (r.ok === "cancelled") return null;
       if (!r.ok) {
-        notify(r.error);
+        void reportError({ title: "No se pudo importar la receta", error: r.error });
         return null;
       }
       notify(`RECETA IMPORTADA · ${r.name.toUpperCase()}`);
       return r.lastLayerId;
     } catch (error) {
-      notify(errorText(error));
+      void reportError({ title: "No se pudo importar la receta", error });
       return null;
     } finally {
       setRecipeBusy(false);
@@ -75,7 +76,7 @@ export function useExportJob(project: Project, previewTime: () => number, notify
     try {
       await shareRecipe(project);
     } catch (error) {
-      notify(errorText(error));
+      void reportError({ title: "No se pudo compartir la receta", error, retry: onShareRecipe });
     } finally {
       setRecipeBusy(false);
     }

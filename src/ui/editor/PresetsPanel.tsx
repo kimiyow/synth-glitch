@@ -14,6 +14,7 @@ import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
 import { Segmented } from "../kit/Segmented";
 import { confirmDelete } from "../../state/confirm";
+import { announce } from "../errors";
 import { colors, radius, space, type } from "../tokens";
 import { layerDef } from "./LayerInspector";
 import { SOURCE_ICON } from "./ModCard";
@@ -68,11 +69,13 @@ export function PresetsPanel({ readOnly, busy, layers, routes, sources, onImport
 
   const mutate = (base: { layers: Layer[]; routes: Route[] }, seed: number, level: MutationLevel) => {
     applySceneVariation(mutateScene(base.layers, base.routes, seed, level, bpm), `mutar · ${seed}`);
+    announce(`VARIACIÓN APLICADA · SEMILLA ${seed}`);
     setExplore({ kind: "mutate", base, seed, level });
   };
   const randomize = (seed: number) => {
     const next = randomScene(seed, sources);
     applySceneVariation(next, `aleatorizar · ${seed}`);
+    announce(`ESCENA NUEVA · SEMILLA ${seed}`);
     const last = next.layers.at(-1);
     if (last) onSelect(last.id);
     setExplore({ kind: "random", seed });
