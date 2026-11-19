@@ -22,6 +22,8 @@ export function Segmented<T extends string | number>({
             key={String(o.id)}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
+            // 32 pt visibles + 2 del marco + 4 de margen arriba y abajo = 44 pt de zona táctil
+            hitSlop={{ top: 6, bottom: 6 }}
             onPress={() => {
               if (on) return;
               selectFeedback();

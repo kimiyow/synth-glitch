@@ -510,13 +510,26 @@ function TempoEditor({ bpm, onTempo }: { bpm: number; onTempo: (bpm: number) => 
   const nudge = (d: number) => onTempo(Math.min(MAX_BPM, Math.max(MIN_BPM, bpm + d)));
   return (
     <View style={styles.tempo}>
-      <Text style={styles.bpm}>
-        {bpm} <Text style={styles.bpmUnit}>BPM</Text>
-      </Text>
-      <Btn label="−" onPress={() => nudge(-1)} />
-      <Btn label="+" onPress={() => nudge(1)} />
+      {/* valor y −/+ son un solo control para VoiceOver: desliza arriba o abajo para cambiar 1 BPM */}
+      <View
+        style={styles.tempoValue}
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel="Tempo"
+        accessibilityValue={{ min: MIN_BPM, max: MAX_BPM, now: bpm, text: `${bpm} BPM` }}
+        accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+        onAccessibilityAction={(e) => nudge(e.nativeEvent.actionName === "increment" ? 1 : -1)}
+      >
+        <Text style={styles.bpm}>
+          {bpm} <Text style={styles.bpmUnit}>BPM</Text>
+        </Text>
+        <Btn label="−" onPress={() => nudge(-1)} />
+        <Btn label="+" onPress={() => nudge(1)} />
+      </View>
       <Btn
         label="TAP"
+        a11yLabel="Marcar el tempo"
+        a11yHint="Toca varias veces al ritmo"
         onPress={() => {
           const r = tapTempo(taps.current, Date.now());
           taps.current = r.taps;
@@ -527,9 +540,9 @@ function TempoEditor({ bpm, onTempo }: { bpm: number; onTempo: (bpm: number) => 
   );
 }
 
-function Btn({ label, onPress }: { label: string; onPress: () => void }) {
+function Btn({ label, a11yLabel, a11yHint, onPress }: { label: string; a11yLabel?: string; a11yHint?: string; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.btn, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={a11yLabel} accessibilityHint={a11yHint} onPress={onPress} style={({ pressed }) => [styles.btn, pressed && styles.pressed]}>
       <Text style={styles.btnText}>{label}</Text>
     </Pressable>
   );
@@ -549,6 +562,7 @@ const styles = StyleSheet.create({
   barSlot: { flex: 1, justifyContent: "flex-end", backgroundColor: colors.inkRaised, borderRadius: 3, overflow: "hidden" },
   bar: { backgroundColor: colors.inkText, borderRadius: 2 },
   tempo: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  tempoValue: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm },
   bpm: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.display, fontWeight: "300", fontVariant: ["tabular-nums"] },
   bpmUnit: { color: colors.inkMute, fontSize: type.label, fontWeight: "400" },
   meterWrap: { flex: 1, gap: 4 },

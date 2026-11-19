@@ -207,6 +207,7 @@ export function LayersPanel(props: Props) {
             selectFeedback();
             setView("global");
           }}
+          hitSlop={{ top: 6, bottom: 6 }}
           style={({ pressed }) => [styles.globalBtn, pressed && styles.pressed]}
         >
           <Icon name="metronome" size={14} />
@@ -219,7 +220,7 @@ export function LayersPanel(props: Props) {
       {layers.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Aún no hay capas</Text>
-          <Pressable accessibilityRole="button" onPress={props.onOpenEffects} style={({ pressed }) => [styles.globalBtn, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" hitSlop={{ top: 6, bottom: 6 }} onPress={props.onOpenEffects} style={({ pressed }) => [styles.globalBtn, pressed && styles.pressed]}>
             <Icon name="wand.and.stars" size={14} />
             <Text style={styles.globalText}>AÑADIR EFECTOS</Text>
           </Pressable>

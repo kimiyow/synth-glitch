@@ -143,6 +143,7 @@ export function LayerInspector(props: Props) {
                 selectFeedback();
                 rerollSeed(layer.id);
               }}
+              hitSlop={{ top: 7, bottom: 7 }}
               style={({ pressed }) => [styles.chipBtn, pressed && styles.pressed]}
             >
               <Icon name="dice" size={16} />
@@ -162,6 +163,7 @@ export function LayerInspector(props: Props) {
             accessibilityState={{ disabled: full }}
             disabled={full}
             onPress={add}
+            hitSlop={{ top: 7, bottom: 7 }}
             style={({ pressed }) => [styles.chipBtn, full && styles.disabled, pressed && styles.pressed]}
           >
             <Icon name="plus" size={14} />

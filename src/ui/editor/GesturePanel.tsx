@@ -71,6 +71,7 @@ export function GesturePanel({ layerLabel, scene, onRecord, onApply, onDelete }:
                 accessibilityLabel={`Aplicar ${p.name}${layerLabel ? ` a ${layerLabel}` : ""}`}
                 disabled={!layerLabel}
                 onPress={() => onApply(p)}
+                hitSlop={{ top: 7, bottom: 7 }}
                 style={({ pressed }) => [styles.apply, !layerLabel && styles.disabled, pressed && styles.pressed]}
               >
                 <Icon name="arrow.down.to.line" size={13} />
