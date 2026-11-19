@@ -10,7 +10,7 @@ import {
   MAX_LAYERS,
 } from "./layerCost";
 
-const EFFECT_IDS: EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt"];
+const EFFECT_IDS: EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt", "pixelsort", "databend"];
 
 function fx(effect: EffectId, visible = true): Layer {
   return { kind: "effect", id: effect, effect, params: { x: 0, y: 0 }, visible };

@@ -18,7 +18,7 @@ export const SCHEMA_VERSION = 1;
 // límite de trazos por proyecto
 export const MAX_STROKES = 400;
 
-const EFFECT_IDS: readonly EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt"];
+const EFFECT_IDS: readonly EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt", "pixelsort", "databend"];
 const GENERATOR_IDS: readonly GeneratorId[] = ["noise", "bars", "voronoi"];
 const STAMP_EFFECTS: readonly StampEffect[] = ["datamosh", "chromatic", "pixel", "smear"];
 const BLENDS = ["replace", "screen", "multiply", "difference"] as const;

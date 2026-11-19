@@ -7,6 +7,8 @@ const LUMINANCE_PARAMS: Partial<Record<EffectId, readonly ("x" | "y")[]>> = {
   crt: ["y"],
   pixelate: ["y"],
   vhs: ["y"],
+  pixelsort: ["y"],
+  databend: ["y"],
 };
 const MAX_SAFE_HZ = 3;
 

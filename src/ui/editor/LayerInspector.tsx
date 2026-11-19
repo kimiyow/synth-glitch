@@ -192,10 +192,17 @@ export function LayerInspector(props: Props) {
       {/* acciones sobre la capa, lejos de la cabecera: restablecer (reversible) a la izquierda y
           quitar (destructiva, con segundo toque) a la derecha */}
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" hitSlop={8} onPress={() => resetLayer(layer.id)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
-          <Icon name="arrow.counterclockwise" size={13} color={colors.inkMute} />
-          <Text style={styles.actionText}>RESTABLECER PARÁMETROS</Text>
-        </Pressable>
+        {/* al confirmar, restablecer cede su lugar a CANCELAR para que el aviso quepa en iPhone */}
+        {confirmRemove ? (
+          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setConfirmRemove(false)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+            <Text style={styles.actionText} numberOfLines={1}>CANCELAR</Text>
+          </Pressable>
+        ) : (
+          <Pressable accessibilityRole="button" accessibilityLabel="Restablecer parámetros" hitSlop={8} onPress={() => resetLayer(layer.id)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+            <Icon name="arrow.counterclockwise" size={13} color={colors.inkMute} />
+            <Text style={styles.actionText} numberOfLines={1}>RESTABLECER</Text>
+          </Pressable>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityHint={confirmRemove ? "Toca otra vez para quitar la capa" : undefined}
@@ -208,7 +215,9 @@ export function LayerInspector(props: Props) {
           style={({ pressed }) => [styles.action, confirmRemove && styles.actionConfirm, pressed && styles.pressed]}
         >
           <Icon name="trash" size={13} color={confirmRemove ? colors.paperText : colors.inkMute} />
-          <Text style={[styles.actionText, confirmRemove && styles.actionTextConfirm]}>{confirmRemove ? "¿QUITAR? TOCA OTRA VEZ" : "QUITAR CAPA"}</Text>
+          <Text style={[styles.actionText, confirmRemove && styles.actionTextConfirm]} numberOfLines={1}>
+            {confirmRemove ? "TOCA PARA QUITAR" : "QUITAR CAPA"}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -220,7 +229,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: space.sm, marginLeft: -space.sm },
   actions: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space.sm, marginTop: space.xs },
-  action: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36, paddingHorizontal: space.sm, borderRadius: radius.pill },
+  action: { flexDirection: "row", alignItems: "center", flexShrink: 1, gap: 6, minHeight: 36, paddingHorizontal: space.sm, borderRadius: radius.pill },
   actionConfirm: { backgroundColor: colors.paper },
   actionText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
   actionTextConfirm: { color: colors.paperText, fontWeight: "700" },
