@@ -1,7 +1,7 @@
 import { useImage, useVideo } from "@shopify/react-native-skia";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -44,6 +44,7 @@ import type { TileRef } from "../../ui/editor/EffectsPanel";
 import { NoProjectView } from "../../ui/editor/NoProjectView";
 import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../../ui/editor/panels";
 import { useExportJob } from "../../ui/editor/useExportJob";
+import { askConfirm } from "../../state/confirm";
 import { colors, type } from "../../ui/tokens";
 import { useLayout } from "../../ui/useLayout";
 
@@ -260,10 +261,11 @@ function ProjectView({ project }: { project: Project }) {
 
   // menú ⋯: reabrir el onboarding (el modo escenario tiene su propio botón y panel)
   const openMore = () =>
-    Alert.alert("Más opciones", undefined, [
-      { text: "Ver introducción", onPress: () => settingsStore.getState().update({ onboardingSeen: false }) },
-      { text: "Cancelar", style: "cancel" },
-    ]);
+    void askConfirm({
+      section: "EDITOR",
+      title: "Más opciones",
+      actions: [{ id: "intro", label: "Ver introducción", icon: "questionmark.circle", variant: "secondary" }],
+    }).then((id) => id === "intro" && settingsStore.getState().update({ onboardingSeen: false }));
   const startStage = (mode: StageMode) => {
     if (!image) return setNotice("CARGANDO LA IMAGEN…");
     setOverlays([]);

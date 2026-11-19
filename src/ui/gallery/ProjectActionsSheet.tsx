@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Icon } from "../kit/Icon";
+import { Button } from "../kit/Button";
 
 import { ALL_ORIENTATIONS, useLayout } from "../useLayout";
 import { colors, geometry, radius, type } from "../tokens";
@@ -99,7 +99,7 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
                 accessibilityLabel="Nombre del proyecto"
                 style={styles.input}
               />
-              <SheetButton label="Guardar" icon="checkmark" onPress={() => run((id) => onRename(id, name))} />
+              <SheetButton label="Guardar" icon="checkmark" primary onPress={() => run((id) => onRename(id, name))} />
               <SheetButton label="Cancelar" muted onPress={() => setMode("actions")} />
             </>
           )}
@@ -107,7 +107,7 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
           {mode === "delete" && (
             <>
               <Text style={styles.body}>Se borran «{project?.name}» y su imagen. No se puede deshacer.</Text>
-              <SheetButton label="Eliminar" icon="trash" onPress={() => run(onDelete)} />
+              <SheetButton label="Eliminar proyecto" icon="trash" primary onPress={() => run(onDelete)} />
               <SheetButton label="Cancelar" muted onPress={() => setMode("actions")} />
             </>
           )}
@@ -119,33 +119,32 @@ export function ProjectActionsSheet({ project, onClose, onRename, onDuplicate, o
   );
 }
 
+// botones del kit: la acción que se confirma en blanco, las demás en gris y Cancelar como texto,
+// igual que la hoja de confirmación común (ConfirmHost)
 function SheetButton({
   label,
   icon,
   onPress,
+  primary = false,
   muted = false,
   disabled = false,
 }: {
   label: string;
   icon?: SFSymbol;
   onPress: () => void;
+  primary?: boolean;
   muted?: boolean;
   disabled?: boolean;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [styles.button, muted && styles.buttonMuted, pressed && styles.pressed, disabled && styles.disabled]}
-    >
-      {icon && <Icon name={icon} size={16} />}
-      <Text style={[styles.buttonText, muted && styles.muted]}>{label}</Text>
-    </Pressable>
+    <View style={styles.buttonSlot}>
+      <Button label={label} icon={icon} variant={primary ? "primary" : muted ? "ghost" : "secondary"} disabled={disabled} onPress={onPress} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  buttonSlot: { marginBottom: 8 },
   flex: { flex: 1, justifyContent: "flex-end" },
   backdrop: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.scrim },
   sheet: {
@@ -174,20 +173,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 8,
   },
-  button: {
-    minHeight: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    marginBottom: 6,
-    borderRadius: radius.md,
-    backgroundColor: colors.inkRaised,
-  },
-  pressed: { opacity: 0.6 },
-  disabled: { opacity: 0.5 },
-  buttonMuted: { backgroundColor: "transparent", justifyContent: "center" },
-  buttonText: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600" },
-  muted: { color: colors.inkMute },
   error: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, marginTop: 8 },
 });

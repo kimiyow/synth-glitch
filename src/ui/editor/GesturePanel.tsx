@@ -5,6 +5,7 @@ import { useSettings } from "../../state/appSettings";
 import { MAX_GESTURE_PRESETS } from "../../state/settings";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
+import { confirmDelete } from "../../state/confirm";
 import { colors, radius, space, type } from "../tokens";
 import { SourceGlyph } from "./SourceGlyph";
 
@@ -75,7 +76,15 @@ export function GesturePanel({ layerLabel, scene, onRecord, onApply, onDelete }:
                 <Icon name="arrow.down.to.line" size={13} />
                 <Text style={styles.applyText}>APLICAR</Text>
               </Pressable>
-              <IconButton icon="trash" label={`Borrar ${p.name}`} size={32} bare onPress={() => onDelete(p.id)} />
+              <IconButton icon="trash" label={`Borrar ${p.name}`} size={32} bare onPress={() => {
+                  void confirmDelete({
+                    section: "BIBLIOTECA",
+                    title: `¿Borrar «${p.name}»?`,
+                    message: "Se borra de la biblioteca de todos los proyectos. No se puede deshacer.",
+                    label: "Borrar gesto",
+                  }).then((ok) => ok && onDelete(p.id));
+                }}
+              />
             </View>
           ))}
         </View>

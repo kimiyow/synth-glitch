@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { addModulation, MAX_MODS_PER_LAYER, rerollSeed, resetLayer, setBlend, toggleLayerVisible } from "../../actions/sceneEdits";
 import type { BlendMode, Layer, Route, SourceConfig } from "../../domain/types";
 import { EFFECT_BY_ID, GENERATOR_BY_ID } from "../../engine/registry";
+import { askConfirm } from "../../state/confirm";
 import { selectFeedback, tapFeedback } from "../../platform/haptics";
 import { ChipRow, type Chip } from "../ChipRow";
 import { Icon } from "../kit/Icon";
@@ -50,13 +51,24 @@ export function LayerInspector(props: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
   // la última modulación creada se abre eligiendo fuente
   const [fresh, setFresh] = useState<string | null>(null);
-  // quitar pide un segundo toque en 3 s
-  const [confirmRemove, setConfirmRemove] = useState(false);
-  useEffect(() => {
-    if (!confirmRemove) return;
-    const id = setTimeout(() => setConfirmRemove(false), 3000);
-    return () => clearTimeout(id);
-  }, [confirmRemove]);
+  // acciones de la capa en la hoja común: restablecer o quitar. La propia hoja es la confirmación
+  const openLayerActions = async () => {
+    const n = mods.length;
+    const id = await askConfirm({
+      section: "CAPA",
+      title: def.label,
+      message: n > 0 ? `Al quitarla también se quitan sus ${n === 1 ? "modulación" : `${n} modulaciones`}. Puedes deshacerlo con ↶.` : "Puedes deshacerlo con ↶.",
+      actions: [
+        { id: "reset", label: "Restablecer parámetros", icon: "arrow.counterclockwise", variant: "secondary" },
+        { id: "remove", label: "Quitar capa", icon: "trash", variant: "primary" },
+      ],
+    });
+    if (id === "reset") resetLayer(layer.id);
+    if (id === "remove") {
+      props.onRemove(layer.id);
+      props.onBack();
+    }
+  };
 
   // modulaciones que tocan un eje (el gesto y el giro mueven los dos)
   const onAxis = (axis: "x" | "y") =>
@@ -89,6 +101,7 @@ export function LayerInspector(props: Props) {
           active={!layer.visible}
           onPress={() => toggleLayerVisible(layer.id)}
         />
+        <IconButton icon="ellipsis" label="Acciones de la capa" onPress={() => void openLayerActions()} />
       </View>
 
       <View style={styles.sliders}>
@@ -189,37 +202,6 @@ export function LayerInspector(props: Props) {
 
       {warning && <Text style={styles.warning}>{warning}</Text>}
 
-      {/* acciones sobre la capa, lejos de la cabecera: restablecer (reversible) a la izquierda y
-          quitar (destructiva, con segundo toque) a la derecha */}
-      <View style={styles.actions}>
-        {/* al confirmar, restablecer cede su lugar a CANCELAR para que el aviso quepa en iPhone */}
-        {confirmRemove ? (
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setConfirmRemove(false)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
-            <Text style={styles.actionText} numberOfLines={1}>CANCELAR</Text>
-          </Pressable>
-        ) : (
-          <Pressable accessibilityRole="button" accessibilityLabel="Restablecer parámetros" hitSlop={8} onPress={() => resetLayer(layer.id)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
-            <Icon name="arrow.counterclockwise" size={13} color={colors.inkMute} />
-            <Text style={styles.actionText} numberOfLines={1}>RESTABLECER</Text>
-          </Pressable>
-        )}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityHint={confirmRemove ? "Toca otra vez para quitar la capa" : undefined}
-          hitSlop={8}
-          onPress={() => {
-            if (!confirmRemove) return setConfirmRemove(true);
-            props.onRemove(layer.id);
-            props.onBack();
-          }}
-          style={({ pressed }) => [styles.action, confirmRemove && styles.actionConfirm, pressed && styles.pressed]}
-        >
-          <Icon name="trash" size={13} color={confirmRemove ? colors.paperText : colors.inkMute} />
-          <Text style={[styles.actionText, confirmRemove && styles.actionTextConfirm]} numberOfLines={1}>
-            {confirmRemove ? "TOCA PARA QUITAR" : "QUITAR CAPA"}
-          </Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -228,11 +210,6 @@ const styles = StyleSheet.create({
   root: { gap: space.md },
   flex: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: space.sm, marginLeft: -space.sm },
-  actions: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space.sm, marginTop: space.xs },
-  action: { flexDirection: "row", alignItems: "center", flexShrink: 1, gap: 6, minHeight: 36, paddingHorizontal: space.sm, borderRadius: radius.pill },
-  actionConfirm: { backgroundColor: colors.paper },
-  actionText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
-  actionTextConfirm: { color: colors.paperText, fontWeight: "700" },
   title: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600", letterSpacing: 1, marginLeft: space.xs },
   section: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   count: { color: colors.inkMute, fontWeight: "400" },

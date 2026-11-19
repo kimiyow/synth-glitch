@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { askConfirm } from "../state/confirm";
 
 import { PREVIEW_LONG_SIDE, renderSceneJpeg, THUMB_LONG_SIDE } from "../render/renderPreviews";
 import { writeImages } from "../project/storage";
@@ -41,25 +41,19 @@ export async function saveActiveProject(): Promise<Result> {
 export function confirmLeave(): Promise<boolean> {
   if (!hasUnsavedWork(sceneStore.getState())) return Promise.resolve(true);
   const { draft } = sceneStore.getState();
-  return new Promise((resolve) => {
-    Alert.alert(
-      draft ? "¿Guardar el proyecto nuevo?" : "¿Guardar los cambios?",
-      draft ? "Si sales sin guardar, el proyecto se descarta." : "Si sales sin guardar, perderás los cambios.",
-      [
-        { text: "Cancelar", style: "cancel", onPress: () => resolve(false) },
-        { text: "Salir sin guardar", style: "destructive", onPress: () => resolve(true) },
-        {
-          text: "Guardar",
-          isPreferred: true,
-          onPress: () => {
-            void saveActiveProject().then((r) => {
-              if (!r.ok) Alert.alert("No se pudo guardar", r.error);
-              resolve(r.ok);
-            });
-          },
-        },
-      ],
-      { cancelable: true, onDismiss: () => resolve(false) },
-    );
+  return askConfirm({
+    section: "PROYECTO",
+    title: draft ? "¿Guardar el proyecto nuevo?" : "¿Guardar los cambios?",
+    message: draft ? "Si sales sin guardar, el proyecto se descarta." : "Si sales sin guardar, perderás los cambios.",
+    actions: [
+      { id: "save", label: "Guardar", icon: "checkmark", variant: "primary" },
+      { id: "discard", label: "Salir sin guardar", icon: "xmark", variant: "secondary" },
+    ],
+  }).then(async (id) => {
+    if (id === "discard") return true;
+    if (id !== "save") return false;
+    const r = await saveActiveProject();
+    if (!r.ok) await askConfirm({ section: "PROYECTO", title: "No se pudo guardar", message: r.error, actions: [], cancelLabel: "Entendido" });
+    return r.ok;
   });
 }

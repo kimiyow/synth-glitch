@@ -13,6 +13,7 @@ import { ActionGrid, type GridAction } from "../kit/ActionGrid";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
 import { Segmented } from "../kit/Segmented";
+import { confirmDelete } from "../../state/confirm";
 import { colors, radius, space, type } from "../tokens";
 import { layerDef } from "./LayerInspector";
 import { SOURCE_ICON } from "./ModCard";
@@ -177,7 +178,22 @@ function SceneRow({ preset, disabled, onApply, onDelete }: { preset: ScenePreset
           <Icon key={r.id} name={SOURCE_ICON[r.source]} size={11} color={colors.inkMute} />
         ))}
       </View>
-      {onDelete && <IconButton icon="trash" label={`Borrar ${preset.name}`} size={32} bare onPress={onDelete} />}
+      {onDelete && (
+        <IconButton
+          icon="trash"
+          label={`Borrar ${preset.name}`}
+          size={32}
+          bare
+          onPress={() => {
+            void confirmDelete({
+              section: "ESCENAS",
+              title: `¿Borrar «${preset.name}»?`,
+              message: "La escena se borra de tu biblioteca. No se puede deshacer.",
+              label: "Borrar escena",
+            }).then((ok) => ok && onDelete());
+          }}
+        />
+      )}
     </Pressable>
   );
 }

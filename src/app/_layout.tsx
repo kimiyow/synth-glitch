@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { DEV_TOOLS_ENABLED } from "../dev/devTools";
 import { PerfHud } from "../dev/PerfHud";
 import { settingsStore, useSettings } from "../state/appSettings";
+import { ConfirmHost } from "../ui/kit/ConfirmHost";
 import { IntroOverlay } from "../ui/IntroOverlay";
 import { Onboarding } from "../ui/Onboarding";
 import { colors } from "../ui/tokens";
@@ -27,6 +28,7 @@ export default function RootLayout() {
       {DEV_TOOLS_ENABLED && <PerfHud />}
       {intro && <IntroOverlay onDone={() => setIntro(false)} />}
       {!intro && !onboardingSeen && <Onboarding onDone={() => settingsStore.getState().update({ onboardingSeen: true })} />}
+      <ConfirmHost />
     </GestureHandlerRootView>
   );
 }

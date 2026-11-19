@@ -11,7 +11,8 @@ import { IconTiles, type IconTile } from "../kit/IconTiles";
 import { Segmented } from "../kit/Segmented";
 import { SheetPin } from "../kit/Sheet";
 import { useLiveMod } from "../../canvas/modBus";
-import { colors, radius, space, type } from "../tokens";
+import { confirmDelete } from "../../state/confirm";
+import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
 import { LiveScope } from "./LiveScope";
 import { SourceGlyph } from "./SourceGlyph";
 import { CommitSlider, hasAdvanced, RouteSourceEditor, type MicView } from "./SourceEditor";
@@ -232,11 +233,21 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Quitar modulación"
-              hitSlop={8}
-              onPress={() => removeModulation(route.id)}
-              style={({ pressed }) => [styles.footBtn, pressed && styles.pressed]}
+              hitSlop={4}
+              onPress={() => {
+                void confirmDelete({
+                  section: "MODULACIÓN",
+                  title: `¿Quitar ${SOURCE_LABEL[route.source]} → ${paramName}?`,
+                  message: "Se pierden sus ajustes. Puedes deshacerlo con ↶.",
+                  label: "Quitar modulación",
+                }).then((ok) => ok && removeModulation(route.id));
+              }}
+              style={({ pressed }) => [styles.removeBtn, pressed && styles.pressed]}
             >
-              <Icon name="trash" size={13} color={colors.inkMute} />
+              <Icon name="trash" size={14} color={colors.inkText} />
+              <Text style={styles.removeText} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+                QUITAR
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -316,4 +327,6 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   footBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36 },
   footText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
+  removeBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.inkRaised },
+  removeText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1 },
 });
