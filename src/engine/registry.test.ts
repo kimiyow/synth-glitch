@@ -5,7 +5,7 @@ import { UNIFORM_NAMES } from "./effects/contract";
 import { GENERATOR_UNIFORM_NAMES } from "./generators/contract";
 import { EFFECTS, EFFECT_BY_ID, GENERATORS } from "./registry";
 
-const ALL_IDS: EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt"];
+const ALL_IDS: EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt", "pixelsort", "databend"];
 
 describe("registro de efectos", () => {
   it("tiene los 7 efectos de FX-01 en orden", () => {
@@ -24,7 +24,7 @@ describe("registro de efectos", () => {
 
   it("usa las muestras por píxel de 3.4", () => {
     const samples = Object.fromEntries(EFFECTS.map((e) => [e.id, e.samples]));
-    expect(samples).toEqual({ chromatic: 3, scanlines: 1, datamosh: 1, vhs: 2, pixelate: 1, wave: 1, crt: 2 });
+    expect(samples).toEqual({ chromatic: 3, scanlines: 1, datamosh: 1, vhs: 2, pixelate: 1, wave: 1, crt: 2, pixelsort: 9, databend: 3 });
   });
 
   it.each(ALL_IDS)("%s declara el contrato de uniforms y una sola main", (id) => {

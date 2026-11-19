@@ -1,8 +1,10 @@
 import type { BlendMode, EffectId, GeneratorId } from "../domain/types";
 import { CHROMATIC_SKSL } from "./effects/chromatic.sksl";
 import { CRT_SKSL } from "./effects/crt.sksl";
+import { DATABEND_SKSL } from "./effects/databend.sksl";
 import { DATAMOSH_SKSL } from "./effects/datamosh.sksl";
 import { PIXELATE_SKSL } from "./effects/pixelate.sksl";
+import { PIXELSORT_SKSL } from "./effects/pixelsort.sksl";
 import { SCANLINES_SKSL } from "./effects/scanlines.sksl";
 import { VHS_SKSL } from "./effects/vhs.sksl";
 import { WAVE_SKSL } from "./effects/wave.sksl";
@@ -32,6 +34,8 @@ export const EFFECTS: readonly EffectDef[] = [
   { id: "pixelate", label: "PIXEL", defaults: { x: 0.25, y: 0.0 }, samples: 1, axes: { x: "Tamaño de bloque", y: "Posterizado" }, sksl: PIXELATE_SKSL },
   { id: "wave", label: "WAVE", defaults: { x: 0.3, y: 0.3 }, samples: 1, axes: { x: "Amplitud", y: "Ondas" }, sksl: WAVE_SKSL },
   { id: "crt", label: "CRT", defaults: { x: 0.25, y: 0.5 }, samples: 2, axes: { x: "Curvatura", y: "Máscara" }, sksl: CRT_SKSL },
+  { id: "pixelsort", label: "SORT", defaults: { x: 0.35, y: 0.35 }, samples: 9, axes: { x: "Largo de tramo", y: "Umbral" }, sksl: PIXELSORT_SKSL },
+  { id: "databend", label: "DATABEND", defaults: { x: 0.35, y: 0.3 }, samples: 3, axes: { x: "Corrupción", y: "Canales" }, sksl: DATABEND_SKSL },
 ];
 
 export const EFFECT_BY_ID: Readonly<Record<EffectId, EffectDef>> = Object.fromEntries(
