@@ -44,3 +44,7 @@ example
 /docs/
 # Material para la defensa (video generado)
 defensa/
+
+# skills locales de Claude Code (no se versionan)
+/.claude/skills/
+/skills-lock.json
