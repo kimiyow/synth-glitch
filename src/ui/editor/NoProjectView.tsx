@@ -24,7 +24,8 @@ export function NoProjectView() {
       if (picked.kind === "selected") {
         const { uri, type: kind } = picked.media;
         const result = kind === "clip" ? await createProjectFromClip(uri, "free") : await createProjectFromPhoto(uri, "free");
-        if (!result.ok) setMessage(`ERROR · ${result.error}`);
+        if (result.ok) router.push("/project");
+        else setMessage(`ERROR · ${result.error}`);
       }
     } catch (error) {
       setMessage(`ERROR · ${error instanceof Error ? error.message : String(error)}`);
@@ -37,7 +38,8 @@ export function NoProjectView() {
     setBusy(true);
     setMessage(null);
     const result = await createGenerativeProject(aspect, generator);
-    if (!result.ok) setMessage(`ERROR · ${result.error}`);
+    if (result.ok) router.push("/project");
+    else setMessage(`ERROR · ${result.error}`);
     setBusy(false);
   };
 

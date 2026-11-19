@@ -89,7 +89,7 @@ function CameraCapture() {
     setBusy(false);
     if (result.ok) {
       setMessage(null);
-      router.navigate("/editor");
+      router.push("/project");
     } else {
       setMessage(`ERROR · ${result.error}`);
     }

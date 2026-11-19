@@ -47,14 +47,14 @@ export default function GalleryScreen() {
       return;
     }
     if (project.id === sceneStore.getState().project?.id) {
-      router.navigate("/editor");
+      router.push("/project");
       return;
     }
     if (!(await confirmLeave())) return;
     const result = openProjectById(project.id);
     if (result.ok) {
       setMessage(null);
-      router.navigate("/editor");
+      router.push("/project");
     } else {
       setMessage(result.error);
     }

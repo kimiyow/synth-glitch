@@ -23,6 +23,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.ink }}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
+        {/* sin deslizar desde el borde: salir siempre pasa por la confirmación de cambios */}
+        <Stack.Screen name="project" options={{ gestureEnabled: false }} />
         <Stack.Screen name="test-lab" />
       </Stack>
       {DEV_TOOLS_ENABLED && <PerfHud />}

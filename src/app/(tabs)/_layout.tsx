@@ -1,15 +1,11 @@
 import { Tabs } from "expo-router";
 import { Icon } from "../../ui/kit/Icon";
 
-import { useScene } from "../../state/activeScene";
 import { colors, type } from "../../ui/tokens";
 
 const TAB_BAR_STYLE = { backgroundColor: colors.ink, borderTopColor: colors.inkLine };
 
 export default function TabsLayout() {
-  // figma: con un proyecto abierto, la barra de herramientas del Editor ocupa el lugar de las
-  // pestañas
-  const projectOpen = useScene((s) => s.project !== null);
   return (
     <Tabs
       screenOptions={{
@@ -35,7 +31,6 @@ export default function TabsLayout() {
         options={{
           title: "EDITOR",
           tabBarIcon: ({ color }) => <Icon name="slider.horizontal.3" size={22} color={color} />,
-          tabBarStyle: projectOpen ? { display: "none" } : TAB_BAR_STYLE,
         }}
       />
       <Tabs.Screen
