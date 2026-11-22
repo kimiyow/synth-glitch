@@ -17,21 +17,17 @@ const BUTTONS: { id: ToolButtonId; label: string; icon: SFSymbol }[] = [
 ];
 
 type Props = {
-  // herramienta del dedo (se conserva al cerrar el panel)
-  activeTool: "brush" | "effects";
-  openPanel: string | null;
+  // el único botón marcado (lo decide la pantalla: panel abierto o herramienta del dedo), o ninguno
+  highlighted: ToolButtonId | null;
   disabled: Partial<Record<ToolButtonId, boolean>>;
   onPress: (id: ToolButtonId) => void;
   // iPad: riel vertical a la izquierda en lugar de la barra inferior
   rail?: boolean;
 };
 
-// barra de herramientas modular: sustituye a las pestañas mientras hay un proyecto abierto
-export function EditorToolbar({ activeTool, openPanel, disabled, onPress, rail = false }: Props) {
+// barra de herramientas modular: cada botón es un interruptor (el marcado se apaga al tocarlo)
+export function EditorToolbar({ highlighted, disabled, onPress, rail = false }: Props) {
   const insets = useSafeAreaInsets();
-  // un solo botón resaltado: el del panel abierto o, sin panel de la barra, la herramienta del dedo.
-  // Abrir Capas o Modulación no marca también Efectos
-  const highlighted = BUTTONS.some((b) => b.id === openPanel) ? openPanel : activeTool;
   const { sideInset } = useLayout();
   return (
     <View

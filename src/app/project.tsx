@@ -53,6 +53,10 @@ import { useLayout } from "../ui/useLayout";
 
 // pantalla del proyecto abierto, apilada sobre las pestañas: se entra desde Cámara, Galería o el
 // editor vacío y "volver" regresa a la pestaña de donde se vino
+// paneles que abre la barra de herramientas (Exportar y Escenario son de la barra superior)
+const TOOLBAR_PANELS: readonly ToolButtonId[] = ["brush", "effects", "layers", "mod", "presets", "gesture"];
+const isToolbarPanel = (id: PanelId): id is ToolButtonId => (TOOLBAR_PANELS as readonly string[]).includes(id);
+
 export default function ProjectScreen() {
   const project = useScene((s) => s.project);
   // el proyecto se cierra al desmontarse la pantalla, después de la animación de salida
@@ -128,7 +132,8 @@ function ProjectView({ project }: { project: Project }) {
   };
 
   // PINCEL activo al abrir (en clips no aplica)
-  const [activeTool, setActiveTool] = useState<"brush" | "effects">(isClip ? "effects" : "brush");
+  // herramienta del dedo; null = ninguna (el dedo no pinta ni ajusta; el pellizco sigue)
+  const [activeTool, setActiveTool] = useState<"brush" | "effects" | null>(isClip ? "effects" : "brush");
   const [overlays, setOverlays] = useState<OverlayStack>([]);
   const openPanel = (overlays.at(-1) ?? null) as PanelId | null;
   const togglePanel = (id: PanelId) => setOverlays((stack) => toggleOverlay(stack, id));
@@ -142,15 +147,25 @@ function ProjectView({ project }: { project: Project }) {
   const slowFrames = useSlowFrames();
   const showCostWarning = layers.length > 0 && (isCostHigh(layers) || slowFrames);
 
+  // la barra es un juego de interruptores: el botón marcado (el panel abierto o, sin panel de la
+  // barra, la herramienta del dedo) se apaga al tocarlo; uno sin marcar se enciende
+  const toolbarPanel = openPanel !== null && isToolbarPanel(openPanel) ? openPanel : null;
+  const highlighted: ToolButtonId | null = toolbarPanel ?? activeTool;
+  // con Capas o Modulación abiertos el dedo ajusta X/Y de la capa abierta solo mientras siguen
+  // abiertos; al cerrarlos vuelve la herramienta que había
+  const fingerTool = openPanel === "layers" || openPanel === "mod" ? "effects" : activeTool;
   const onToolPress = (id: ToolButtonId) => {
+    if (id === highlighted) {
+      if (openPanel === id) setOverlays([]);
+      if (id === activeTool) setActiveTool(null);
+      return;
+    }
     if (id === "brush" && isClip) return setNotice("PINCEL · SOLO FOTOS");
     if (id === "brush" && strokes.length >= MAX_STROKES) setNotice(`LÍMITE DE ${MAX_STROKES} TRAZOS`);
     if (id === "brush" || id === "effects") setActiveTool(id);
-    // en Capas y Modulación el gesto X/Y actúa sobre la capa abierta, como en Efectos
-    if (id === "layers" || id === "mod") setActiveTool("effects");
     // Modulación abre la capa seleccionada; sin selección, la de arriba
     if (id === "mod" && !selected && layers.length > 0) setSelectedId(layers.at(-1)?.id ?? null);
-    togglePanel(id);
+    setOverlays([id]);
   };
 
   // fichas: apagada → enciende y selecciona; encendida → selecciona. desde el detalle se quita
@@ -288,7 +303,7 @@ function ProjectView({ project }: { project: Project }) {
     strokes,
     mediaWidth: media.width,
     mediaHeight: media.height,
-    xyLayerId: activeTool === "effects" && !readOnly ? (selected?.id ?? null) : null,
+    xyLayerId: fingerTool === "effects" && !readOnly ? (selected?.id ?? null) : null,
     onCommitXY: commitXY,
     onResetXY: resetLayer,
   };
@@ -309,8 +324,7 @@ function ProjectView({ project }: { project: Project }) {
   const toolbar = (
     <Animated.View style={chromeStyle}>
       <EditorToolbar
-        activeTool={activeTool}
-        openPanel={openPanel}
+        highlighted={highlighted}
         disabled={{ brush: isClip }}
         onPress={onToolPress}
         rail={regular}
@@ -349,7 +363,7 @@ function ProjectView({ project }: { project: Project }) {
                   {...canvasProps}
                   working={working}
                   brush={
-                    activeTool === "brush" && !readOnly
+                    fingerTool === "brush" && !readOnly
                       ? { tool: brushTool, size: brushSize, spacing: brushSpacing, sceneSeed: project.scene.seed }
                       : null
                   }
