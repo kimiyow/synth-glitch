@@ -65,18 +65,22 @@ function remember(key: string, uri: string) {
   }
 }
 
-function thumbKey(image: SkImage, layer: Layer, seed: number, px: number): string {
+function layerKey(layer: Layer): string {
   const kind = layer.kind === "effect" ? `e:${layer.effect}` : `g:${layer.generator}:${layer.blend}:${layer.seed ?? 0}`;
-  return `${imageId(image)}|${kind}|${layer.params.x.toFixed(3)},${layer.params.y.toFixed(3)}|${seed}|${px}`;
+  return `${kind}:${layer.visible ? 1 : 0}:${layer.params.x.toFixed(3)},${layer.params.y.toFixed(3)}`;
 }
 
-function renderThumb(key: string, image: SkImage, layer: Layer, seed: number, px: number): Promise<string | null> {
+function thumbKey(image: SkImage, layers: readonly Layer[], seed: number, pw: number, ph: number): string {
+  return `${imageId(image)}|${layers.map(layerKey).join("+")}|${seed}|${pw}x${ph}`;
+}
+
+function renderThumb(key: string, image: SkImage, layers: readonly Layer[], seed: number, pw: number, ph: number): Promise<string | null> {
   const running = pending.get(key);
   if (running) return running;
   const job = (async () => {
     try {
-      const element = createElement(SceneRenderer, { image: smallSource(image), width: px, height: px, layers: [layer], seed, frame: STILL });
-      const rendered = await drawAsImage(element, { width: px, height: px });
+      const element = createElement(SceneRenderer, { image: smallSource(image), width: pw, height: ph, layers, seed, frame: STILL });
+      const rendered = await drawAsImage(element, { width: pw, height: ph });
       if (!rendered) return null;
       try {
         const b64 = rendered.encodeToBase64(ImageFormat.JPEG, 85);
@@ -97,21 +101,50 @@ function renderThumb(key: string, image: SkImage, layer: Layer, seed: number, px
   return job;
 }
 
-// miniatura de una ficha o de una capa: la imagen del proyecto con esa sola capa. Se renderiza
-// fuera de pantalla una vez y se muestra como imagen normal (siempre aparece; sin lienzo por ficha)
-export const EffectThumb = memo(function EffectThumb({
+// miniatura de una ficha o de una capa: la imagen del proyecto con esa sola capa
+export const EffectThumb = memo(function EffectThumb({ image, layer, seed, size }: { image: SkImage | null; layer: Layer; seed: number; size: number }) {
+  return <LayersThumb image={image} layers={[layer]} layerKeyHint={layerKey(layer)} seed={seed} width={size} height={size} />;
+});
+
+// miniatura de una escena: la imagen del proyecto con todas sus capas (sin modulación: valores base)
+export const SceneThumb = memo(function SceneThumb({
   image,
-  layer,
+  layers,
   seed,
-  size,
+  width,
+  height,
 }: {
   image: SkImage | null;
-  layer: Layer;
+  layers: readonly Layer[];
   seed: number;
-  size: number;
+  width: number;
+  height: number;
 }) {
-  const px = Math.round(size * Math.min(3, PixelRatio.get()));
-  const key = image ? thumbKey(image, layer, seed, px) : null;
+  return <LayersThumb image={image} layers={layers} layerKeyHint={layers.map(layerKey).join("+")} seed={seed} width={width} height={height} />;
+});
+
+// se renderiza fuera de pantalla una vez y se muestra como imagen normal (siempre aparece; sin
+// lienzo por miniatura). layerKeyHint evita volver a renderizar cuando solo cambia la identidad
+// del arreglo de capas
+function LayersThumb({
+  image,
+  layers,
+  layerKeyHint,
+  seed,
+  width,
+  height,
+}: {
+  image: SkImage | null;
+  layers: readonly Layer[];
+  layerKeyHint: string;
+  seed: number;
+  width: number;
+  height: number;
+}) {
+  const ratio = Math.min(3, PixelRatio.get());
+  const pw = Math.max(1, Math.round(width * ratio));
+  const ph = Math.max(1, Math.round(height * ratio));
+  const key = image ? thumbKey(image, layers, seed, pw, ph) : null;
   const [shown, setShown] = useState<{ key: string; uri: string } | null>(null);
   const cached = key ? cache.get(key) : undefined;
 
@@ -120,7 +153,7 @@ export const EffectThumb = memo(function EffectThumb({
     let alive = true;
     // al arrastrar un parámetro la clave cambia seguido: solo se renderiza al detenerse
     const id = setTimeout(() => {
-      void renderThumb(key, image, layer, seed, px).then((uri) => {
+      void renderThumb(key, image, layers, seed, pw, ph).then((uri) => {
         if (alive && uri) setShown({ key, uri });
       });
     }, shown ? DEBOUNCE_MS : 0);
@@ -128,12 +161,12 @@ export const EffectThumb = memo(function EffectThumb({
       alive = false;
       clearTimeout(id);
     };
-    // layer y seed ya están en la clave
+    // las capas y la semilla ya están en la clave
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, image, px]);
+  }, [key, image, layerKeyHint]);
 
   // mientras llega la nueva, se mantiene la anterior (no parpadea al arrastrar)
   const uri = cached ?? shown?.uri;
-  if (!uri) return <View style={{ width: size, height: size, backgroundColor: colors.inkRaised }} />;
-  return <Image source={{ uri }} style={{ width: size, height: size }} fadeDuration={0} />;
-});
+  if (!uri) return <View style={{ width, height, backgroundColor: colors.inkRaised }} />;
+  return <Image source={{ uri }} style={{ width, height }} fadeDuration={0} />;
+}

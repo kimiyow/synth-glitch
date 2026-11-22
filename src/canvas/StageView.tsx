@@ -1,3 +1,4 @@
+import type { SkImage } from "@shopify/react-native-skia";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState, type ComponentProps } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
@@ -6,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   cancelAnimation,
   Easing,
+  isSharedValue,
   useAnimatedStyle,
   useFrameCallback,
   useReducedMotion,
@@ -20,7 +22,7 @@ import { useStageScreen } from "../platform/screen";
 import type { ScenePreset } from "../domain/types";
 import { SCENE_FADE_BEATS, type SceneFadeBeats } from "../state/settings";
 import { Icon } from "../ui/kit/Icon";
-import { Pill } from "../ui/kit/Pill";
+import { SceneThumb } from "../render/EffectThumb";
 import { colors, radius, space, type } from "../ui/tokens";
 import { ALL_ORIENTATIONS } from "../ui/useLayout";
 import { EditorCanvas } from "./EditorCanvas";
@@ -37,6 +39,9 @@ const BLACKOUT_TAP_MS = 300;
 const RING = 30;
 // tiempo que se ve el aviso de atajos al entrar
 const HINT_MS = 2500;
+
+// miniatura de cada escena en la tira
+const SCENE_THUMB = 36;
 
 type CanvasProps = Omit<ComponentProps<typeof EditorCanvas>, "brush" | "extraGesture" | "onCommitStroke" | "showSizePreview">;
 
@@ -63,6 +68,7 @@ export function StageView({
   onFadeBeats: (beats: SceneFadeBeats) => void;
 }) {
   const [current, setCurrent] = useState<string | null>(null);
+  const still = isSharedValue(canvas.image) ? null : (canvas.image as SkImage);
   useStageScreen();
   const insets = useSafeAreaInsets();
   // aviso al entrar: se ve 2.5 s y se desvanece (nunca recibe toques)
@@ -157,17 +163,32 @@ export function StageView({
                 <Icon name="arrow.left.arrow.right" size={12} />
                 <Text style={styles.fadeText}>{fadeBeats === 0 ? "CORTE" : `${fadeBeats} T`}</Text>
               </Pressable>
-              {scenes.map((s) => (
-                <Pill
-                  key={s.id}
-                  label={s.name.toUpperCase()}
-                  selected={s.id === current}
-                  onPress={() => {
-                    setCurrent(s.id);
-                    onScene(s);
-                  }}
-                />
-              ))}
+              {scenes.map((s) => {
+                const on = s.id === current;
+                return (
+                  <Pressable
+                    key={s.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Escena ${s.name}`}
+                    accessibilityState={{ selected: on }}
+                    onPress={() => {
+                      setCurrent(s.id);
+                      onScene(s);
+                    }}
+                    style={({ pressed }) => [styles.sceneChip, on && styles.sceneChipOn, pressed && styles.pressed]}
+                  >
+                    {/* miniatura sobre la foto del proyecto (los clips no tienen cuadro fijo) */}
+                    {still && (
+                      <View style={styles.sceneThumb}>
+                        <SceneThumb image={still} layers={s.layers} seed={canvas.seed} width={SCENE_THUMB} height={SCENE_THUMB} />
+                      </View>
+                    )}
+                    <Text style={[styles.sceneText, on && styles.sceneTextOn]} numberOfLines={1}>
+                      {s.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </View>
         )}
@@ -242,6 +263,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.scrim,
   },
   strip: { position: "absolute" },
+  sceneChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: 44,
+    maxWidth: 160,
+    paddingLeft: 4,
+    paddingRight: space.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.scrim,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.inkLineStrong,
+  },
+  sceneChipOn: { backgroundColor: colors.paper, borderColor: colors.paper },
+  sceneThumb: { width: SCENE_THUMB, height: SCENE_THUMB, borderRadius: radius.sm, overflow: "hidden" },
+  sceneText: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600" },
+  sceneTextOn: { color: colors.paperText },
   stripRow: { gap: 6, paddingHorizontal: space.lg, alignItems: "center" },
   fadeChip: {
     flexDirection: "row",

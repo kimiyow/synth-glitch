@@ -62,7 +62,7 @@ const PANEL_TITLE: Record<PanelId, string> = {
   layers: "Capas",
   mod: "Modulación",
   gesture: "Gesto",
-  presets: "Presets",
+  presets: "Escenas",
   export: "Exportar",
   stage: "Escenario",
 };
@@ -159,6 +159,8 @@ export function EditorPanels(props: Props) {
         <PresetsPanel
           readOnly={readOnly}
           busy={exports.recipeBusy}
+          image={props.image}
+          seed={seed}
           layers={layers}
           routes={routes}
           sources={sources}

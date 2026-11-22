@@ -22,18 +22,57 @@ function withFreshIds(layers: readonly Layer[], routes: readonly Route[]): { lay
   return { layers: nextLayers, routes: nextRoutes };
 }
 
-// guarda la escena actual (capas + modulaciones). Devuelve su nombre, o null si la biblioteca está
+// firma de una escena sin ids: capas en orden y modulaciones apuntando al índice de su capa. Dos
+// escenas con la misma firma se ven y se mueven igual (aplicar un preset le da ids nuevos)
+export function sceneSignature(layers: readonly Layer[], routes: readonly Route[]): string {
+  const index = new Map(layers.map((l, i) => [l.id, i]));
+  const ls = layers.map(({ id: _id, ...rest }) => rest);
+  const rs = routes
+    .filter((r) => index.has(r.target.layerId))
+    .map(({ id: _id, target, ...rest }) => ({ ...rest, target: { layer: index.get(target.layerId), param: target.param } }));
+  return JSON.stringify({ ls, rs });
+}
+
+// la escena guardada (de fábrica o propia) igual a la actual, si hay
+export function findSameScene(presets: readonly ScenePreset[], layers: readonly Layer[], routes: readonly Route[]): ScenePreset | null {
+  if (layers.length === 0) return null;
+  const sig = sceneSignature(layers, routes);
+  return presets.find((p) => sceneSignature(p.layers, p.routes) === sig) ?? null;
+}
+
+export type SaveSceneResult = { kind: "saved"; name: string } | { kind: "exists"; name: string } | { kind: "full" };
+
+// guarda la escena actual (capas + modulaciones), salvo que ya esté guardada o la biblioteca esté
 // llena
-export function saveScenePreset(layers: readonly Layer[], routes: readonly Route[], sources: SourceConfig): string | null {
+export function saveScenePreset(layers: readonly Layer[], routes: readonly Route[], sources: SourceConfig, factory: readonly ScenePreset[] = []): SaveSceneResult {
   const { scenes } = settingsStore.getState();
-  if (scenes.length >= MAX_SCENE_PRESETS) return null;
+  const same = findSameScene([...factory, ...scenes], layers, routes);
+  if (same) return { kind: "exists", name: same.name };
+  if (scenes.length >= MAX_SCENE_PRESETS) return { kind: "full" };
   const used = new Set(scenes.map((s) => s.name));
   let n = scenes.length + 1;
   while (used.has(`Escena ${n}`)) n++;
   const copy = withFreshIds(layers, routes);
   const preset: ScenePreset = { id: `s-${Date.now().toString(36)}`, name: `Escena ${n}`, builtIn: false, ...copy, sources };
   settingsStore.getState().update({ scenes: [...scenes, preset] });
-  return preset.name;
+  return { kind: "saved", name: preset.name };
+}
+
+export const MAX_SCENE_NAME = 30;
+
+// renombra una escena propia. Vacío o solo espacios: conserva el nombre
+export function renameScenePreset(id: string, name: string) {
+  const { scenes } = settingsStore.getState();
+  const clean = name.replace(/\s+/g, " ").trim().slice(0, MAX_SCENE_NAME);
+  if (!clean) return;
+  settingsStore.getState().update({ scenes: scenes.map((s) => (s.id === id ? { ...s, name: clean } : s)) });
+}
+
+// reemplaza el contenido de una escena propia por la escena actual (conserva nombre y lugar)
+export function updateScenePreset(id: string, layers: readonly Layer[], routes: readonly Route[], sources: SourceConfig) {
+  const { scenes } = settingsStore.getState();
+  const copy = withFreshIds(layers, routes);
+  settingsStore.getState().update({ scenes: scenes.map((s) => (s.id === id ? { ...s, ...copy, sources } : s)) });
 }
 
 export function removeScenePreset(id: string) {

@@ -215,7 +215,7 @@ function ProjectView({ project }: { project: Project }) {
     } else {
       setFade(null);
     }
-    setNotice(preset.name.toUpperCase());
+    setNotice(`${preset.name.toUpperCase()} · ↶ PARA VOLVER`);
   };
 
   // GIRO: el sensor solo se enciende si alguna capa lo usa (se añade como fuente en Modulación)

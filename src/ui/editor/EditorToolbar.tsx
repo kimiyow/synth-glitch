@@ -12,7 +12,7 @@ const BUTTONS: { id: ToolButtonId; label: string; icon: SFSymbol }[] = [
   { id: "effects", label: "Efectos", icon: "wand.and.stars" },
   { id: "layers", label: "Capas", icon: "square.3.layers.3d" },
   { id: "mod", label: "Modulación", icon: "waveform.path" },
-  { id: "presets", label: "Presets", icon: "square.stack.3d.up" },
+  { id: "presets", label: "Escenas", icon: "square.stack.3d.up" },
   { id: "gesture", label: "Gesto", icon: "hand.draw" },
 ];
 
