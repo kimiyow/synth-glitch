@@ -51,6 +51,7 @@ const PANEL_TITLE: Record<PanelId, string> = {
   brush: "Pincel",
   effects: "Efectos",
   layers: "Capas",
+  mod: "Modulación",
   gesture: "Gesto",
   presets: "Presets",
   export: "Exportar",
@@ -72,7 +73,7 @@ export function EditorPanels(props: Props) {
     ? routes.find((r) => r.target.layerId === selected.id && r.source === "track" && (r.settings?.gesture?.samples.length ?? 0) >= 4)?.settings?.gesture
     : undefined;
   const warning = hasFastLuminanceRoute(layers, routes, sources) ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA" : null;
-  const renderInspector = (layer: Layer, onBack: () => void) => (
+  const renderInspector = (layer: Layer, onBack: () => void, focus?: "mod") => (
     <LayerInspector
       key={layer.id}
       layer={layer}
@@ -83,6 +84,7 @@ export function EditorPanels(props: Props) {
       onBack={onBack}
       onRemove={props.onRemove}
       onNotice={props.onNotice}
+      focus={focus}
       {...paramDrag}
     />
   );
@@ -101,14 +103,15 @@ export function EditorPanels(props: Props) {
           renderInspector={renderInspector}
           onTile={props.onTile}
         />
-      ) : panel === "layers" ? (
+      ) : panel === "layers" || panel === "mod" ? (
         <LayersPanel
+          startInLayer={panel === "mod"}
           layers={layers}
           routes={routes}
           selectedLayerId={selected?.id ?? null}
           onSelect={props.onSelect}
           renderThumb={(layer, size) => <EffectThumb image={props.image} layer={layer} seed={seed} size={size} />}
-          renderInspector={renderInspector}
+          renderInspector={panel === "mod" ? (layer, onBack) => renderInspector(layer, onBack, "mod") : renderInspector}
           onOpenEffects={props.onOpenEffects}
           sources={sources}
           onSources={setSources}

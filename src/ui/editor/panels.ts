@@ -1,6 +1,6 @@
-// botones de la barra inferior. Giro es un interruptor sin panel
-export type ToolButtonId = "brush" | "effects" | "layers" | "gyro" | "presets" | "gesture";
-export type PanelId = "brush" | "effects" | "layers" | "presets" | "gesture" | "export" | "stage";
+// botones de la barra inferior. Modulación es un atajo a las modulaciones de la capa seleccionada
+export type ToolButtonId = "brush" | "effects" | "layers" | "mod" | "presets" | "gesture";
+export type PanelId = "brush" | "effects" | "layers" | "mod" | "presets" | "gesture" | "export" | "stage";
 
 // gestor de superposiciones como pila pura:
 // - tocar el botón de la superposición abierta la cierra; otro botón la reemplaza;

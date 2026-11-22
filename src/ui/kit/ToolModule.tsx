@@ -29,7 +29,9 @@ export function ToolModule({ icon, label, active, disabled = false, onPress }: P
       <View style={[styles.pill, active && styles.pillOn]}>
         <Icon name={icon} size={20} color={active ? colors.paperText : colors.inkText} />
       </View>
-      <Text style={[styles.label, active && styles.labelOn]}>{label}</Text>
+      <Text style={[styles.label, active && styles.labelOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

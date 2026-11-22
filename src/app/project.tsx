@@ -7,14 +7,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { confirmLeave } from "../actions/leaveGuard";
 import {
-  addModulation,
   addTileLayer,
   calibrateMic,
   commitStroke,
   commitXY,
   findTileLayer,
   removeLayer,
-  removeModulation,
   resetLayer,
   setGestureClip,
 } from "../actions/sceneEdits";
@@ -140,12 +138,13 @@ function ProjectView({ project }: { project: Project }) {
   const showCostWarning = layers.length > 0 && (isCostHigh(layers) || slowFrames);
 
   const onToolPress = (id: ToolButtonId) => {
-    if (id === "gyro") return toggleGyro();
     if (id === "brush" && isClip) return setNotice("PINCEL · SOLO FOTOS");
     if (id === "brush" && strokes.length >= MAX_STROKES) setNotice(`LÍMITE DE ${MAX_STROKES} TRAZOS`);
     if (id === "brush" || id === "effects") setActiveTool(id);
-    // en Capas el gesto X/Y actúa sobre la capa abierta, como en Efectos
-    if (id === "layers") setActiveTool("effects");
+    // en Capas y Modulación el gesto X/Y actúa sobre la capa abierta, como en Efectos
+    if (id === "layers" || id === "mod") setActiveTool("effects");
+    // Modulación abre la capa seleccionada; sin selección, la de arriba
+    if (id === "mod" && !selected && layers.length > 0) setSelectedId(layers.at(-1)?.id ?? null);
     togglePanel(id);
   };
 
@@ -217,21 +216,8 @@ function ProjectView({ project }: { project: Project }) {
     setNotice(preset.name.toUpperCase());
   };
 
-  // GIRO: el sensor solo se enciende si alguna capa lo usa. El botón de la barra lo activa o quita
-  // en la capa seleccionada; al activarlo, la posición actual del teléfono es el centro
+  // GIRO: el sensor solo se enciende si alguna capa lo usa (se añade como fuente en Modulación)
   const usesGyro = focused && project.scene.routes.some((r) => r.source === "orientation" && r.amount !== 0);
-  const gyroRoute = selected ? project.scene.routes.find((r) => r.target.layerId === selected.id && r.source === "orientation") : undefined;
-  const toggleGyro = () => {
-    if (readOnly) return;
-    if (!selected) return setNotice("ELIGE UNA CAPA EN EFECTOS O CAPAS");
-    if (gyroRoute) {
-      removeModulation(gyroRoute.id);
-      return setNotice("GIRO DESACTIVADO");
-    }
-    if (!addModulation(project.scene.routes, selected.id, "x", "orientation")) return setNotice("MÁXIMO 4 MODULACIONES POR CAPA");
-    bus.oriCalibrate.set(bus.oriCalibrate.get() + 1);
-    setNotice("GIRO ACTIVO · INCLINA EL TELÉFONO");
-  };
 
   // grabación de un gesto: el panel se oculta (sin desmontarse) y una capa sobre el lienzo captura
   // el dedo; al soltar, el gesto queda en su modulación y se repite en bucle
@@ -290,8 +276,7 @@ function ProjectView({ project }: { project: Project }) {
       <EditorToolbar
         activeTool={activeTool}
         openPanel={openPanel}
-        disabled={{ brush: isClip, gyro: readOnly }}
-        on={{ gyro: gyroRoute !== undefined }}
+        disabled={{ brush: isClip }}
         onPress={onToolPress}
         rail={regular}
       />

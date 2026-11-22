@@ -36,6 +36,8 @@ type Props = ParamDrag & {
   onBack: () => void;
   onRemove: (layerId: string) => void;
   onNotice: (text: string) => void;
+  // atajo Modulación: solo las modulaciones, con la primera abierta
+  focus?: "mod";
 };
 
 export function layerDef(layer: Layer) {
@@ -48,7 +50,8 @@ export function LayerInspector(props: Props) {
   const { layer, routes, scene, mic, warning } = props;
   const def = layerDef(layer);
   const mods = routes.filter((r) => r.target.layerId === layer.id);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const focusMod = props.focus === "mod";
+  const [expanded, setExpanded] = useState<string | null>(() => (focusMod ? (mods[0]?.id ?? null) : null));
   // la última modulación creada se abre eligiendo fuente
   const [fresh, setFresh] = useState<string | null>(null);
   // acciones de la capa en la hoja común: restablecer o quitar. La propia hoja es la confirmación
@@ -104,6 +107,7 @@ export function LayerInspector(props: Props) {
         <IconButton icon="ellipsis" label="Acciones de la capa" onPress={() => void openLayerActions()} />
       </View>
 
+      {!focusMod && (
       <View style={styles.sliders}>
         {(["x", "y"] as const).map((axis) => {
           return (
@@ -125,7 +129,9 @@ export function LayerInspector(props: Props) {
         })}
       </View>
 
-      {layer.kind === "generator" && (
+      )}
+
+      {!focusMod && layer.kind === "generator" && (
         <>
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Mezcla</Text>

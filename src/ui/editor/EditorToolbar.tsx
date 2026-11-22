@@ -11,26 +11,27 @@ const BUTTONS: { id: ToolButtonId; label: string; icon: SFSymbol }[] = [
   { id: "brush", label: "Pincel", icon: "paintbrush.pointed" },
   { id: "effects", label: "Efectos", icon: "wand.and.stars" },
   { id: "layers", label: "Capas", icon: "square.3.layers.3d" },
-  { id: "gyro", label: "Giro", icon: "gyroscope" },
+  { id: "mod", label: "Modulación", icon: "waveform.path" },
   { id: "presets", label: "Presets", icon: "square.stack.3d.up" },
   { id: "gesture", label: "Gesto", icon: "hand.draw" },
 ];
 
 type Props = {
-  // herramienta activa (se conserva al cerrar el panel)
+  // herramienta del dedo (se conserva al cerrar el panel)
   activeTool: "brush" | "effects";
   openPanel: string | null;
   disabled: Partial<Record<ToolButtonId, boolean>>;
-  // interruptores encendidos (p. ej. Giro en la capa seleccionada)
-  on?: Partial<Record<ToolButtonId, boolean>>;
   onPress: (id: ToolButtonId) => void;
   // iPad: riel vertical a la izquierda en lugar de la barra inferior
   rail?: boolean;
 };
 
 // barra de herramientas modular: sustituye a las pestañas mientras hay un proyecto abierto
-export function EditorToolbar({ activeTool, openPanel, disabled, on = {}, onPress, rail = false }: Props) {
+export function EditorToolbar({ activeTool, openPanel, disabled, onPress, rail = false }: Props) {
   const insets = useSafeAreaInsets();
+  // un solo botón resaltado: el del panel abierto o, sin panel de la barra, la herramienta del dedo.
+  // Abrir Capas o Modulación no marca también Efectos
+  const highlighted = BUTTONS.some((b) => b.id === openPanel) ? openPanel : activeTool;
   const { sideInset } = useLayout();
   return (
     <View
@@ -45,7 +46,7 @@ export function EditorToolbar({ activeTool, openPanel, disabled, on = {}, onPres
           key={id}
           icon={icon}
           label={label}
-          active={id === activeTool || id === openPanel || on[id] === true}
+          active={id === highlighted}
           disabled={disabled[id] === true}
           onPress={() => onPress(id)}
         />

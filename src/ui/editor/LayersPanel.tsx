@@ -137,13 +137,15 @@ type Props = {
   // la vista del micrófono está abierta: el medidor necesita el micrófono encendido
   onMicVisible: (visible: boolean) => void;
   onRemove: (layerId: string) => void;
+  // atajo Modulación: abre directo la capa seleccionada
+  startInLayer?: boolean;
 };
 
 // panel Capas: la pila de la escena como en un editor de video. Cada capa abre su inspector
 // (parámetros + modulaciones); arriba, el reloj y el micrófono que comparte toda la escena
 export function LayersPanel(props: Props) {
   const { layers, routes, selectedLayerId } = props;
-  const [view, setView] = useState<"list" | "layer" | "global">("list");
+  const [view, setView] = useState<"list" | "layer" | "global">(() => (props.startInLayer && selectedLayerId ? "layer" : "list"));
   const open = view === "layer" ? (layers.find((l) => l.id === selectedLayerId) ?? null) : null;
 
   const globalOpen = view === "global";
