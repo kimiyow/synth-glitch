@@ -1,5 +1,5 @@
 import { BlurView } from "expo-blur";
-import { createContext, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from "react";
+import { createContext, useContext, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { selectFeedback } from "../../platform/haptics";
@@ -18,6 +18,20 @@ export type SheetControls = {
   scrollIntoView: (target: RefObject<ComponentRef<typeof View> | null>) => void;
 };
 export const SheetPin = createContext<SheetControls | null>(null);
+// espera a que el teclado termine de subir (y la hoja de encogerse) antes de desplazar
+const REVEAL_DELAY_MS = 320;
+
+// para un campo de texto dentro de una hoja: al enfocarlo, la hoja lo desplaza a la vista (el
+// teclado encoge la hoja y el campo podía quedar fuera). ref va en una View que envuelve el campo
+export function useRevealOnFocus() {
+  const sheet = useContext(SheetPin);
+  const ref = useRef<ComponentRef<typeof View>>(null);
+  const onFocus = () => {
+    setTimeout(() => sheet?.scrollIntoView(ref), REVEAL_DELAY_MS);
+  };
+  return { ref, onFocus };
+}
+
 // alto que se le resta al desplazamiento mientras hay algo fijado (la hoja crece el resto)
 const PIN_ALLOWANCE = 48;
 

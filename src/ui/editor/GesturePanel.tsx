@@ -9,6 +9,7 @@ import { useSettings } from "../../state/appSettings";
 import { MAX_GESTURE_PRESETS } from "../../state/settings";
 import { Icon } from "../kit/Icon";
 import { Segmented } from "../kit/Segmented";
+import { useRevealOnFocus } from "../kit/Sheet";
 import { IconButton } from "../kit/IconButton";
 import { confirmDelete } from "../../state/confirm";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
@@ -63,6 +64,7 @@ export function GesturePanel(props: Props) {
   const presets = useSettings((s) => s.gestures);
   // gesto de la biblioteca cuyo nombre se está editando
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const { ref: revealRef, onFocus: revealOnFocus } = useRevealOnFocus();
   const finishRename = () => {
     if (editing) props.onRename(editing.id, editing.text);
     setEditing(null);
@@ -167,13 +169,14 @@ export function GesturePanel(props: Props) {
               <View style={styles.glyph}>
                 <SourceGlyph route={asRoute(p)} scene={scene} width={52} height={26} />
               </View>
-              <View style={styles.rowText}>
+              <View style={styles.rowText} ref={editing?.id === p.id ? revealRef : undefined} collapsable={false}>
                 {editing?.id === p.id ? (
                   <TextInput
                     value={editing.text}
                     onChangeText={(text) => setEditing({ id: p.id, text })}
                     onEndEditing={finishRename}
                     onSubmitEditing={finishRename}
+                    onFocus={revealOnFocus}
                     autoFocus
                     selectTextOnFocus
                     maxLength={MAX_GESTURE_NAME}

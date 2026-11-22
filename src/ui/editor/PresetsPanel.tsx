@@ -24,6 +24,7 @@ import { ActionGrid, type GridAction } from "../kit/ActionGrid";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
 import { Segmented } from "../kit/Segmented";
+import { useRevealOnFocus } from "../kit/Sheet";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
 import { layerDef } from "./LayerInspector";
 import { SOURCE_ICON } from "./ModCard";
@@ -288,6 +289,7 @@ function SceneCard(props: {
   onMenu?: () => void;
 }) {
   const { preset, width, active } = props;
+  const { ref: revealRef, onFocus: revealOnFocus } = useRevealOnFocus();
   const thumbH = Math.round(width * THUMB_RATIO);
   const effects = preset.layers.map((l) => layerDef(l).label).join(" + ");
   return (
@@ -316,13 +318,14 @@ function SceneCard(props: {
           </View>
         )}
       </Pressable>
-      <View style={styles.cardFooter}>
+      <View style={styles.cardFooter} ref={revealRef} collapsable={false}>
         {props.editing !== null ? (
           <TextInput
             value={props.editing}
             onChangeText={props.onRenameText}
             onEndEditing={props.onFinishRename}
             onSubmitEditing={props.onFinishRename}
+            onFocus={revealOnFocus}
             autoFocus
             selectTextOnFocus
             maxLength={MAX_SCENE_NAME}

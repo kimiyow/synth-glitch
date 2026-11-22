@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import type { SaveStatus } from "../../state/sceneStore";
+import { useRevealOnFocus } from "../kit/Sheet";
 import { ActionGrid } from "../kit/ActionGrid";
 import { Icon } from "../kit/Icon";
 import { colors, space, type } from "../tokens";
@@ -36,6 +37,7 @@ const ROWS: { id: ExportAction; icon: SFSymbol; label: string }[] = [
 // panel Exportar: nombre editable, estado del guardado manual y salidas en módulos
 export function ExportPanel({ name, readOnly, status, draft: isDraft, unavailable, job, onRename, onAction }: Props) {
   const [draft, setDraft] = useState(name);
+  const { ref: revealRef, onFocus: revealOnFocus } = useRevealOnFocus();
   const statusText = readOnly
     ? "Solo lectura"
     : status.state === "error"
@@ -48,8 +50,9 @@ export function ExportPanel({ name, readOnly, status, draft: isDraft, unavailabl
 
   return (
     <View style={styles.root}>
-      <View style={styles.nameRow}>
+      <View style={styles.nameRow} ref={revealRef} collapsable={false}>
         <TextInput
+          onFocus={revealOnFocus}
           value={draft}
           onChangeText={setDraft}
           onEndEditing={() => {

@@ -1,7 +1,7 @@
 import { useImage, useVideo } from "@shopify/react-native-skia";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -47,6 +47,7 @@ import { useExportJob } from "../ui/editor/useExportJob";
 import { askConfirm } from "../state/confirm";
 import { announce } from "../ui/errors";
 import { Toast } from "../ui/kit/Toast";
+import { useKeyboardOverlap } from "../ui/useKeyboardOverlap";
 import { colors, space, type } from "../ui/tokens";
 import { useLayout } from "../ui/useLayout";
 
@@ -76,6 +77,7 @@ function ProjectView({ project }: { project: Project }) {
   const canUndo = useScene((s) => s.history.past.length > 0);
   const canRedo = useScene((s) => s.history.future.length > 0);
   const { regular, landscape } = useLayout();
+  const { ref: keyboardRef, overlap: keyboardOverlap } = useKeyboardOverlap();
   const { media, layers } = project.scene;
   const strokes = project.scene.paint.strokes;
 
@@ -380,10 +382,15 @@ function ProjectView({ project }: { project: Project }) {
 
           {/* capa flotante sobre el lienzo: el panel nunca cambia el tamaño ni la posición de la
               imagen; fuera del panel los toques siguen llegando al lienzo */}
-          {/* sube con el teclado (p. ej. al renombrar en Exportar) para que el campo quede a la vista */}
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={[styles.overlay, landscape && styles.overlaySide, recordingRoute !== null && styles.hidden]}
+          {/* sube con el teclado (renombrar en Exportar, Gesto o Escenas) hasta que el campo quede a la vista */}
+          <View
+            ref={keyboardRef}
+            style={[
+              styles.overlay,
+              landscape && styles.overlaySide,
+              keyboardOverlap > 0 && { paddingBottom: keyboardOverlap + 8 },
+              recordingRoute !== null && styles.hidden,
+            ]}
             pointerEvents="box-none"
           >
             {notice && <Toast text={notice} style={styles.notice} />}
@@ -421,7 +428,7 @@ function ProjectView({ project }: { project: Project }) {
                 </GestureRecordContext.Provider>
               </LiveModContext.Provider>
             )}
-          </KeyboardAvoidingView>
+          </View>
         </View>
 
         {usesGyro && <OrientationSensor bus={bus} />}
