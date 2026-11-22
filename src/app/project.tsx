@@ -37,6 +37,7 @@ import { settingsStore, useSettings } from "../state/appSettings";
 import { EditorPanels } from "../ui/editor/EditorPanels";
 import { EditorToolbar } from "../ui/editor/EditorToolbar";
 import { EditorTopBar } from "../ui/editor/EditorTopBar";
+import { layerDef } from "../ui/editor/LayerInspector";
 import { GestureRecordContext } from "../ui/editor/gestureRecord";
 import type { TileRef } from "../ui/editor/EffectsPanel";
 import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../ui/editor/panels";
@@ -223,6 +224,11 @@ function ProjectView({ project }: { project: Project }) {
   // el dedo; al soltar, el gesto queda en su modulación y se repite en bucle
   const [recordingRoute, setRecordingRoute] = useState<string | null>(null);
   const gestureRecord = { start: (routeId: string) => setRecordingRoute(routeId), notice: setNotice };
+  // ejes de la capa que se graba (para la guía sobre el lienzo)
+  const recordingLayer = recordingRoute
+    ? layers.find((l) => l.id === project.scene.routes.find((r) => r.id === recordingRoute)?.target.layerId)
+    : undefined;
+  const recordingAxes = recordingLayer ? layerDef(recordingLayer).axes : { x: "X", y: "Y" };
   const onGestureDone = useCallback(
     (clip: { durationMs: number; samples: number[] }) => {
       const id = recordingRoute;
@@ -331,7 +337,13 @@ function ProjectView({ project }: { project: Project }) {
               <Toast tone="status" icon="gauge.with.dots.needle.67percent" text={`RENDIMIENTO BAJO · ${layers.length} CAPAS`} style={styles.warning} />
             )}
             {recordingRoute && image && !stage && (
-              <GestureRecorder bus={bus} routeId={recordingRoute} onDone={onGestureDone} onCancel={() => setRecordingRoute(null)} />
+              <GestureRecorder
+                bus={bus}
+                routeId={recordingRoute}
+                axes={recordingAxes}
+                onDone={onGestureDone}
+                onCancel={() => setRecordingRoute(null)}
+              />
             )}
           </View>
 

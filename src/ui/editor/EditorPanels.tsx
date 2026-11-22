@@ -2,7 +2,7 @@ import type { SkImage } from "@shopify/react-native-skia";
 import type { ComponentProps } from "react";
 
 import { applyGesturePreset, ensureGestureRoute, removeGesturePreset, saveGesturePreset } from "../../actions/gestureLibrary";
-import { setSources, setTempo } from "../../actions/sceneEdits";
+import { removeModulation, setSources, setTempo } from "../../actions/sceneEdits";
 import type { StageMode } from "../../canvas/StageView";
 import type { Layer, Project, ScenePreset } from "../../domain/types";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
@@ -69,9 +69,10 @@ export function EditorPanels(props: Props) {
   const { layers, routes, sources, seed } = project.scene;
   const rec = useGestureRecord();
   // gesto grabado de la capa seleccionada (para "Guardar preset gestual" en Exportar)
-  const selectedGesture = selected
-    ? routes.find((r) => r.target.layerId === selected.id && r.source === "track" && (r.settings?.gesture?.samples.length ?? 0) >= 4)?.settings?.gesture
-    : undefined;
+  const gestureRoute = selected
+    ? (routes.find((r) => r.target.layerId === selected.id && r.source === "track" && (r.settings?.gesture?.samples.length ?? 0) >= 4) ?? null)
+    : null;
+  const selectedGesture = gestureRoute?.settings?.gesture;
   const warning = hasFastLuminanceRoute(layers, routes, sources) ? "AVISO · DESTELLOS RÁPIDOS (> 3 HZ) SOBRE UNA ZONA AMPLIA" : null;
   const renderInspector = (layer: Layer, onBack: () => void, focus?: "mod") => (
     <LayerInspector
@@ -161,8 +162,21 @@ export function EditorPanels(props: Props) {
         />
       ) : (
         <GesturePanel
-          layerLabel={selected && !readOnly ? layerDef(selected).label : null}
+          layer={selected && !readOnly ? { label: layerDef(selected).label, axes: layerDef(selected).axes, params: selected.params } : null}
+          route={readOnly ? null : gestureRoute}
+          routes={routes}
           scene={sources}
+          onSave={() => {
+            if (!selectedGesture) return null;
+            const name = saveGesturePreset(selectedGesture);
+            props.onNotice(name ? `${name.toUpperCase()} GUARDADO EN LA BIBLIOTECA` : "BIBLIOTECA LLENA · BORRA UN GESTO");
+            return name;
+          }}
+          onRemove={() => {
+            if (!gestureRoute) return;
+            removeModulation(gestureRoute.id);
+            props.onNotice("GESTO QUITADO · PUEDES DESHACERLO CON ↶");
+          }}
           onRecord={() => {
             if (!selected) return;
             const id = ensureGestureRoute(routes, selected.id);

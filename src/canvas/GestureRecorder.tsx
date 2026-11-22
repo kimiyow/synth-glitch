@@ -12,6 +12,8 @@ type Props = {
   bus: ModBus;
   // modulación GESTO que se graba
   routeId: string;
+  // nombres de los ejes de la capa, para explicar qué mueve cada dirección del dedo
+  axes: { x: string; y: string };
   // fin de la grabación: muestras [x, y] intercaladas y duración (ms)
   onDone: (clip: { durationMs: number; samples: number[] }) => void;
   onCancel: () => void;
@@ -23,7 +25,7 @@ const POLL_MS = 100;
 // capa de grabación sobre el lienzo: la posición del dedo en el área de la imagen es el valor de
 // los dos parámetros (izquierda → derecha = 0 → 1; abajo → arriba = 0 → 1). Todo ocurre en el hilo
 // de UI; JS solo consulta números para saber cuándo terminó (sin llamar a JS desde un worklet)
-export function GestureRecorder({ bus, routeId, onDone, onCancel }: Props) {
+export function GestureRecorder({ bus, routeId, axes, onDone, onCancel }: Props) {
   const [size, setSize] = useState({ w: 1, h: 1 });
   const [elapsed, setElapsed] = useState<number | null>(null);
   const down = useSharedValue(0);
@@ -99,12 +101,30 @@ export function GestureRecorder({ bus, routeId, onDone, onCancel }: Props) {
         <View style={[styles.badge, elapsed !== null && styles.badgeRec]} pointerEvents="none">
           {elapsed !== null && <View style={styles.dot} />}
           <Text style={[styles.badgeText, elapsed !== null && styles.badgeTextRec]}>
-            {elapsed === null ? "TOCA Y MUEVE SOBRE LA IMAGEN" : `REC 0:${String(Math.floor(shown)).padStart(2, "0")} / 0:${GESTURE_MAX_S}`}
+            {elapsed === null ? "LISTO PARA GRABAR" : `REC 0:${String(Math.floor(shown)).padStart(2, "0")} / 0:${GESTURE_MAX_S}`}
           </Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancelar grabación" hitSlop={8} onPress={onCancel} style={styles.cancel}>
           <Icon name="xmark" size={14} />
         </Pressable>
+      </View>
+      {/* qué hacer: antes de tocar, qué mueve cada dirección; grabando, cómo terminar */}
+      <View style={styles.guide} pointerEvents="none">
+        {elapsed === null ? (
+          <>
+            <Text style={styles.guideTitle}>Toca y mueve el dedo sobre la imagen</Text>
+            <View style={styles.guideRow}>
+              <Icon name="arrow.left.and.right" size={13} />
+              <Text style={styles.guideText}>{axes.x}</Text>
+              <View style={styles.guideSep} />
+              <Icon name="arrow.up.and.down" size={13} />
+              <Text style={styles.guideText}>{axes.y}</Text>
+            </View>
+            <Text style={styles.guideNote}>Al soltar, la capa repite tu movimiento en bucle</Text>
+          </>
+        ) : (
+          <Text style={styles.guideNote}>Suelta para terminar · máximo {GESTURE_MAX_S} s</Text>
+        )}
       </View>
       {elapsed !== null && (
         <View style={styles.progress} pointerEvents="none">
@@ -141,6 +161,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.scrim,
   },
+  guide: {
+    position: "absolute",
+    left: space.lg,
+    right: space.lg,
+    bottom: space.xl,
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.scrim,
+    alignSelf: "center",
+  },
+  guideTitle: { color: colors.inkText, fontFamily: type.family, fontSize: type.body - 1, fontWeight: "600", textAlign: "center" },
+  guideRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  guideSep: { width: StyleSheet.hairlineWidth, height: 12, marginHorizontal: 4, backgroundColor: colors.inkLineStrong },
+  guideText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label },
+  guideNote: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, textAlign: "center" },
   progress: { position: "absolute", left: space.md, right: space.md, bottom: space.md, height: 3, borderRadius: 2, backgroundColor: colors.inkLineStrong, overflow: "hidden" },
   progressFill: { height: 3, backgroundColor: colors.paper },
 });
