@@ -14,23 +14,36 @@ export function useExportJob(project: Project, previewTime: () => number, notify
   const [lastExport, setLastExport] = useState<string | null>(null);
   const [recipeBusy, setRecipeBusy] = useState(false);
   const gifCancel = useRef(false);
+  // un doble toque llega antes de que el re-render deshabilite los botones: sin esto se guardan dos
+  // JPG en Fotos o corren dos GIF a la vez
+  const busy = useRef(false);
 
   const onExportAction = async (action: ExportAction): Promise<void> => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      await runExportAction(action);
+    } finally {
+      busy.current = false;
+    }
+  };
+
+  const runExportAction = async (action: ExportAction): Promise<void> => {
     const retry = () => onExportAction(action);
     if (action === "project") {
       const r = await saveActiveProject();
       if (r.ok) return notify("PROYECTO GUARDADO");
-      return reportError({ title: "No se pudo guardar el proyecto", error: r.error, retry });
+      return void reportError({ title: "No se pudo guardar el proyecto", error: r.error, retry });
     }
     if (action === "share") {
-      if (lastExport) await shareFile(lastExport).catch((error: unknown) => reportError({ title: "No se pudo compartir", error, retry }));
+      if (lastExport) await shareFile(lastExport).catch((error: unknown) => void reportError({ title: "No se pudo compartir", error, retry }));
       return;
     }
     if (action === "jpg") {
       setJob({ label: "Exportando JPG…", progress: null });
       const r = await exportJpeg(project, previewTime());
       setJob(null);
-      if (!r.ok) return reportError({ title: "No se pudo exportar el JPG", error: r.error, retry });
+      if (!r.ok) return void reportError({ title: "No se pudo exportar el JPG", error: r.error, retry });
       setLastExport(r.uri);
       notify(`JPG GUARDADO EN FOTOS · ${(r.ms / 1000).toFixed(1)} S`);
     }
@@ -45,7 +58,7 @@ export function useExportJob(project: Project, previewTime: () => number, notify
         isCancelled: () => gifCancel.current,
       });
       setJob(null);
-      if (!r.ok) return "cancelled" in r ? notify("GIF CANCELADO") : reportError({ title: "No se pudo crear el GIF", error: r.error, retry });
+      if (!r.ok) return "cancelled" in r ? notify("GIF CANCELADO") : void reportError({ title: "No se pudo crear el GIF", error: r.error, retry });
       setLastExport(r.uri);
       notify(`GIF GUARDADO EN FOTOS · ${(r.ms / 1000).toFixed(1)} S`);
     }
