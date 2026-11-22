@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { croppedSize, fitLongSide } from "../engine/crop";
 import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate, NO_INPUTS } from "../modulation/evaluate";
-import { renderPainted } from "../paint/brushEngine";
+import { renderPaintMask, renderPainted } from "../paint/brushEngine";
 import { GENERATOR_BY_ID } from "../engine/registry";
 import type { GeneratorId, Layer, Scene } from "../domain/types";
 import { SceneRenderer } from "./SceneRenderer";
@@ -40,6 +40,7 @@ export async function renderSceneJpeg(
   // la pintura se reproduce desde los trazos a la resolución de salida
   const paintLongSide = Math.min(4096, Math.ceil(longSide / Math.max(scene.crop.rect[2], scene.crop.rect[3])));
   const source = renderPainted(image, scene.paint.strokes, paintLongSide);
+  const paintMask = renderPaintMask(image, scene.paint.strokes, paintLongSide);
   const element = createElement(SceneRenderer, {
     image: source,
     width: size.width,
@@ -48,10 +49,12 @@ export async function renderSceneJpeg(
     seed: scene.seed,
     frame,
     crop: scene.crop.rect,
+    paintMask,
   });
   const rendered = await drawAsImage(element, size).finally(() => {
     // la imagen pintada es temporal; a 4096 px no liberarla acumula memoria
     if (source !== image) source.dispose();
+    paintMask?.dispose();
   });
   if (!rendered) throw new Error("NO SE PUDO RENDERIZAR LA VISTA PREVIA");
   try {
@@ -109,6 +112,7 @@ export function createFrameRenderer(image: SkImage, scene: Scene, longSide: numb
   const size = fitLongSide(croppedSize(image.width(), image.height(), scene.crop.rect), longSide);
   const paintLongSide = Math.min(4096, Math.ceil(longSide / Math.max(scene.crop.rect[2], scene.crop.rect[3])));
   const source = renderPainted(image, scene.paint.strokes, paintLongSide);
+  const paintMask = renderPaintMask(image, scene.paint.strokes, paintLongSide);
   const info = { width: size.width, height: size.height, colorType: ColorType.RGBA_8888, alphaType: AlphaType.Unpremul };
   return {
     size,
@@ -121,6 +125,7 @@ export function createFrameRenderer(image: SkImage, scene: Scene, longSide: numb
         seed: scene.seed,
         frame,
         crop: scene.crop.rect,
+        paintMask,
       });
       const rendered = await drawAsImage(element, size);
       if (!rendered) throw new Error("NO SE PUDO RENDERIZAR EL CUADRO");
@@ -134,6 +139,7 @@ export function createFrameRenderer(image: SkImage, scene: Scene, longSide: numb
     },
     dispose() {
       if (source !== image) source.dispose();
+      paintMask?.dispose();
     },
   };
 }

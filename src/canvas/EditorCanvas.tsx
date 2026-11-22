@@ -309,6 +309,7 @@ export function EditorCanvas(props: Props) {
   const toolGestures = [pinch, gate, xyPan, xyCommit, brushPan, brushCommit, doubleTap];
   const gestures = Gesture.Simultaneous(...toolGestures, ...(props.extraGesture ? [props.extraGesture] : []));
   const sceneImage: SkImage | DerivedValue<SkImage | null> = paintable && paint.ready ? paint.shown : image;
+  const paintMask = paintable && paint.ready ? paint.mask : null;
   const rotation = props.rotation ?? 0;
 
   const transform = useDerivedValue(() => [
@@ -346,6 +347,7 @@ export function EditorCanvas(props: Props) {
                   crop={crop}
                   rotation={rotation}
                   sourceSize={props.sourceSize}
+                  paintMask={paintMask}
                 />
                 {props.fadeFrom && (
                   <FadeOutScene

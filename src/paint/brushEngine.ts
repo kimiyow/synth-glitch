@@ -1,4 +1,5 @@
 import {
+  BlendMode,
   FilterMode,
   MipmapMode,
   Skia,
@@ -100,4 +101,38 @@ export function renderPainted(original: SkImage, strokes: readonly Stroke[], lon
   drawOriginal(surface, original);
   replayStrokes(surface, original, strokes);
   return surface.makeImageSnapshot().makeNonTextureImage() ?? original;
+}
+
+// ---------------------------------------------------------------- máscara de pintura
+// dónde hay sellos (alfa 1) y dónde no (alfa 0). Sobre un generador en replace, que tapa la imagen
+// base, la pintura se compone encima de él usando esta máscara (SceneRenderer). BORRAR la vacía
+
+export function drawMaskStamp(surface: SkSurface, stamp: Stamp) {
+  "worklet";
+  const bw = surface.width();
+  const sizePx = stamp.size * bw;
+  const square = Skia.XYWHRect(stamp.x * bw - sizePx / 2, stamp.y * bw - sizePx / 2, sizePx, sizePx);
+  const paint = Skia.Paint();
+  paint.setColor(Skia.Color("white"));
+  if (stamp.erase) paint.setBlendMode(BlendMode.Clear);
+  surface.getCanvas().drawRect(square, paint);
+}
+
+export function replayMask(surface: SkSurface, strokes: readonly Stroke[]) {
+  "worklet";
+  surface.getCanvas().clear(Skia.Color("transparent"));
+  for (const stroke of strokes) {
+    for (const stamp of stroke.stamps) drawMaskStamp(surface, stamp);
+  }
+  surface.flush();
+}
+
+// máscara para exportar (hilo de JS), del mismo tamaño que renderPainted
+export function renderPaintMask(original: SkImage, strokes: readonly Stroke[], longSide: number): SkImage | null {
+  if (strokes.length === 0) return null;
+  const size = paintBufferSize(original.width(), original.height(), longSide);
+  const surface = Skia.Surface.MakeOffscreen(size.width, size.height);
+  if (!surface) throw new Error("NO SE PUDO CREAR LA MÁSCARA DE PINTURA");
+  replayMask(surface, strokes);
+  return surface.makeImageSnapshot().makeNonTextureImage();
 }

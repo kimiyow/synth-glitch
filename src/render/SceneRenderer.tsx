@@ -4,6 +4,7 @@ import { isSharedValue, useDerivedValue, type DerivedValue } from "react-native-
 
 import { cropViewport, FULL_CROP, type CropRect } from "../engine/crop";
 import { buildLayerChain, nodeUniforms, type ChainNode, type FrameInputs } from "../engine/renderGraph";
+import { BLEND_INDEX } from "../engine/registry";
 import { getEffectRuntime, getGeneratorRuntime } from "../engine/runtimeEffects";
 import type { Layer } from "../domain/types";
 
@@ -23,12 +24,27 @@ type Props = {
   rotation?: 0 | 90 | 180 | 270;
   // tamaño del cuadro sin rotar; necesario cuando hay giro (el cuadro es un valor compartido)
   sourceSize?: { width: number; height: number };
+  // dónde hay sellos de pincel. Un generador en replace tapa la imagen base y con ella la pintura:
+  // con la máscara, la pintura se compone encima del último generador en replace (y debajo de lo
+  // que siga), como si ese generador fuera el medio
+  paintMask?: SkImage | DerivedValue<SkImage> | null;
 };
+
+// pintura (imagen base pintada) encima de la cadena donde la máscara tiene sellos
+const PAINT_OVER = Skia.RuntimeEffect.Make(`
+uniform shader below;
+uniform shader paint;
+uniform shader mask;
+half4 main(float2 p) {
+  return mask.eval(p).a > 0.5 ? paint.eval(p) : below.eval(p);
+}`);
 
 // árbol de Skia de la escena: medio → capas de efecto y generador apiladas → recorte. Va dentro de
 // un Canvas o de drawAsImage. width × height es el tamaño de salida (la región recortada)
-export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP, rotation = 0, sourceSize }: Props) {
+export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP, rotation = 0, sourceSize, paintMask }: Props) {
   const chain = buildLayerChain(layers);
+  // la pintura va encima del último generador que reemplaza la imagen (clips: no hay pintura)
+  const paintOverIndex = paintMask && rotation === 0 ? lastReplaceGenerator(chain) : -1;
   // los efectos se evalúan sobre la imagen completa, así el recorte no cambia su aspecto
   const { fullW, fullH, tx, ty } = cropViewport(width, height, crop);
   const resolution: [number, number] = [fullW, fullH];
@@ -37,10 +53,11 @@ export function SceneRenderer({ image, width, height, layers, seed, frame, crop 
   // cuadro queda desplazado y el borde estirado (clamp) parece un efecto. La matriz completa:
   // centrar el cuadro, escalar (cover), girar y llevarlo al centro
   const rotated = rotation !== 0 && sourceSize && sourceSize.width > 0 && sourceSize.height > 0;
+  const fullRect = { x: 0, y: 0, width: fullW, height: fullH };
   let node: ReactElement = rotated ? (
     <ImageShader image={image} fit="none" tx="clamp" ty="clamp" matrix={coverMatrix(sourceSize, rotation, fullW, fullH)} />
   ) : (
-    <ImageShader image={image} fit="cover" rect={{ x: 0, y: 0, width: fullW, height: fullH }} tx="clamp" ty="clamp" />
+    <ImageShader image={image} fit="cover" rect={fullRect} tx="clamp" ty="clamp" />
   );
   chain.forEach((chainNode, index) => {
     const source = runtimeFor(chainNode);
@@ -56,6 +73,15 @@ export function SceneRenderer({ image, width, height, layers, seed, frame, crop 
         {node}
       </Shader>
     );
+    if (index === paintOverIndex && PAINT_OVER && paintMask) {
+      node = (
+        <Shader key={`${chainNode.layerId}-pintura`} source={PAINT_OVER} uniforms={{}}>
+          {node}
+          <ImageShader image={image} fit="cover" rect={fullRect} tx="clamp" ty="clamp" />
+          <ImageShader image={paintMask} fit="cover" rect={fullRect} tx="decal" ty="decal" />
+        </Shader>
+      );
+    }
   });
 
   return (
@@ -80,6 +106,14 @@ function coverMatrix(src: { width: number; height: number }, rotation: number, w
   m.scale(s, s);
   m.translate(-src.width / 2, -src.height / 2);
   return m;
+}
+
+function lastReplaceGenerator(chain: readonly ChainNode[]): number {
+  for (let i = chain.length - 1; i >= 0; i--) {
+    const node = chain[i];
+    if (node.kind === "generator" && node.blend === BLEND_INDEX.replace) return i;
+  }
+  return -1;
 }
 
 function runtimeFor(node: ChainNode) {
