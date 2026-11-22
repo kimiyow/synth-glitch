@@ -29,6 +29,21 @@ export function saveGesturePreset(clip: Pick<GestureClip, "durationMs" | "sample
   return preset.name;
 }
 
+// largo máximo del nombre (el mismo que acepta la lectura de los ajustes)
+export const MAX_GESTURE_NAME = 30;
+
+// renombra un gesto de la biblioteca. Vacío o solo espacios: conserva el nombre. Devuelve el nombre
+// que queda
+export function renameGesturePreset(id: string, name: string): string | null {
+  const { gestures } = settingsStore.getState();
+  const current = gestures.find((g) => g.id === id);
+  if (!current) return null;
+  const clean = name.replace(/\s+/g, " ").trim().slice(0, MAX_GESTURE_NAME);
+  if (!clean || clean === current.name) return current.name;
+  settingsStore.getState().update({ gestures: gestures.map((g) => (g.id === id ? { ...g, name: clean } : g)) });
+  return clean;
+}
+
 export function removeGesturePreset(id: string) {
   const { gestures } = settingsStore.getState();
   settingsStore.getState().update({ gestures: gestures.filter((g) => g.id !== id) });

@@ -1,7 +1,7 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import type { ComponentProps } from "react";
 
-import { applyGesturePreset, ensureGestureRoute, removeGesturePreset, saveGesturePreset } from "../../actions/gestureLibrary";
+import { applyGesturePreset, ensureGestureRoute, removeGesturePreset, renameGesturePreset, saveGesturePreset } from "../../actions/gestureLibrary";
 import { removeModulation, setGestureTransform, setSources, setTempo } from "../../actions/sceneEdits";
 import type { StageMode } from "../../canvas/StageView";
 import type { Layer, Project, ScenePreset } from "../../domain/types";
@@ -141,7 +141,7 @@ export function EditorPanels(props: Props) {
             if (a === "gesture") {
               if (!selectedGesture) return;
               const name = saveGesturePreset(selectedGesture);
-              props.onNotice(name ? `${name.toUpperCase()} GUARDADO EN LA BIBLIOTECA` : "BIBLIOTECA LLENA · BORRA UN GESTO");
+              props.onNotice(name ? `${name.toUpperCase()} GUARDADO · TOCA SU NOMBRE PARA RENOMBRARLO` : "BIBLIOTECA LLENA · BORRA UN GESTO");
               return;
             }
             void exports.onExportAction(a);
@@ -194,6 +194,7 @@ export function EditorPanels(props: Props) {
             if (!selected) return;
             props.onNotice(applyGesturePreset(routes, selected.id, preset) ? `${preset.name.toUpperCase()} APLICADO` : "MÁXIMO 4 MODULACIONES POR CAPA");
           }}
+          onRename={(id, name) => void renameGesturePreset(id, name)}
           onDelete={removeGesturePreset}
         />
       )}

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { MAX_GESTURE_NAME } from "../../actions/gestureLibrary";
 import type { GestureTransform } from "../../actions/sceneEdits";
 import type { GestureDirection, GesturePreset, Route, SourceConfig } from "../../domain/types";
 import { gestureSpeed, GESTURE_SPEEDS } from "../../modulation/sources";
@@ -30,6 +31,7 @@ type Props = {
   trailVisible: boolean;
   onToggleTrail: () => void;
   onApply: (preset: GesturePreset) => void;
+  onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
 };
 
@@ -59,6 +61,12 @@ const DIRECTIONS: { id: GestureDirection; label: string }[] = [
 export function GesturePanel(props: Props) {
   const { layer, route, routes, scene, onRecord, onSave, onRemove, onApply, onDelete } = props;
   const presets = useSettings((s) => s.gestures);
+  // gesto de la biblioteca cuyo nombre se está editando
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const finishRename = () => {
+    if (editing) props.onRename(editing.id, editing.text);
+    setEditing(null);
+  };
   const [scopeW, setScopeW] = useState(0);
   // nombre con el que se guardó el gesto actual (se olvida al grabar otro)
   const [savedAs, setSavedAs] = useState<{ routeId: string; samples: number; name: string } | null>(null);
@@ -130,7 +138,7 @@ export function GesturePanel(props: Props) {
             >
               <Icon name={saved ? "checkmark" : "tray.and.arrow.down"} size={15} color={saved ? colors.inkText : colors.paperText} />
               <Text style={[styles.actionText, !saved && styles.actionTextPrimary]} maxFontSizeMultiplier={COMPACT_FONT_SCALE} numberOfLines={1}>
-                {saved ? `Guardado · ${saved}` : "Guardar en biblioteca"}
+                {saved ? "Guardado en biblioteca" : "Guardar en biblioteca"}
               </Text>
             </Pressable>
             <Pressable accessibilityRole="button" onPress={onRecord} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
@@ -163,9 +171,33 @@ export function GesturePanel(props: Props) {
                 <SourceGlyph route={asRoute(p)} scene={scene} width={52} height={26} />
               </View>
               <View style={styles.rowText}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {p.name}
-                </Text>
+                {editing?.id === p.id ? (
+                  <TextInput
+                    value={editing.text}
+                    onChangeText={(text) => setEditing({ id: p.id, text })}
+                    onEndEditing={finishRename}
+                    onSubmitEditing={finishRename}
+                    autoFocus
+                    selectTextOnFocus
+                    maxLength={MAX_GESTURE_NAME}
+                    returnKeyType="done"
+                    accessibilityLabel={`Nombre de ${p.name}`}
+                    style={[styles.name, styles.nameInput]}
+                  />
+                ) : (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${p.name}. Toca para renombrar`}
+                    hitSlop={{ top: 8, bottom: 8 }}
+                    onPress={() => setEditing({ id: p.id, text: p.name })}
+                    style={styles.nameRow}
+                  >
+                    <Text style={styles.name} numberOfLines={1}>
+                      {p.name}
+                    </Text>
+                    <Icon name="pencil" size={11} color={colors.inkMute} />
+                  </Pressable>
+                )}
                 <Text style={styles.dur}>{(p.durationMs / 1000).toFixed(1)} s</Text>
               </View>
               <Pressable
@@ -289,7 +321,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.sm, borderRadius: radius.md, backgroundColor: colors.inkSurface },
   glyph: { width: 60, height: 34, borderRadius: radius.sm, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center" },
   rowText: { flex: 1, gap: 2 },
-  name: { color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600" },
+  name: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600" },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", maxWidth: "100%" },
+  nameInput: {
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    marginLeft: -6,
+    borderRadius: radius.sm,
+    backgroundColor: colors.inkRaised,
+  },
   dur: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontVariant: ["tabular-nums"] },
   apply: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 30, paddingHorizontal: space.sm, borderRadius: radius.pill, backgroundColor: colors.inkRaised },
   applyText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
