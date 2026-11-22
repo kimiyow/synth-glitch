@@ -341,6 +341,7 @@ function ProjectView({ project }: { project: Project }) {
                 bus={bus}
                 routeId={recordingRoute}
                 axes={recordingAxes}
+                base={recordingLayer?.params ?? { x: 0.5, y: 0.5 }}
                 onDone={onGestureDone}
                 onCancel={() => setRecordingRoute(null)}
               />

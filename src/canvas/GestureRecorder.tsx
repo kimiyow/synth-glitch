@@ -14,6 +14,8 @@ type Props = {
   routeId: string;
   // nombres de los ejes de la capa, para explicar qué mueve cada dirección del dedo
   axes: { x: string; y: string };
+  // valores base de la capa: mientras no se toca, la capa se queda en ellos (sin el gesto anterior)
+  base: { x: number; y: number };
   // fin de la grabación: muestras [x, y] intercaladas y duración (ms)
   onDone: (clip: { durationMs: number; samples: number[] }) => void;
   onCancel: () => void;
@@ -25,7 +27,7 @@ const POLL_MS = 100;
 // capa de grabación sobre el lienzo: la posición del dedo en el área de la imagen es el valor de
 // los dos parámetros (izquierda → derecha = 0 → 1; abajo → arriba = 0 → 1). Todo ocurre en el hilo
 // de UI; JS solo consulta números para saber cuándo terminó (sin llamar a JS desde un worklet)
-export function GestureRecorder({ bus, routeId, axes, onDone, onCancel }: Props) {
+export function GestureRecorder({ bus, routeId, axes, base, onDone, onCancel }: Props) {
   const [size, setSize] = useState({ w: 1, h: 1 });
   const [elapsed, setElapsed] = useState<number | null>(null);
   const down = useSharedValue(0);
@@ -35,9 +37,20 @@ export function GestureRecorder({ bus, routeId, axes, onDone, onCancel }: Props)
   const seconds = useSharedValue(0);
   const finished = useRef(false);
 
-  // al salir (terminar o cancelar) la ruta deja de seguir al dedo
-  const { recRoute } = bus;
-  useEffect(() => () => recRoute.set(""), [recRoute]);
+  // la grabación toma la ruta desde que se abre: al regrabar, el gesto anterior deja de verse y la
+  // capa queda en sus valores base hasta que el dedo toca. Al salir (terminar o cancelar) la ruta
+  // deja de seguir al dedo
+  const { recRoute, recX, recY } = bus;
+  const baseX = base.x;
+  const baseY = base.y;
+  useEffect(() => {
+    recX.set(baseX);
+    recY.set(baseY);
+    recRoute.set(routeId);
+    return () => recRoute.set("");
+    // solo al abrir la grabación: la base no cambia mientras se graba
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeId]);
 
   const w = size.w;
   const h = size.h;
