@@ -15,8 +15,9 @@ export type Stamp = {
   seed: number;
 };
 export type Stroke = { id: string; stamps: Stamp[]; strokeSeed: number };
-// máximo 400 trazos
-export type PaintLayer = { strokes: Stroke[] };
+// máximo 400 trazos. Es la fila PINTURA de Capas: index = cuántas capas quedan debajo (0 = sobre la
+// imagen); visible = el ojo de la fila
+export type PaintLayer = { strokes: Stroke[]; visible: boolean; index: number };
 
 export type BlendMode = "replace" | "screen" | "multiply" | "difference";
 

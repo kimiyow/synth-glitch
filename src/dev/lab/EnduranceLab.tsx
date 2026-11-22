@@ -69,7 +69,7 @@ async function runCycle(i: number): Promise<number> {
   const base = createProject({ id: newProjectId(now), media: { kind: "photo", file: "media.jpg", ...BIG }, seed, now });
   const project = {
     ...base,
-    scene: { ...base.scene, layers: randomLayers(), paint: { strokes: [{ id: `s${i}`, strokeSeed: seed, stamps: randomStroke(seed) }] } },
+    scene: { ...base.scene, layers: randomLayers(), paint: { strokes: [{ id: `s${i}`, strokeSeed: seed, stamps: randomStroke(seed) }], visible: true, index: 0 } },
   };
   try {
     // captura: se escribe el medio como borrador y se abre, como al tomar una foto

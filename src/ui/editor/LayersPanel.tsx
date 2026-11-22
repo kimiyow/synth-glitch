@@ -3,8 +3,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useReducedMotion } from "react-native-reanimated";
 
-import { moveLayer, toggleLayerVisible } from "../../actions/sceneEdits";
-import type { Layer, Route, SourceConfig } from "../../domain/types";
+import { clearPaint, moveLayer, toggleLayerVisible, togglePaintVisible } from "../../actions/sceneEdits";
+import type { Layer, PaintLayer, Route, SourceConfig } from "../../domain/types";
+import { PAINT_ROW_ID, stackIds } from "../../paint/paintStack";
 import { selectFeedback, tapFeedback } from "../../platform/haptics";
 import { confirmDelete } from "../../state/confirm";
 import { Icon } from "../kit/Icon";
@@ -23,10 +24,17 @@ const ROW_GAP = 4;
 const ROW_STRIDE = ROW_H + ROW_GAP;
 
 type RowProps = {
-  layer: Layer;
+  label: string;
+  // texto tenue tras el nombre (GENERADOR, n TRAZOS)
+  suffix: string | null;
+  visible: boolean;
   index: number;
   count: number;
-  mods: Route[];
+  // insignias de modulación
+  badges: ReactNode;
+  a11yExtra: string;
+  // confirmación antes de quitar
+  remove: { title: string; message: string; label: string };
   selected: boolean;
   // desplazamiento para abrir hueco mientras se arrastra otra fila
   offset: number;
@@ -34,6 +42,7 @@ type RowProps = {
   dragging: number | null;
   thumb: ReactNode;
   onOpen: () => void;
+  onToggleVisible: () => void;
   onDragStart: () => void;
   onDragMove: (dy: number) => void;
   onDragEnd: () => void;
@@ -42,8 +51,9 @@ type RowProps = {
   onRemove: () => void;
 };
 
-function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb, onOpen, onDragStart, onDragMove, onDragEnd, onMove, onRemove }: RowProps) {
-  const def = layerDef(layer);
+// fila de la pila: una capa de efecto o generador, o la capa PINTURA
+function StackRow(props: RowProps) {
+  const { label, suffix, visible, index, count, selected, offset, dragging, thumb, onOpen, onDragStart, onDragMove, onDragEnd, onMove } = props;
   const lifted = dragging !== null;
   const reduced = useReducedMotion();
   // la manija arrastra en el hilo de JS (pocas filas); bloquea el desplazamiento de la hoja
@@ -57,47 +67,27 @@ function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb
     <View style={[styles.rowWrap, { transform: [{ translateY: lifted ? dragging : offset }] }, lifted && styles.rowLifted]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Capa ${index + 1}, ${def.label}${mods.length ? `, ${mods.length} modulaciones` : ""}${layer.visible ? "" : ", oculta"}`}
+        accessibilityLabel={`Capa ${index + 1}, ${label}${props.a11yExtra}${visible ? "" : ", oculta"}`}
         onPress={onOpen}
         style={({ pressed }) => [styles.row, selected && styles.rowSelected, lifted && styles.rowDragging, lifted && !reduced && styles.rowGrow, pressed && styles.pressed]}
       >
-        <View style={[styles.thumb, !layer.visible && styles.hidden]}>{thumb}</View>
+        <View style={[styles.thumb, !visible && styles.hidden]}>{thumb}</View>
         <View style={styles.rowText}>
-          <Text style={[styles.rowTitle, !layer.visible && styles.rowTitleHidden]} numberOfLines={1}>
+          <Text style={[styles.rowTitle, !visible && styles.rowTitleHidden]} numberOfLines={1}>
             <Text style={styles.order}>{index + 1} </Text>
-            {def.label}
-            {layer.kind === "generator" ? <Text style={styles.order}> · GENERADOR</Text> : null}
+            {label}
+            {suffix ? <Text style={styles.order}> · {suffix}</Text> : null}
           </Text>
-          {mods.length > 0 && (
-            <View style={styles.badges}>
-              {mods.map((r) => (
-                <View key={r.id} style={styles.badge} accessible accessibilityLabel={`${SOURCE_LABEL[r.source]} mueve ${def.axes[r.target.param]}`}>
-                  <Icon name={SOURCE_ICON[r.source]} size={11} />
-                </View>
-              ))}
-            </View>
-          )}
+          {props.badges}
         </View>
-        <IconButton
-          icon={layer.visible ? "eye" : "eye.slash"}
-          label={layer.visible ? "Ocultar capa" : "Mostrar capa"}
-          size={36}
-          bare
-          onPress={() => toggleLayerVisible(layer.id)}
-        />
+        <IconButton icon={visible ? "eye" : "eye.slash"} label={visible ? "Ocultar capa" : "Mostrar capa"} size={36} bare onPress={props.onToggleVisible} />
         <IconButton
           icon="trash"
-          label={`Quitar ${def.label}`}
+          label={`Quitar ${label}`}
           size={36}
           bare
           onPress={() => {
-            const n = mods.length;
-            void confirmDelete({
-              section: "CAPA",
-              title: `¿Quitar ${def.label}?`,
-              message: n > 0 ? `También se quitan sus ${n === 1 ? "modulación" : `${n} modulaciones`}. Puedes deshacerlo con ↶.` : "Puedes deshacerlo con ↶.",
-              label: "Quitar capa",
-            }).then((ok) => ok && onRemove());
+            void confirmDelete({ section: "CAPA", ...props.remove }).then((ok) => ok && props.onRemove());
           }}
         />
         {count > 1 && (
@@ -106,7 +96,7 @@ function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb
               style={styles.handle}
               accessible
               accessibilityRole="adjustable"
-              accessibilityLabel={`Ordenar ${def.label}, posición ${index + 1} de ${count}`}
+              accessibilityLabel={`Ordenar ${label}, posición ${index + 1} de ${count}`}
               accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
               onAccessibilityAction={(e) => {
                 if (e.nativeEvent.actionName === "decrement" && index < count - 1) onMove(index + 1);
@@ -122,8 +112,51 @@ function LayerRow({ layer, index, count, mods, selected, offset, dragging, thumb
   );
 }
 
+function layerRowInfo(layer: Layer, mods: Route[]) {
+  const def = layerDef(layer);
+  const n = mods.length;
+  return {
+    label: def.label,
+    suffix: layer.kind === "generator" ? "GENERADOR" : null,
+    a11yExtra: n ? `, ${n} modulaciones` : "",
+    remove: {
+      title: `¿Quitar ${def.label}?`,
+      message: n > 0 ? `También se quitan sus ${n === 1 ? "modulación" : `${n} modulaciones`}. Puedes deshacerlo con ↶.` : "Puedes deshacerlo con ↶.",
+      label: "Quitar capa",
+    },
+    badges:
+      n > 0 ? (
+        <View style={styles.badges}>
+          {mods.map((r) => (
+            <View key={r.id} style={styles.badge} accessible accessibilityLabel={`${SOURCE_LABEL[r.source]} mueve ${def.axes[r.target.param]}`}>
+              <Icon name={SOURCE_ICON[r.source]} size={11} />
+            </View>
+          ))}
+        </View>
+      ) : null,
+  };
+}
+
+function paintRowInfo(strokes: number) {
+  const trazos = strokes === 1 ? "1 TRAZO" : `${strokes} TRAZOS`;
+  return {
+    label: "PINTURA",
+    suffix: trazos,
+    a11yExtra: `, ${trazos.toLowerCase()}`,
+    remove: {
+      title: "¿Borrar la pintura?",
+      message: `${strokes === 1 ? "Se quita el trazo" : `Se quitan los ${strokes} trazos`} del pincel. Puedes deshacerlo con ↶.`,
+      label: "Borrar pintura",
+    },
+    badges: null,
+  };
+}
+
 type Props = {
   layers: readonly Layer[];
+  // capa PINTURA (trazos del pincel); su fila aparece si tiene trazos
+  paint: PaintLayer;
+  onOpenBrush: () => void;
   routes: readonly Route[];
   selectedLayerId: string | null;
   onSelect: (layerId: string) => void;
@@ -144,7 +177,9 @@ type Props = {
 // panel Capas: la pila de la escena como en un editor de video. Cada capa abre su inspector
 // (parámetros + modulaciones); arriba, el reloj y el micrófono que comparte toda la escena
 export function LayersPanel(props: Props) {
-  const { layers, routes, selectedLayerId } = props;
+  const { layers, routes, selectedLayerId, paint } = props;
+  // filas en orden de aplicación: las capas y, en su lugar, la pintura
+  const rows = stackIds(layers, paint);
   const [view, setView] = useState<"list" | "layer" | "global">(() => (props.startInLayer && selectedLayerId ? "layer" : "list"));
   const open = view === "layer" ? (layers.find((l) => l.id === selectedLayerId) ?? null) : null;
 
@@ -162,7 +197,7 @@ export function LayersPanel(props: Props) {
     dragRef.current = value;
     setDragState(value);
   };
-  const dropIndex = (d: NonNullable<typeof drag>) => Math.min(layers.length - 1, Math.max(0, d.from + Math.round(d.dy / ROW_STRIDE)));
+  const dropIndex = (d: NonNullable<typeof drag>) => Math.min(rows.length - 1, Math.max(0, d.from + Math.round(d.dy / ROW_STRIDE)));
   const target = drag ? dropIndex(drag) : null;
   const shiftFor = (i: number) => {
     if (!drag || target === null || i === drag.from) return 0;
@@ -193,9 +228,9 @@ export function LayersPanel(props: Props) {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <View style={styles.sectionRow} accessible accessibilityLabel={`${layers.length} capas, se aplican de arriba hacia abajo`}>
-          <Text style={styles.sectionText}>{layers.length === 1 ? "1 CAPA" : `${layers.length} CAPAS`}</Text>
-          {layers.length > 1 && (
+        <View style={styles.sectionRow} accessible accessibilityLabel={`${rows.length} capas, se aplican de arriba hacia abajo`}>
+          <Text style={styles.sectionText}>{rows.length === 1 ? "1 CAPA" : `${rows.length} CAPAS`}</Text>
+          {rows.length > 1 && (
             <>
               <Icon name="arrow.down" size={10} color={colors.inkMute} />
               <Text style={styles.sectionText}>EN ORDEN</Text>
@@ -219,7 +254,7 @@ export function LayersPanel(props: Props) {
         </Pressable>
       </View>
 
-      {layers.length === 0 ? (
+      {rows.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Aún no hay capas</Text>
           <Pressable accessibilityRole="button" hitSlop={{ top: 6, bottom: 6 }} onPress={props.onOpenEffects} style={({ pressed }) => [styles.globalBtn, pressed && styles.pressed]}>
@@ -229,38 +264,55 @@ export function LayersPanel(props: Props) {
         </View>
       ) : (
         <View style={styles.list}>
-          {layers.map((layer, i) => (
-            <LayerRow
-              key={layer.id}
-              layer={layer}
-              index={i}
-              count={layers.length}
-              mods={routes.filter((r) => r.target.layerId === layer.id)}
-              selected={layer.id === selectedLayerId}
-              offset={shiftFor(i)}
-              dragging={drag?.id === layer.id ? drag.dy : null}
-              thumb={props.renderThumb(layer, ROW_THUMB)}
-              onRemove={() => props.onRemove(layer.id)}
-              onOpen={() => {
-                selectFeedback();
-                props.onSelect(layer.id);
-                setView("layer");
-              }}
-              onDragStart={() => {
-                lockSheet(true);
-                tapFeedback();
-                setDrag({ id: layer.id, from: i, dy: 0 });
-              }}
-              onDragMove={(dy) => setDrag((d) => (d ? { ...d, dy } : d))}
-              onDragEnd={() => {
-                lockSheet(false);
-                const d = dragRef.current;
-                if (d && dropIndex(d) !== d.from) moveLayer(d.id, dropIndex(d));
-                setDrag(null);
-              }}
-              onMove={(to) => moveLayer(layer.id, to)}
-            />
-          ))}
+          {rows.map((id, i) => {
+            const layer = layers.find((l) => l.id === id);
+            if (!layer && id !== PAINT_ROW_ID) return null;
+            const mods = layer ? routes.filter((r) => r.target.layerId === layer.id) : [];
+            const info = layer ? layerRowInfo(layer, mods) : paintRowInfo(paint.strokes.length);
+            return (
+              <StackRow
+                key={id}
+                {...info}
+                visible={layer ? layer.visible : paint.visible}
+                index={i}
+                count={rows.length}
+                selected={layer ? layer.id === selectedLayerId : false}
+                offset={shiftFor(i)}
+                dragging={drag?.id === id ? drag.dy : null}
+                thumb={
+                  layer ? (
+                    props.renderThumb(layer, ROW_THUMB)
+                  ) : (
+                    <View style={styles.paintThumb}>
+                      <Icon name="paintbrush.pointed" size={20} />
+                    </View>
+                  )
+                }
+                onToggleVisible={() => (layer ? toggleLayerVisible(layer.id) : togglePaintVisible())}
+                onRemove={() => (layer ? props.onRemove(layer.id) : clearPaint())}
+                onOpen={() => {
+                  selectFeedback();
+                  // la fila PINTURA abre el pincel; una capa, su inspector
+                  if (!layer) return props.onOpenBrush();
+                  props.onSelect(layer.id);
+                  setView("layer");
+                }}
+                onDragStart={() => {
+                  lockSheet(true);
+                  tapFeedback();
+                  setDrag({ id, from: i, dy: 0 });
+                }}
+                onDragMove={(dy) => setDrag((d) => (d ? { ...d, dy } : d))}
+                onDragEnd={() => {
+                  lockSheet(false);
+                  const d = dragRef.current;
+                  if (d && dropIndex(d) !== d.from) moveLayer(d.id, dropIndex(d));
+                  setDrag(null);
+                }}
+                onMove={(to) => moveLayer(id, to)}
+              />
+            );
+          })}
         </View>
       )}
     </View>
@@ -308,6 +360,7 @@ const styles = StyleSheet.create({
     borderColor: colors.inkLine,
   },
   rowSelected: { borderColor: colors.paper },
+  paintThumb: { flex: 1, alignItems: "center", justifyContent: "center" },
   thumb: { width: ROW_THUMB, height: ROW_THUMB, borderRadius: radius.sm, overflow: "hidden", backgroundColor: colors.inkRaised },
   hidden: { opacity: 0.3 },
   rowText: { flex: 1, gap: 4 },

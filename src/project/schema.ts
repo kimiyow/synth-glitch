@@ -1,3 +1,4 @@
+import { clampPaintIndex, defaultPaintIndex } from "../paint/paintStack";
 import { DEFAULT_SOURCES, parseRouteSettings, parseSources, withRouteSettings } from "../modulation/sources";
 import type {
   CropAspect,
@@ -42,7 +43,7 @@ export function createScene(media: Scene["media"], seed: number): Scene {
   return {
     media,
     crop: { aspect: "free", rect: [0, 0, 1, 1] },
-    paint: { strokes: [] },
+    paint: { strokes: [], visible: true, index: 0 },
     layers: [],
     routes: [],
     sources: JSON.parse(JSON.stringify(DEFAULT_SOURCES)),
@@ -121,10 +122,15 @@ function stamp(v: unknown, path: string): Stamp {
   };
 }
 
-function paint(v: unknown, path: string): PaintLayer {
-  const strokes = arr(obj(v, path).strokes, `${path}.strokes`);
+// proyectos anteriores no guardan visible ni index: la pintura queda donde se veía (encima del
+// último generador en replace o sobre la imagen)
+function paint(v: unknown, path: string, layers: readonly Layer[]): PaintLayer {
+  const o = obj(v, path);
+  const strokes = arr(o.strokes, `${path}.strokes`);
   if (strokes.length > MAX_STROKES) fail(`${path}.strokes`, `como máximo ${MAX_STROKES} trazos`);
   return {
+    visible: o.visible === undefined ? true : bool(o.visible, `${path}.visible`),
+    index: o.index === undefined ? defaultPaintIndex(layers) : clampPaintIndex(num(o.index, `${path}.index`), layers),
     strokes: strokes.map((s, i) => {
       const p = `${path}.strokes[${i}]`;
       const o = obj(s, p);
@@ -195,6 +201,7 @@ function scene(v: unknown, path: string): Scene {
   if (rect.length !== 4) fail(`${path}.crop.rect`, "4 números");
   obj(o.sources, `${path}.sources`);
   const sources = parseSources(o.sources);
+  const layers = arr(o.layers, `${path}.layers`).map((l, i) => parseLayer(l, `${path}.layers[${i}]`));
   return {
     media: {
       kind: oneOf(media.kind, MEDIA_KINDS, `${path}.media.kind`),
@@ -206,8 +213,8 @@ function scene(v: unknown, path: string): Scene {
       aspect: oneOf(crop.aspect, ASPECTS, `${path}.crop.aspect`),
       rect: rect.map((r, i) => unit(r, `${path}.crop.rect[${i}]`)) as [number, number, number, number],
     },
-    paint: paint(o.paint, `${path}.paint`),
-    layers: arr(o.layers, `${path}.layers`).map((l, i) => parseLayer(l, `${path}.layers[${i}]`)),
+    paint: paint(o.paint, `${path}.paint`, layers),
+    layers,
     // cada modulación lleva sus propios ajustes; los proyectos anteriores los toman de la escena
     routes: arr(o.routes, `${path}.routes`).map((r, i) => withRouteSettings(parseRoute(r, `${path}.routes[${i}]`), sources)),
     sources,

@@ -5,7 +5,8 @@ import type { Layer, Route, SourceConfig } from "../domain/types";
 import type { CropRect } from "../engine/crop";
 import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate } from "../modulation/evaluate";
-import { SceneRenderer } from "../render/SceneRenderer";
+import { paintChainIndex } from "../paint/paintStack";
+import { SceneRenderer, type PaintInput } from "../render/SceneRenderer";
 import { oriInput, type ModBus } from "./modBus";
 
 // escena que se va durante un crossfade: sus capas y modulaciones, cuándo empezó (reloj del
@@ -24,11 +25,14 @@ type Props = {
   crop?: CropRect;
   rotation?: 0 | 90 | 180 | 270;
   sourceSize?: { width: number; height: number };
+  // capa PINTURA de la escena; su lugar (paintIndex) se aplica a las capas que se van
+  paint?: PaintInput | null;
+  paintIndex?: number;
 };
 
 // la escena anterior dibujada encima de la nueva, con opacidad que baja de 1 a 0 a lo largo del
 // fundido. Sigue animando con sus propias modulaciones mientras se desvanece
-export function FadeOutScene({ fade, bus, micLevel, image, width, height, sources, seed, crop, rotation, sourceSize }: Props) {
+export function FadeOutScene({ fade, bus, micLevel, image, width, height, sources, seed, crop, rotation, sourceSize, paint, paintIndex = 0 }: Props) {
   const chain = buildLayerChain(fade.layers).map((n) => ({ id: n.layerId, params: n.base }));
   const { routes, start, duration } = fade;
   const frame = useDerivedValue<FrameInputs>(() => {
@@ -61,6 +65,7 @@ export function FadeOutScene({ fade, bus, micLevel, image, width, height, source
         crop={crop}
         rotation={rotation}
         sourceSize={sourceSize}
+        paint={paint ? { ...paint, at: paintChainIndex(fade.layers, paintIndex) } : null}
       />
     </Group>
   );

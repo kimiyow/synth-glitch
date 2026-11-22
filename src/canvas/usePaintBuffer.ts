@@ -9,7 +9,7 @@ import type { Stamp, Stroke } from "../domain/types";
 let empty: SkImage | null = null;
 
 // máscara sin sellos (1×1 transparente): el nodo de pintura nunca recibe una imagen nula
-function emptyMask(): SkImage {
+export function emptyMask(): SkImage {
   if (!empty) {
     const surface = Skia.Surface.Make(1, 1);
     if (!surface) throw new Error("NO SE PUDO CREAR LA MÁSCARA");

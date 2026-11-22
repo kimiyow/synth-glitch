@@ -4,12 +4,19 @@ import { isSharedValue, useDerivedValue, type DerivedValue } from "react-native-
 
 import { cropViewport, FULL_CROP, type CropRect } from "../engine/crop";
 import { buildLayerChain, nodeUniforms, type ChainNode, type FrameInputs } from "../engine/renderGraph";
-import { BLEND_INDEX } from "../engine/registry";
 import { getEffectRuntime, getGeneratorRuntime } from "../engine/runtimeEffects";
 import type { Layer } from "../domain/types";
 
+// capa PINTURA: la imagen pintada se compone sobre la cadena donde la máscara tiene sellos, justo
+// encima de los `at` primeros nodos (0 = sobre la imagen, debajo de todas las capas)
+export type PaintInput = {
+  image: SkImage | DerivedValue<SkImage | null>;
+  mask: SkImage | DerivedValue<SkImage>;
+  at: number;
+};
+
 type Props = {
-  // original o buffer de pintura (valor compartido en el editor)
+  // medio sin pintura (valor compartido con los cuadros de un clip)
   image: SkImage | DerivedValue<SkImage | null>;
   width: number;
   height: number;
@@ -24,13 +31,11 @@ type Props = {
   rotation?: 0 | 90 | 180 | 270;
   // tamaño del cuadro sin rotar; necesario cuando hay giro (el cuadro es un valor compartido)
   sourceSize?: { width: number; height: number };
-  // dónde hay sellos de pincel. Un generador en replace tapa la imagen base y con ella la pintura:
-  // con la máscara, la pintura se compone encima del último generador en replace (y debajo de lo
-  // que siga), como si ese generador fuera el medio
-  paintMask?: SkImage | DerivedValue<SkImage> | null;
+  // capa PINTURA (solo imágenes fijas); null o ausente = sin pintura
+  paint?: PaintInput | null;
 };
 
-// pintura (imagen base pintada) encima de la cadena donde la máscara tiene sellos
+// pintura encima de la cadena donde la máscara tiene sellos
 const PAINT_OVER = Skia.RuntimeEffect.Make(`
 uniform shader below;
 uniform shader paint;
@@ -41,10 +46,10 @@ half4 main(float2 p) {
 
 // árbol de Skia de la escena: medio → capas de efecto y generador apiladas → recorte. Va dentro de
 // un Canvas o de drawAsImage. width × height es el tamaño de salida (la región recortada)
-export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP, rotation = 0, sourceSize, paintMask }: Props) {
+export function SceneRenderer({ image, width, height, layers, seed, frame, crop = FULL_CROP, rotation = 0, sourceSize, paint }: Props) {
   const chain = buildLayerChain(layers);
-  // la pintura va encima del último generador que reemplaza la imagen (clips: no hay pintura)
-  const paintOverIndex = paintMask && rotation === 0 ? lastReplaceGenerator(chain) : -1;
+  // la pintura va encima del nodo paintAt - 1 (clips: no hay pintura)
+  const paintAt = paint && PAINT_OVER && rotation === 0 ? Math.min(chain.length, Math.max(0, paint.at)) : -1;
   // los efectos se evalúan sobre la imagen completa, así el recorte no cambia su aspecto
   const { fullW, fullH, tx, ty } = cropViewport(width, height, crop);
   const resolution: [number, number] = [fullW, fullH];
@@ -59,9 +64,24 @@ export function SceneRenderer({ image, width, height, layers, seed, frame, crop 
   ) : (
     <ImageShader image={image} fit="cover" rect={fullRect} tx="clamp" ty="clamp" />
   );
+  const paintOver = (below: ReactElement, key: string) =>
+    paint && PAINT_OVER ? (
+      <Shader key={key} source={PAINT_OVER} uniforms={{}}>
+        {below}
+        <ImageShader image={paint.image} fit="cover" rect={fullRect} tx="clamp" ty="clamp" />
+        <ImageShader image={paint.mask} fit="cover" rect={fullRect} tx="decal" ty="decal" />
+      </Shader>
+    ) : (
+      below
+    );
+  if (paintAt === 0) node = paintOver(node, "pintura");
   chain.forEach((chainNode, index) => {
     const source = runtimeFor(chainNode);
-    if (!source) return; // un shader que no compila se salta en lugar de romper la cadena
+    // un shader que no compila se salta en lugar de romper la cadena
+    if (!source) {
+      if (index === paintAt - 1) node = paintOver(node, `${chainNode.layerId}-pintura`);
+      return;
+    }
     // la key por capa evita que React reutilice el nodo de otra capa: un generador con los uniforms
     // de un efecto (sin blend) hace que Skia falle en el hilo de UI y cierra la app
     node = isLiveFrame(frame) ? (
@@ -73,15 +93,7 @@ export function SceneRenderer({ image, width, height, layers, seed, frame, crop 
         {node}
       </Shader>
     );
-    if (index === paintOverIndex && PAINT_OVER && paintMask) {
-      node = (
-        <Shader key={`${chainNode.layerId}-pintura`} source={PAINT_OVER} uniforms={{}}>
-          {node}
-          <ImageShader image={image} fit="cover" rect={fullRect} tx="clamp" ty="clamp" />
-          <ImageShader image={paintMask} fit="cover" rect={fullRect} tx="decal" ty="decal" />
-        </Shader>
-      );
-    }
+    if (index === paintAt - 1) node = paintOver(node, `${chainNode.layerId}-pintura`);
   });
 
   return (
@@ -106,14 +118,6 @@ function coverMatrix(src: { width: number; height: number }, rotation: number, w
   m.scale(s, s);
   m.translate(-src.width / 2, -src.height / 2);
   return m;
-}
-
-function lastReplaceGenerator(chain: readonly ChainNode[]): number {
-  for (let i = chain.length - 1; i >= 0; i--) {
-    const node = chain[i];
-    if (node.kind === "generator" && node.blend === BLEND_INDEX.replace) return i;
-  }
-  return -1;
 }
 
 function runtimeFor(node: ChainNode) {

@@ -1,6 +1,6 @@
 import { Canvas, Group, type SkImage } from "@shopify/react-native-skia";
 import { useEffect, useState } from "react";
-import type { DerivedValue, SharedValue } from "react-native-reanimated";
+import type { SharedValue } from "react-native-reanimated";
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector, type GestureType } from "react-native-gesture-handler";
 import Animated, {
@@ -30,8 +30,9 @@ import {
 } from "../paint/strokeInterpolate";
 import type { Layer, Route, SourceConfig, Stamp, Stroke } from "../domain/types";
 import { colors, type } from "../ui/tokens";
-import { SceneRenderer } from "../render/SceneRenderer";
-import { usePaintBuffer } from "./usePaintBuffer";
+import { SceneRenderer, type PaintInput } from "../render/SceneRenderer";
+import { emptyMask, usePaintBuffer } from "./usePaintBuffer";
+import { paintChainIndex } from "../paint/paintStack";
 import { clampAxis, clampZoom, fitContain, screenToImage } from "./viewTransform";
 
 export type BrushConfig = {
@@ -79,6 +80,9 @@ type Props = {
   paintable?: boolean;
   brush?: BrushConfig | null;
   strokes?: readonly Stroke[];
+  // capa PINTURA: ojo de la fila y lugar en la pila (scene.paint)
+  paintVisible?: boolean;
+  paintIndex?: number;
   mediaWidth?: number;
   mediaHeight?: number;
   showSizePreview?: boolean;
@@ -93,6 +97,7 @@ export function EditorCanvas(props: Props) {
   const { routes, sources } = props;
   const { image, contentWidth, contentHeight, layers, seed, crop, xyLayerId = null, onCommitXY, onResetXY } = props;
   const { paintable = false, brush = null, strokes = NO_STROKES, showSizePreview = false } = props;
+  const { paintVisible = true, paintIndex = 0 } = props;
   const mediaWidth = props.mediaWidth ?? contentWidth;
   const mediaHeight = props.mediaHeight ?? contentHeight;
   const [view, setView] = useState({ width: 0, height: 0 });
@@ -113,12 +118,23 @@ export function EditorCanvas(props: Props) {
   const paint = usePaintBuffer(paintable ? still : null, mediaWidth, mediaHeight, strokes);
   const cancelled = useSharedValue(false);
   const live = useSharedValue<Stamp[]>([]);
+  // pintar sobre la capa PINTURA oculta la muestra desde el primer sello; el trazo confirmado la
+  // vuelve visible en el store
+  const stroking = useSharedValue(false);
+  useEffect(() => {
+    stroking.set(false);
+  }, [paintVisible, stroking]);
+  const blankMask = emptyMask();
+  const shownMask = useDerivedValue(() => (paintVisible || stroking.get() ? paint.mask.get() : blankMask));
 
   const pinch = Gesture.Pinch()
     .onStart((e) => {
       // un segundo dedo durante un trazo lo cancela
       cancelled.set(true);
-      if (live.get().length > 0) paint.cancelStroke();
+      if (live.get().length > 0) {
+        stroking.set(false);
+        paint.cancelStroke();
+      }
       start.set({ s: scale.get(), tx: tx.get(), ty: ty.get(), fx: e.focalX, fy: e.focalY });
     })
     .onUpdate((e) => {
@@ -275,6 +291,7 @@ export function EditorCanvas(props: Props) {
     cursor.set(null);
     live.set([]);
     cancelled.set(false);
+    stroking.set(true);
     paint.beginStroke();
     placeAt(px, py);
   };
@@ -299,6 +316,7 @@ export function EditorCanvas(props: Props) {
       live.set([]);
       if (stamps.length === 0) return;
       if (cancelled.get()) {
+        stroking.set(false);
         runOnUI(paint.cancelStroke)();
         return;
       }
@@ -308,8 +326,8 @@ export function EditorCanvas(props: Props) {
 
   const toolGestures = [pinch, gate, xyPan, xyCommit, brushPan, brushCommit, doubleTap];
   const gestures = Gesture.Simultaneous(...toolGestures, ...(props.extraGesture ? [props.extraGesture] : []));
-  const sceneImage: SkImage | DerivedValue<SkImage | null> = paintable && paint.ready ? paint.shown : image;
-  const paintMask = paintable && paint.ready ? paint.mask : null;
+  // la pintura va siempre en el árbol de una foto: el primer sello se ve sin esperar al store
+  const paintInput: PaintInput | null = paintable && paint.ready ? { image: paint.shown, mask: shownMask, at: paintChainIndex(layers, paintIndex) } : null;
   const rotation = props.rotation ?? 0;
 
   const transform = useDerivedValue(() => [
@@ -338,7 +356,7 @@ export function EditorCanvas(props: Props) {
             <Group transform={transform}>
               <Group transform={[{ translateX: base.x }, { translateY: base.y }]}>
                 <SceneRenderer
-                  image={sceneImage}
+                  image={image}
                   width={base.width}
                   height={base.height}
                   layers={layers}
@@ -347,7 +365,7 @@ export function EditorCanvas(props: Props) {
                   crop={crop}
                   rotation={rotation}
                   sourceSize={props.sourceSize}
-                  paintMask={paintMask}
+                  paint={paintInput}
                 />
                 {props.fadeFrom && (
                   <FadeOutScene
@@ -356,7 +374,9 @@ export function EditorCanvas(props: Props) {
                     fade={props.fadeFrom}
                     bus={bus}
                     micLevel={micLevel}
-                    image={sceneImage}
+                    image={image}
+                    paint={paintInput}
+                    paintIndex={paintIndex}
                     width={base.width}
                     height={base.height}
                     sources={sources}

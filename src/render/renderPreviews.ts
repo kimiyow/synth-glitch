@@ -7,7 +7,8 @@ import { evaluate, NO_INPUTS } from "../modulation/evaluate";
 import { renderPaintMask, renderPainted } from "../paint/brushEngine";
 import { GENERATOR_BY_ID } from "../engine/registry";
 import type { GeneratorId, Layer, Scene } from "../domain/types";
-import { SceneRenderer } from "./SceneRenderer";
+import { hasPaint, paintChainIndex } from "../paint/paintStack";
+import { SceneRenderer, type PaintInput } from "./SceneRenderer";
 
 export const PREVIEW_LONG_SIDE = 2048;
 export const THUMB_LONG_SIDE = 400;
@@ -39,23 +40,19 @@ export async function renderSceneJpeg(
   const size = fitLongSide(croppedSize(image.width(), image.height(), scene.crop.rect), longSide);
   // la pintura se reproduce desde los trazos a la resolución de salida
   const paintLongSide = Math.min(4096, Math.ceil(longSide / Math.max(scene.crop.rect[2], scene.crop.rect[3])));
-  const source = renderPainted(image, scene.paint.strokes, paintLongSide);
-  const paintMask = renderPaintMask(image, scene.paint.strokes, paintLongSide);
+  const paint = paintInput(image, scene, paintLongSide);
   const element = createElement(SceneRenderer, {
-    image: source,
+    image,
     width: size.width,
     height: size.height,
     layers: scene.layers,
     seed: scene.seed,
     frame,
     crop: scene.crop.rect,
-    paintMask,
+    paint: paint?.input,
   });
-  const rendered = await drawAsImage(element, size).finally(() => {
-    // la imagen pintada es temporal; a 4096 px no liberarla acumula memoria
-    if (source !== image) source.dispose();
-    paintMask?.dispose();
-  });
+  // la imagen pintada es temporal; a 4096 px no liberarla acumula memoria
+  const rendered = await drawAsImage(element, size).finally(() => paint?.dispose());
   if (!rendered) throw new Error("NO SE PUDO RENDERIZAR LA VISTA PREVIA");
   try {
     const bytes = rendered.encodeToBytes(ImageFormat.JPEG, quality);
@@ -64,6 +61,22 @@ export async function renderSceneJpeg(
   } finally {
     rendered.dispose();
   }
+}
+
+// capa PINTURA reproducida desde los trazos (null si no tiene trazos o está oculta)
+function paintInput(image: SkImage, scene: Scene, longSide: number): { input: PaintInput; dispose: () => void } | null {
+  const { paint } = scene;
+  if (!hasPaint(paint) || !paint.visible) return null;
+  const painted = renderPainted(image, paint.strokes, longSide);
+  const mask = renderPaintMask(image, paint.strokes, longSide);
+  if (!mask) return null;
+  return {
+    input: { image: painted, mask, at: paintChainIndex(scene.layers, paint.index) },
+    dispose() {
+      if (painted !== image) painted.dispose();
+      mask.dispose();
+    },
+  };
 }
 
 let blank: SkImage | null = null;
@@ -111,21 +124,20 @@ export async function renderGeneratorJpeg(generator: GeneratorId, width: number,
 export function createFrameRenderer(image: SkImage, scene: Scene, longSide: number) {
   const size = fitLongSide(croppedSize(image.width(), image.height(), scene.crop.rect), longSide);
   const paintLongSide = Math.min(4096, Math.ceil(longSide / Math.max(scene.crop.rect[2], scene.crop.rect[3])));
-  const source = renderPainted(image, scene.paint.strokes, paintLongSide);
-  const paintMask = renderPaintMask(image, scene.paint.strokes, paintLongSide);
+  const paint = paintInput(image, scene, paintLongSide);
   const info = { width: size.width, height: size.height, colorType: ColorType.RGBA_8888, alphaType: AlphaType.Unpremul };
   return {
     size,
     async render(frame: FrameInputs): Promise<Uint8Array> {
       const element = createElement(SceneRenderer, {
-        image: source,
+        image,
         width: size.width,
         height: size.height,
         layers: scene.layers,
         seed: scene.seed,
         frame,
         crop: scene.crop.rect,
-        paintMask,
+        paint: paint?.input,
       });
       const rendered = await drawAsImage(element, size);
       if (!rendered) throw new Error("NO SE PUDO RENDERIZAR EL CUADRO");
@@ -138,8 +150,7 @@ export function createFrameRenderer(image: SkImage, scene: Scene, longSide: numb
       }
     },
     dispose() {
-      if (source !== image) source.dispose();
-      paintMask?.dispose();
+      paint?.dispose();
     },
   };
 }

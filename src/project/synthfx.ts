@@ -1,5 +1,6 @@
 import { parseSources, withRouteSettings } from "../modulation/sources";
 import { MAX_LAYERS } from "../engine/layerCost";
+import { clampPaintIndex } from "../paint/paintStack";
 import type { Scene, SynthFx } from "../domain/types";
 import { Invalid, parseLayer, parseRoute, type ValidationResult } from "./schema";
 
@@ -83,4 +84,5 @@ export function applySynthFx(scene: Scene, fx: SynthFx): void {
   scene.routes = fx.routes.map((r) => JSON.parse(JSON.stringify(r)) as typeof r);
   scene.sources = fx.sources;
   scene.seed = fx.seed;
+  scene.paint.index = clampPaintIndex(scene.paint.index, scene.layers);
 }

@@ -2,6 +2,7 @@ import { canAddLayer } from "../engine/layerCost";
 import { EFFECT_BY_ID, GENERATOR_BY_ID } from "../engine/registry";
 import { calibrateFloor } from "../modulation/micEnvelope";
 import { defaultRouteSetting } from "../modulation/sources";
+import { clampPaintIndex, defaultPaintIndex, hasPaint, moveInStack } from "../paint/paintStack";
 import { stampSeed } from "../paint/strokeInterpolate";
 import { sceneStore } from "../state/activeScene";
 import type {
@@ -58,6 +59,9 @@ export function findTileLayer(layers: readonly Layer[], tile: LayerTile): Layer 
 // quita la capa y sus rutas
 export function removeLayer(layerId: string) {
   commit("quitar capa", (scene) => {
+    // la pintura conserva su lugar respecto de las capas que siguen debajo
+    const at = scene.layers.findIndex((l) => l.id === layerId);
+    if (at >= 0 && at < scene.paint.index) scene.paint.index -= 1;
     scene.layers = scene.layers.filter((l) => l.id !== layerId);
     scene.routes = scene.routes.filter((r) => r.target.layerId !== layerId);
   });
@@ -204,18 +208,31 @@ export function applySceneVariation(next: { layers: Layer[]; routes: Route[] }, 
   commit(label, (scene) => {
     scene.layers = next.layers;
     scene.routes = next.routes;
+    scene.paint.index = clampPaintIndex(scene.paint.index, scene.layers);
   });
 }
 
-// mueve una capa a otra posición de la pila (la primera se aplica antes)
-export function moveLayer(layerId: string, toIndex: number) {
+// mueve una fila de Capas (una capa o la pintura, PAINT_ROW_ID) a otra posición de la pila. La
+// posición cuenta la fila de pintura si existe; la primera se aplica antes
+export function moveLayer(rowId: string, toIndex: number) {
   commit("ordenar capas", (scene) => {
-    const from = scene.layers.findIndex((l) => l.id === layerId);
-    if (from < 0) return;
-    const to = Math.min(scene.layers.length - 1, Math.max(0, toIndex));
-    if (to === from) return;
-    const [layer] = scene.layers.splice(from, 1);
-    scene.layers.splice(to, 0, layer);
+    const next = moveInStack(scene.layers, scene.paint, rowId, toIndex);
+    scene.layers = next.layers;
+    scene.paint.index = next.paintIndex;
+  });
+}
+
+export function togglePaintVisible() {
+  commit("mostrar u ocultar pintura", (scene) => {
+    scene.paint.visible = !scene.paint.visible;
+  });
+}
+
+// quita la capa PINTURA (todos sus trazos)
+export function clearPaint() {
+  commit("borrar pintura", (scene) => {
+    scene.paint.strokes = [];
+    scene.paint.visible = true;
   });
 }
 
@@ -241,6 +258,9 @@ export function setTempo(bpm: number) {
 
 export function commitStroke(stamps: Stamp[]) {
   commit("trazo", (scene) => {
+    // el primer trazo crea la capa PINTURA; pintar sobre ella oculta la vuelve a mostrar
+    if (!hasPaint(scene.paint)) scene.paint.index = defaultPaintIndex(scene.layers);
+    scene.paint.visible = true;
     const index = scene.paint.strokes.length;
     scene.paint.strokes.push({
       id: `s${Date.now().toString(36)}-${index}`,

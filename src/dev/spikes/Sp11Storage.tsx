@@ -35,7 +35,7 @@ function heavyProject(id: string): Project {
       seed: s * 1000 + i,
     })),
   }));
-  return { ...p, scene: { ...p.scene, paint: { strokes } } };
+  return { ...p, scene: { ...p.scene, paint: { ...p.scene.paint, strokes } } };
 }
 
 // escritura atómica con renombrado en el sistema de archivos real, recuperación tras un corte

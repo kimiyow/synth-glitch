@@ -43,6 +43,8 @@ type Props = {
   onSelect: (layerId: string) => void;
   onRemove: (layerId: string) => void;
   onOpenEffects: () => void;
+  // fila PINTURA de Capas: abre el pincel
+  onOpenBrush: () => void;
   onNotice: (text: string) => void;
   // cierra el panel (✕)
   onClose: () => void;
@@ -117,6 +119,8 @@ export function EditorPanels(props: Props) {
         <LayersPanel
           startInLayer={panel === "mod"}
           layers={layers}
+          paint={project.scene.paint}
+          onOpenBrush={props.onOpenBrush}
           routes={routes}
           selectedLayerId={selected?.id ?? null}
           onSelect={props.onSelect}

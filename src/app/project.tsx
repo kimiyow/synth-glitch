@@ -301,6 +301,8 @@ function ProjectView({ project }: { project: Project }) {
     crop: project.scene.crop.rect,
     paintable: !isClip,
     strokes,
+    paintVisible: project.scene.paint.visible,
+    paintIndex: project.scene.paint.index,
     mediaWidth: media.width,
     mediaHeight: media.height,
     xyLayerId: fingerTool === "effects" && !readOnly ? (selected?.id ?? null) : null,
@@ -431,6 +433,7 @@ function ProjectView({ project }: { project: Project }) {
                     onSelect={setSelectedId}
                     onRemove={onRemove}
                     onOpenEffects={() => onToolPress("effects")}
+                    onOpenBrush={() => onToolPress("brush")}
                     onNotice={setNotice}
                     onClose={() => setOverlays([])}
                   onStartStage={startStage}
