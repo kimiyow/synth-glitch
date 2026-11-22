@@ -5,9 +5,9 @@ import { useReducedMotion } from "react-native-reanimated";
 
 import { clearPaint, moveLayer, toggleLayerVisible, togglePaintVisible } from "../../actions/sceneEdits";
 import type { Layer, PaintLayer, Route, SourceConfig } from "../../domain/types";
-import { PAINT_ROW_ID, stackIds } from "../../paint/paintStack";
+import { hasPaint, PAINT_ROW_ID, stackIds } from "../../paint/paintStack";
 import { selectFeedback, tapFeedback } from "../../platform/haptics";
-import { confirmDelete } from "../../state/confirm";
+import { askConfirm, confirmDelete } from "../../state/confirm";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
 import { SheetScrollLock } from "../kit/Sheet";
@@ -22,6 +22,7 @@ const ROW_THUMB = 44;
 const ROW_H = 60;
 const ROW_GAP = 4;
 const ROW_STRIDE = ROW_H + ROW_GAP;
+const PAINT_NO_MOD = "LA MODULACIÓN ES SOLO PARA EFECTOS, NO PARA LA PINTURA";
 
 type RowProps = {
   label: string;
@@ -137,11 +138,12 @@ function layerRowInfo(layer: Layer, mods: Route[]) {
   };
 }
 
-function paintRowInfo(strokes: number) {
+// en Modulación la fila avisa que la pintura no se modula
+function paintRowInfo(strokes: number, modulation: boolean) {
   const trazos = strokes === 1 ? "1 TRAZO" : `${strokes} TRAZOS`;
   return {
     label: "PINTURA",
-    suffix: trazos,
+    suffix: modulation ? "SIN MODULACIÓN" : trazos,
     a11yExtra: `, ${trazos.toLowerCase()}`,
     remove: {
       title: "¿Borrar la pintura?",
@@ -157,6 +159,7 @@ type Props = {
   // capa PINTURA (trazos del pincel); su fila aparece si tiene trazos
   paint: PaintLayer;
   onOpenBrush: () => void;
+  onNotice: (text: string) => void;
   routes: readonly Route[];
   selectedLayerId: string | null;
   onSelect: (layerId: string) => void;
@@ -213,6 +216,30 @@ export function LayersPanel(props: Props) {
 
   if (open) return <>{props.renderInspector(open, () => setView("list"))}</>;
 
+  // + AÑADIR CAPA: un efecto o generador (panel Efectos) o la PINTURA (pincel). La pintura es una
+  // sola capa: si ya existe, el pincel sigue pintando en ella
+  const addLayer = () => {
+    selectFeedback();
+    void askConfirm({
+      section: "CAPAS",
+      title: "Añadir capa",
+      message: hasPaint(paint) ? "La pintura es una sola capa: el pincel sigue pintando en PINTURA." : "La capa PINTURA aparece con tu primer trazo.",
+      actions: [
+        { id: "effect", label: "Efecto o generador", icon: "wand.and.stars", variant: "primary" },
+        { id: "paint", label: hasPaint(paint) ? "Pintar en PINTURA" : "Pintura", icon: "paintbrush.pointed", variant: "secondary" },
+      ],
+    }).then((id) => {
+      if (id === "effect") props.onOpenEffects();
+      if (id === "paint") props.onOpenBrush();
+    });
+  };
+  const addButton = (
+    <Pressable accessibilityRole="button" hitSlop={{ top: 6, bottom: 6 }} onPress={addLayer} style={({ pressed }) => [styles.globalBtn, pressed && styles.pressed]}>
+      <Icon name="plus" size={14} />
+      <Text style={styles.globalText}>AÑADIR CAPA</Text>
+    </Pressable>
+  );
+
   if (globalOpen) {
     return (
       <View style={styles.root}>
@@ -257,10 +284,7 @@ export function LayersPanel(props: Props) {
       {rows.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Aún no hay capas</Text>
-          <Pressable accessibilityRole="button" hitSlop={{ top: 6, bottom: 6 }} onPress={props.onOpenEffects} style={({ pressed }) => [styles.globalBtn, pressed && styles.pressed]}>
-            <Icon name="wand.and.stars" size={14} />
-            <Text style={styles.globalText}>AÑADIR EFECTOS</Text>
-          </Pressable>
+          {addButton}
         </View>
       ) : (
         <View style={styles.list}>
@@ -268,7 +292,7 @@ export function LayersPanel(props: Props) {
             const layer = layers.find((l) => l.id === id);
             if (!layer && id !== PAINT_ROW_ID) return null;
             const mods = layer ? routes.filter((r) => r.target.layerId === layer.id) : [];
-            const info = layer ? layerRowInfo(layer, mods) : paintRowInfo(paint.strokes.length);
+            const info = layer ? layerRowInfo(layer, mods) : paintRowInfo(paint.strokes.length, props.startInLayer === true);
             return (
               <StackRow
                 key={id}
@@ -292,8 +316,8 @@ export function LayersPanel(props: Props) {
                 onRemove={() => (layer ? props.onRemove(layer.id) : clearPaint())}
                 onOpen={() => {
                   selectFeedback();
-                  // la fila PINTURA abre el pincel; una capa, su inspector
-                  if (!layer) return props.onOpenBrush();
+                  // la fila PINTURA abre el pincel (en Modulación avisa que no se modula); una capa, su inspector
+                  if (!layer) return props.startInLayer ? props.onNotice(PAINT_NO_MOD) : props.onOpenBrush();
                   props.onSelect(layer.id);
                   setView("layer");
                 }}
@@ -313,6 +337,7 @@ export function LayersPanel(props: Props) {
               />
             );
           })}
+          <View style={styles.addRow}>{addButton}</View>
         </View>
       )}
     </View>
@@ -347,6 +372,7 @@ const styles = StyleSheet.create({
   sep: { width: StyleSheet.hairlineWidth, height: 14, backgroundColor: colors.inkLineStrong },
   pressed: { opacity: 0.6 },
   list: { gap: ROW_GAP },
+  addRow: { paddingTop: space.sm },
   row: {
     flex: 1,
     flexDirection: "row",

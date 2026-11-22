@@ -121,6 +121,7 @@ export function EditorPanels(props: Props) {
           layers={layers}
           paint={project.scene.paint}
           onOpenBrush={props.onOpenBrush}
+          onNotice={props.onNotice}
           routes={routes}
           selectedLayerId={selected?.id ?? null}
           onSelect={props.onSelect}

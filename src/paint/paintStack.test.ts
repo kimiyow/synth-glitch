@@ -1,3 +1,5 @@
+import { describe, expect, it } from "@jest/globals";
+
 import type { Layer, PaintLayer } from "../domain/types";
 import { defaultPaintIndex, moveInStack, PAINT_ROW_ID, paintChainIndex, stackIds } from "./paintStack";
 
