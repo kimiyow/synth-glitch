@@ -184,7 +184,9 @@ export function PresetsPanel(props: Props) {
 
   return (
     <View style={styles.root} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      <Text style={styles.intro}>Una escena guarda tus capas y modulaciones. Tócala para cambiar a ella con la transición elegida.</Text>
+      <Text style={styles.intro}>
+        Una escena guarda tus capas y modulaciones. Tócala para cambiar a ella; tócala otra vez para quitarla y volver a como estaba.
+      </Text>
 
       <View style={styles.group}>
         <Text style={styles.label}>TRANSICIÓN AL CAMBIAR</Text>
@@ -291,7 +293,7 @@ function SceneCard(props: {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${preset.name}: ${effects}${active ? ", activa" : ""}`}
-        accessibilityHint="Cambia a esta escena. Puedes volver con deshacer"
+        accessibilityHint={active ? "Quita la escena y vuelve a como estaba" : "Cambia a esta escena"}
         accessibilityState={{ selected: active, disabled: props.disabled }}
         disabled={props.disabled}
         onPress={props.onApply}

@@ -54,6 +54,7 @@ export function StageView({
   canvas,
   onExit,
   scenes,
+  activeSceneId,
   onScene,
   fadeBeats,
   onFadeBeats,
@@ -63,11 +64,12 @@ export function StageView({
   onExit: () => void;
   // escenas disparables (tira inferior en modo interactivo)
   scenes: readonly ScenePreset[];
+  // escena que se ve ahora (tocarla la quita)
+  activeSceneId: string | null;
   onScene: (preset: ScenePreset) => void;
   fadeBeats: SceneFadeBeats;
   onFadeBeats: (beats: SceneFadeBeats) => void;
 }) {
-  const [current, setCurrent] = useState<string | null>(null);
   const still = isSharedValue(canvas.image) ? null : (canvas.image as SkImage);
   useStageScreen();
   const insets = useSafeAreaInsets();
@@ -164,17 +166,14 @@ export function StageView({
                 <Text style={styles.fadeText}>{fadeBeats === 0 ? "CORTE" : `${fadeBeats} T`}</Text>
               </Pressable>
               {scenes.map((s) => {
-                const on = s.id === current;
+                const on = s.id === activeSceneId;
                 return (
                   <Pressable
                     key={s.id}
                     accessibilityRole="button"
                     accessibilityLabel={`Escena ${s.name}`}
                     accessibilityState={{ selected: on }}
-                    onPress={() => {
-                      setCurrent(s.id);
-                      onScene(s);
-                    }}
+                    onPress={() => onScene(s)}
                     style={({ pressed }) => [styles.sceneChip, on && styles.sceneChipOn, pressed && styles.pressed]}
                   >
                     {/* miniatura sobre la foto del proyecto (los clips no tienen cuadro fijo) */}

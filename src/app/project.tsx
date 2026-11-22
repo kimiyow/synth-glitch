@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { confirmLeave } from "../actions/leaveGuard";
 import {
   addTileLayer,
+  applySceneVariation,
   calibrateMic,
   commitStroke,
   commitXY,
@@ -18,7 +19,7 @@ import {
 } from "../actions/sceneEdits";
 import { EditorCanvas } from "../canvas/EditorCanvas";
 import { MIN_GESTURE_MS } from "../actions/gestureLibrary";
-import { applyScenePreset } from "../actions/scenePresets";
+import { applyScenePreset, findSameScene } from "../actions/scenePresets";
 import type { SceneFade } from "../canvas/FadeOutScene";
 import { GestureTrail } from "../canvas/GestureTrail";
 import { GestureRecorder } from "../canvas/GestureRecorder";
@@ -26,7 +27,7 @@ import { OrientationSensor } from "../canvas/OrientationSensor";
 import { LiveModContext, useModBus } from "../canvas/modBus";
 import { StageView, type StageMode } from "../canvas/StageView";
 import { useSlowFrames } from "../canvas/useSlowFrames";
-import type { Project, ScenePreset } from "../domain/types";
+import type { Layer, Project, Route, ScenePreset } from "../domain/types";
 import { FACTORY_PRESETS } from "../engine/factoryPresets";
 import { croppedSize } from "../engine/crop";
 import { isCostHigh, MAX_LAYERS } from "../engine/layerCost";
@@ -202,11 +203,29 @@ function ProjectView({ project }: { project: Project }) {
     },
     [],
   );
+  // escenas como interruptor: no se apilan. Al aplicar una escena desde un estado propio, ese estado
+  // queda como original; tocar la escena activa la quita y vuelve a él (con la misma transición).
+  // El original es de esta sesión del proyecto; sin él, quitar la escena deja la imagen sin capas
+  const activeScene = findSameScene(scenes, project.scene.layers, project.scene.routes);
+  const sceneOriginal = useRef<{ projectId: string; layers: Layer[]; routes: Route[] } | null>(null);
   const triggerScene = (preset: ScenePreset) => {
     if (readOnly) return;
     const outgoing = { layers: project.scene.layers, routes: project.scene.routes };
-    const last = applyScenePreset(preset);
-    if (last) setSelectedId(last);
+    const original = sceneOriginal.current?.projectId === project.id ? sceneOriginal.current : null;
+    let notice: string;
+    if (activeScene?.id === preset.id) {
+      const back = original ?? { layers: [], routes: [] };
+      applySceneVariation({ layers: back.layers, routes: back.routes }, `quitar escena · ${preset.name}`);
+      sceneOriginal.current = null;
+      setSelectedId(back.layers.at(-1)?.id ?? null);
+      notice = `${preset.name.toUpperCase()} QUITADA · VUELVE A COMO ESTABA`;
+    } else {
+      // entrar a una escena desde un estado propio (no desde otra escena) guarda ese estado
+      if (!activeScene || !original) sceneOriginal.current = { projectId: project.id, layers: [...outgoing.layers], routes: [...outgoing.routes] };
+      const last = applyScenePreset(preset);
+      if (last) setSelectedId(last);
+      notice = `${preset.name.toUpperCase()} · TÓCALA OTRA VEZ PARA QUITARLA`;
+    }
     if (fadeTimer.current) clearTimeout(fadeTimer.current);
     if (sceneFade > 0 && image && outgoing.layers.length > 0) {
       const duration = (sceneFade * 60) / project.scene.sources.tempo.bpm;
@@ -215,7 +234,7 @@ function ProjectView({ project }: { project: Project }) {
     } else {
       setFade(null);
     }
-    setNotice(`${preset.name.toUpperCase()} · ↶ PARA VOLVER`);
+    setNotice(notice);
   };
 
   // GIRO: el sensor solo se enciende si alguna capa lo usa (se añade como fuente en Modulación)
@@ -413,6 +432,7 @@ function ProjectView({ project }: { project: Project }) {
             // sea el pincel
             canvas={{ ...canvasProps, xyLayerId: readOnly ? null : (selected?.id ?? null) }}
             scenes={readOnly ? [] : scenes}
+            activeSceneId={activeScene?.id ?? null}
             onScene={triggerScene}
             fadeBeats={sceneFade}
             onFadeBeats={(b) => settingsStore.getState().update({ sceneFade: b })}
