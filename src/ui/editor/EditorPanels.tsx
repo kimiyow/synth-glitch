@@ -2,7 +2,7 @@ import type { SkImage } from "@shopify/react-native-skia";
 import type { ComponentProps } from "react";
 
 import { applyGesturePreset, ensureGestureRoute, removeGesturePreset, saveGesturePreset } from "../../actions/gestureLibrary";
-import { removeModulation, setSources, setTempo } from "../../actions/sceneEdits";
+import { removeModulation, setGestureTransform, setSources, setTempo } from "../../actions/sceneEdits";
 import type { StageMode } from "../../canvas/StageView";
 import type { Layer, Project, ScenePreset } from "../../domain/types";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
@@ -45,6 +45,8 @@ type Props = {
   onTriggerScene: (preset: ScenePreset) => void;
   exports: ReturnType<typeof useExportJob>;
   onImportRecipe: () => void;
+  // estela del gesto sobre el lienzo
+  trail: { visible: boolean; onToggle: () => void };
 };
 
 const PANEL_TITLE: Record<PanelId, string> = {
@@ -171,6 +173,11 @@ export function EditorPanels(props: Props) {
             const name = saveGesturePreset(selectedGesture);
             props.onNotice(name ? `${name.toUpperCase()} GUARDADO EN LA BIBLIOTECA` : "BIBLIOTECA LLENA · BORRA UN GESTO");
             return name;
+          }}
+          trailVisible={props.trail.visible}
+          onToggleTrail={props.trail.onToggle}
+          onTransform={(patch) => {
+            if (gestureRoute) setGestureTransform(gestureRoute.id, patch);
           }}
           onRemove={() => {
             if (!gestureRoute) return;

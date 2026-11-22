@@ -1,5 +1,5 @@
 import type { Layer, Route, SourceConfig } from "../domain/types";
-import { cycleHz, routeLfo, routeSeq, routeSh } from "./sources";
+import { cycleHz, gesturePeriodS, routeLfo, routeSeq, routeSh } from "./sources";
 
 // GIF: 12 fps, hasta 4 s (48 cuadros); 3 s si nada marca un periodo
 export const GIF_FPS = 12;
@@ -25,7 +25,7 @@ function routePeriod(route: Route, s: SourceConfig): number | null {
       return beat;
     case "track": {
       const g = route.settings?.gesture;
-      return g && g.samples.length >= 4 && g.durationMs > 0 ? g.durationMs / 1000 : null;
+      return g && g.samples.length >= 4 && g.durationMs > 0 ? gesturePeriodS(g) : null;
     }
     default:
       return null;

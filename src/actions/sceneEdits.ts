@@ -134,12 +134,24 @@ export function addModulation(routes: readonly Route[], layerId: string, param: 
 }
 
 // gesto recién grabado (o aplicado desde la biblioteca) de una modulación GESTO
-export function setGestureClip(routeId: string, clip: Omit<GestureClip, "loop">, label = "grabar gesto") {
+// un gesto nuevo (grabado o de la biblioteca) entra sin transformaciones: suena como se grabó
+export function setGestureClip(routeId: string, clip: Pick<GestureClip, "durationMs" | "samples">, label = "grabar gesto") {
   commit(label, (scene) => {
     const r = scene.routes.find((x) => x.id === routeId);
     if (!r) return;
     const loop = r.settings?.gesture?.loop ?? "smooth";
     r.settings = { ...r.settings, gesture: { durationMs: clip.durationMs, samples: [...clip.samples], loop } };
+  });
+}
+
+export type GestureTransform = Pick<GestureClip, "speed" | "direction" | "mirrorX" | "mirrorY">;
+
+// velocidad, dirección o espejo del gesto de una modulación (un cambio deshacible)
+export function setGestureTransform(routeId: string, patch: GestureTransform) {
+  commit("transformar gesto", (scene) => {
+    const g = scene.routes.find((x) => x.id === routeId)?.settings?.gesture;
+    if (!g) return;
+    Object.assign(g, patch);
   });
 }
 

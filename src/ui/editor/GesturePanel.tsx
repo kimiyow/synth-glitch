@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { GesturePreset, Route, SourceConfig } from "../../domain/types";
+import type { GestureTransform } from "../../actions/sceneEdits";
+import type { GestureDirection, GesturePreset, Route, SourceConfig } from "../../domain/types";
+import { gestureSpeed, GESTURE_SPEEDS } from "../../modulation/sources";
 import { useSettings } from "../../state/appSettings";
 import { MAX_GESTURE_PRESETS } from "../../state/settings";
 import { Icon } from "../kit/Icon";
+import { Segmented } from "../kit/Segmented";
 import { IconButton } from "../kit/IconButton";
 import { confirmDelete } from "../../state/confirm";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
@@ -22,6 +25,10 @@ type Props = {
   // guarda el gesto de la capa en la biblioteca; devuelve el nombre o null si está llena
   onSave: () => string | null;
   onRemove: () => void;
+  // velocidad, dirección y espejo del gesto de la capa
+  onTransform: (patch: GestureTransform) => void;
+  trailVisible: boolean;
+  onToggleTrail: () => void;
   onApply: (preset: GesturePreset) => void;
   onDelete: (id: string) => void;
 };
@@ -42,7 +49,15 @@ const SCOPE_H = 56;
 
 // panel Gesto: qué es, el gesto de la capa seleccionada (en bucle, con su señal en vivo) y la
 // biblioteca para llevarlo a otras capas o proyectos
-export function GesturePanel({ layer, route, routes, scene, onRecord, onSave, onRemove, onApply, onDelete }: Props) {
+const SPEED_LABEL: Record<number, string> = { 0.25: "¼×", 0.5: "½×", 1: "1×", 2: "2×", 4: "4×" };
+const DIRECTIONS: { id: GestureDirection; label: string }[] = [
+  { id: "forward", label: "Adelante" },
+  { id: "reverse", label: "Reversa" },
+  { id: "pingpong", label: "Ida y vuelta" },
+];
+
+export function GesturePanel(props: Props) {
+  const { layer, route, routes, scene, onRecord, onSave, onRemove, onApply, onDelete } = props;
   const presets = useSettings((s) => s.gestures);
   const [scopeW, setScopeW] = useState(0);
   // nombre con el que se guardó el gesto actual (se olvida al grabar otro)
@@ -72,6 +87,13 @@ export function GesturePanel({ layer, route, routes, scene, onRecord, onSave, on
             <Text style={styles.cardTitle} numberOfLines={1}>
               {layer.label} · {(clip.durationMs / 1000).toFixed(1)} s
             </Text>
+            <IconButton
+              icon={props.trailVisible ? "eye" : "eye.slash"}
+              label={props.trailVisible ? "Ocultar el recorrido sobre la imagen" : "Mostrar el recorrido sobre la imagen"}
+              size={32}
+              bare
+              onPress={props.onToggleTrail}
+            />
             <IconButton icon="trash" label="Quitar el gesto de la capa" size={32} bare onPress={onRemove} />
           </View>
           {/* señal en vivo: se ve avanzar y volver a empezar, así se nota que se repite */}
@@ -79,8 +101,22 @@ export function GesturePanel({ layer, route, routes, scene, onRecord, onSave, on
             {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={layer.params} width={scopeW} height={SCOPE_H} />}
           </View>
           <Text style={styles.cardNote}>
-            Mueve {layer.axes.x} y {layer.axes.y}. Para ajustarlo o mezclarlo con otras fuentes, ábrelo en Modulación.
+            Mueve {layer.axes.x} y {layer.axes.y}. Transfórmalo sin regrabar:
           </Text>
+
+          <Text style={styles.label}>VELOCIDAD</Text>
+          <Segmented
+            options={GESTURE_SPEEDS.map((v) => ({ id: v, label: SPEED_LABEL[v] }))}
+            value={gestureSpeed(clip)}
+            onChange={(speed) => props.onTransform({ speed })}
+          />
+          <Text style={styles.label}>DIRECCIÓN</Text>
+          <Segmented options={DIRECTIONS} value={clip.direction ?? "forward"} onChange={(direction) => props.onTransform({ direction })} />
+          <Text style={styles.label}>ESPEJO</Text>
+          <View style={styles.mirrors}>
+            <MirrorToggle icon="arrow.left.and.right" label={`Invertir ${layer.axes.x}`} on={clip.mirrorX === true} onPress={() => props.onTransform({ mirrorX: !clip.mirrorX })} />
+            <MirrorToggle icon="arrow.up.and.down" label={`Invertir ${layer.axes.y}`} on={clip.mirrorY === true} onPress={() => props.onTransform({ mirrorY: !clip.mirrorY })} />
+          </View>
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
@@ -165,7 +201,40 @@ export function GesturePanel({ layer, route, routes, scene, onRecord, onSave, on
   );
 }
 
+function MirrorToggle({ icon, label, on, onPress }: { icon: "arrow.left.and.right" | "arrow.up.and.down"; label: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: on }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.mirror, on && styles.mirrorOn, pressed && styles.pressed]}
+    >
+      <Icon name={icon} size={14} color={on ? colors.paperText : colors.inkText} />
+      <Text style={[styles.mirrorText, on && styles.mirrorTextOn]} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1.2, marginTop: space.xs },
+  mirrors: { flexDirection: "row", gap: space.sm },
+  mirror: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.inkRaised,
+  },
+  mirrorOn: { backgroundColor: colors.paper },
+  mirrorText: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600" },
+  mirrorTextOn: { color: colors.paperText },
   root: { gap: space.md },
   intro: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, lineHeight: 18 },
   card: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: colors.inkSurface },

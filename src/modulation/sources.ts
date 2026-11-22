@@ -88,28 +88,59 @@ export const GESTURE_MAX_FRAMES = GESTURE_RATE_HZ * GESTURE_MAX_S;
 // duración del fundido del cierre suave: 0.4 s o la cuarta parte de un gesto corto
 const GESTURE_FADE_S = 0.4;
 
-// valor de un eje (0 = x, 1 = y) del gesto en t (s), en bucle e interpolado entre muestras; null si
-// aún no hay gesto grabado
+export const GESTURE_SPEEDS = [0.25, 0.5, 1, 2, 4] as const;
+
+export function gestureSpeed(g: GestureClip): number {
+  "worklet";
+  const s = g.speed ?? 1;
+  return Math.min(4, Math.max(0.25, s));
+}
+
+// periodo del bucle (s) con velocidad y dirección: ida y vuelta dura el doble
+export function gesturePeriodS(g: GestureClip): number {
+  "worklet";
+  const dur = g.durationMs / 1000 / gestureSpeed(g);
+  return g.direction === "pingpong" ? dur * 2 : dur;
+}
+
+// muestra interpolada de un eje en la posición u (0 = inicio, 1 = fin del gesto grabado)
+function sampleAt(samples: readonly number[], frames: number, u: number, axis: 0 | 1): number {
+  "worklet";
+  const f = Math.min(frames - 1, Math.max(0, u * (frames - 1)));
+  const i = Math.floor(f);
+  const j = Math.min(frames - 1, i + 1);
+  const k = f - i;
+  return samples[i * 2 + axis] * (1 - k) + samples[j * 2 + axis] * k;
+}
+
+// valor de un eje (0 = x, 1 = y) del gesto en t (s), en bucle e interpolado entre muestras, con su
+// velocidad, dirección y espejo; null si aún no hay gesto grabado
 export function gestureValue(g: GestureClip, t: number, axis: 0 | 1): number | null {
   "worklet";
   const frames = Math.floor(g.samples.length / 2);
   if (frames < 2 || g.durationMs <= 0) return null;
-  const dur = g.durationMs / 1000;
-  const local = t - Math.floor(t / dur) * dur;
-  const f = Math.min(frames - 1, Math.max(0, (local / dur) * (frames - 1)));
-  const i = Math.floor(f);
-  const j = Math.min(frames - 1, i + 1);
-  const k = f - i;
-  const v = g.samples[i * 2 + axis] * (1 - k) + g.samples[j * 2 + axis] * k;
-  if (g.loop !== "smooth") return v;
-  // cierre suave: en el último tramo se funde hacia el punto inicial (curva S), así al volver a
-  // empezar no hay salto
-  const fade = Math.min(GESTURE_FADE_S, dur * 0.25);
-  const into = local - (dur - fade);
-  if (into <= 0 || fade <= 0) return v;
-  const u = Math.min(1, into / fade);
-  const w = u * u * (3 - 2 * u);
-  return v * (1 - w) + g.samples[axis] * w;
+  const dur = g.durationMs / 1000 / gestureSpeed(g);
+  const pingpong = g.direction === "pingpong";
+  const reverse = g.direction === "reverse";
+  const period = pingpong ? dur * 2 : dur;
+  const local = t - Math.floor(t / period) * period;
+  const raw = local / dur;
+  // ida y vuelta no salta nunca; adelante y reversa cierran el bucle
+  const u = pingpong ? (raw <= 1 ? raw : 2 - raw) : reverse ? 1 - raw : raw;
+  let v = sampleAt(g.samples, frames, u, axis);
+  if (!pingpong && g.loop === "smooth") {
+    // cierre suave: en el último tramo se funde hacia el punto de partida (curva S), así al volver
+    // a empezar no hay salto
+    const fade = Math.min(GESTURE_FADE_S, dur * 0.25);
+    const into = local - (dur - fade);
+    if (into > 0 && fade > 0) {
+      const p = Math.min(1, into / fade);
+      const w = p * p * (3 - 2 * p);
+      v = v * (1 - w) + sampleAt(g.samples, frames, reverse ? 1 : 0, axis) * w;
+    }
+  }
+  const mirrored = axis === 0 ? g.mirrorX === true : g.mirrorY === true;
+  return mirrored ? 1 - v : v;
 }
 
 // ajustes de una modulación nueva para la fuente dada, a partir de los de la escena
@@ -162,6 +193,12 @@ export function parseRouteSettings(raw: unknown): RouteSettings | undefined {
       samples,
       loop: g.loop === "cut" ? "cut" : "smooth",
     };
+    // transformaciones: solo se guardan si no son las de por defecto
+    const speed = num(g.speed, 1, 0.25, 4);
+    if (speed !== 1) out.gesture.speed = speed;
+    if (g.direction === "reverse" || g.direction === "pingpong") out.gesture.direction = g.direction;
+    if (g.mirrorX === true) out.gesture.mirrorX = true;
+    if (g.mirrorY === true) out.gesture.mirrorY = true;
   }
   if (r.mic !== undefined) {
     const m = o(r.mic);

@@ -61,7 +61,18 @@ export type AdsrTrigger = "touch" | "mic";
 // gesto grabado: posición absoluta del dedo [x, y] intercalada (0..1) a 30 Hz. smooth = el final se
 // funde con el inicio para que el bucle no salte; cut = salta tal cual se grabó
 export type GestureLoop = "smooth" | "cut";
-export type GestureClip = { durationMs: number; samples: number[]; loop: GestureLoop };
+export type GestureDirection = "forward" | "reverse" | "pingpong";
+// transformaciones de reproducción (opcionales: sin ellas, 1×, adelante y sin espejo). Se aplican al
+// reproducir; las muestras grabadas no cambian
+export type GestureClip = {
+  durationMs: number;
+  samples: number[];
+  loop: GestureLoop;
+  speed?: number;
+  direction?: GestureDirection;
+  mirrorX?: boolean;
+  mirrorY?: boolean;
+};
 // gesto guardado en la biblioteca de la app (se aplica a cualquier capa o proyecto)
 export type GesturePreset = { id: string; name: string; durationMs: number; samples: number[] };
 

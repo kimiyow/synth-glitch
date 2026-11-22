@@ -20,6 +20,7 @@ import { EditorCanvas } from "../canvas/EditorCanvas";
 import { MIN_GESTURE_MS } from "../actions/gestureLibrary";
 import { applyScenePreset } from "../actions/scenePresets";
 import type { SceneFade } from "../canvas/FadeOutScene";
+import { GestureTrail } from "../canvas/GestureTrail";
 import { GestureRecorder } from "../canvas/GestureRecorder";
 import { OrientationSensor } from "../canvas/OrientationSensor";
 import { LiveModContext, useModBus } from "../canvas/modBus";
@@ -224,6 +225,12 @@ function ProjectView({ project }: { project: Project }) {
   // el dedo; al soltar, el gesto queda en su modulación y se repite en bucle
   const [recordingRoute, setRecordingRoute] = useState<string | null>(null);
   const gestureRecord = { start: (routeId: string) => setRecordingRoute(routeId), notice: setNotice };
+  // estela del gesto de la capa seleccionada sobre el lienzo (se oculta desde el panel Gesto)
+  const [trailVisible, setTrailVisible] = useState(true);
+  const selectedClip = selected
+    ? project.scene.routes.find((r) => r.target.layerId === selected.id && r.source === "track" && r.amount !== 0 && (r.settings?.gesture?.samples.length ?? 0) >= 4)
+        ?.settings?.gesture
+    : undefined;
   // ejes de la capa que se graba (para la guía sobre el lienzo)
   const recordingLayer = recordingRoute
     ? layers.find((l) => l.id === project.scene.routes.find((r) => r.id === recordingRoute)?.target.layerId)
@@ -333,6 +340,9 @@ function ProjectView({ project }: { project: Project }) {
                 <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
               </View>
             )}
+            {trailVisible && selectedClip && selected?.visible && image && !stage && !recordingRoute && (
+              <GestureTrail bus={bus} clip={selectedClip} />
+            )}
             {showCostWarning && (
               <Toast tone="status" icon="gauge.with.dots.needle.67percent" text={`RENDIMIENTO BAJO · ${layers.length} CAPAS`} style={styles.warning} />
             )}
@@ -385,6 +395,7 @@ function ProjectView({ project }: { project: Project }) {
                   onStartStage={startStage}
                   onTriggerScene={triggerScene}
                     exports={exports}
+                    trail={{ visible: trailVisible, onToggle: () => setTrailVisible((v) => !v) }}
                     onImportRecipe={() => void onImportRecipe()}
                   />
                 </GestureRecordContext.Provider>
