@@ -1,3 +1,5 @@
+import { describe, expect, it } from "@jest/globals";
+
 import type { GestureClip } from "../domain/types";
 import { gesturePeriodS, gestureValue } from "./sources";
 
