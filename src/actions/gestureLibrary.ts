@@ -12,10 +12,24 @@ export function ensureGestureRoute(routes: readonly Route[], layerId: string): s
   return existing ? existing.id : addModulation(routes, layerId, "x", "track");
 }
 
-// guarda un gesto en la biblioteca de la app. Devuelve su nombre, o null si la biblioteca está llena
-export function saveGesturePreset(clip: Pick<GestureClip, "durationMs" | "samples">): string | null {
+// el gesto de la biblioteca con el mismo movimiento (misma duración y muestras), si existe. Las
+// transformaciones de la capa no cuentan: la biblioteca guarda el gesto original
+export function findSameGesture(presets: readonly GesturePreset[], clip: Pick<GestureClip, "durationMs" | "samples">): GesturePreset | null {
+  return (
+    presets.find(
+      (p) => p.durationMs === clip.durationMs && p.samples.length === clip.samples.length && p.samples.every((v, i) => v === clip.samples[i]),
+    ) ?? null
+  );
+}
+
+export type SaveGestureResult = { kind: "saved"; name: string } | { kind: "exists"; name: string } | { kind: "full" };
+
+// guarda un gesto en la biblioteca de la app, salvo que ya esté (no se duplica) o esté llena
+export function saveGesturePreset(clip: Pick<GestureClip, "durationMs" | "samples">): SaveGestureResult {
   const { gestures } = settingsStore.getState();
-  if (gestures.length >= MAX_GESTURE_PRESETS) return null;
+  const same = findSameGesture(gestures, clip);
+  if (same) return { kind: "exists", name: same.name };
+  if (gestures.length >= MAX_GESTURE_PRESETS) return { kind: "full" };
   const used = new Set(gestures.map((g) => g.name));
   let n = gestures.length + 1;
   while (used.has(`Gesto ${n}`)) n++;
@@ -26,7 +40,7 @@ export function saveGesturePreset(clip: Pick<GestureClip, "durationMs" | "sample
     samples: [...clip.samples],
   };
   settingsStore.getState().update({ gestures: [...gestures, preset] });
-  return preset.name;
+  return { kind: "saved", name: preset.name };
 }
 
 // largo máximo del nombre (el mismo que acepta la lectura de los ajustes)
@@ -42,6 +56,13 @@ export function renameGesturePreset(id: string, name: string): string | null {
   if (!clean || clean === current.name) return current.name;
   settingsStore.getState().update({ gestures: gestures.map((g) => (g.id === id ? { ...g, name: clean } : g)) });
   return clean;
+}
+
+// aviso del resultado de guardar, igual en Gesto, Exportar y la fuente GESTO
+export function saveGestureNotice(r: SaveGestureResult): string {
+  if (r.kind === "saved") return `${r.name.toUpperCase()} GUARDADO · TOCA SU NOMBRE PARA RENOMBRARLO`;
+  if (r.kind === "exists") return `YA ESTÁ EN LA BIBLIOTECA · ${r.name.toUpperCase()}`;
+  return "BIBLIOTECA LLENA · BORRA UN GESTO";
 }
 
 export function removeGesturePreset(id: string) {

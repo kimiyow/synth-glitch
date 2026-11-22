@@ -1,7 +1,14 @@
 import type { SkImage } from "@shopify/react-native-skia";
 import type { ComponentProps } from "react";
 
-import { applyGesturePreset, ensureGestureRoute, removeGesturePreset, renameGesturePreset, saveGesturePreset } from "../../actions/gestureLibrary";
+import {
+  applyGesturePreset,
+  ensureGestureRoute,
+  removeGesturePreset,
+  renameGesturePreset,
+  saveGestureNotice,
+  saveGesturePreset,
+} from "../../actions/gestureLibrary";
 import { removeModulation, setGestureTransform, setSources, setTempo } from "../../actions/sceneEdits";
 import type { StageMode } from "../../canvas/StageView";
 import type { Layer, Project, ScenePreset } from "../../domain/types";
@@ -140,8 +147,7 @@ export function EditorPanels(props: Props) {
           onAction={(a) => {
             if (a === "gesture") {
               if (!selectedGesture) return;
-              const name = saveGesturePreset(selectedGesture);
-              props.onNotice(name ? `${name.toUpperCase()} GUARDADO · TOCA SU NOMBRE PARA RENOMBRARLO` : "BIBLIOTECA LLENA · BORRA UN GESTO");
+              props.onNotice(saveGestureNotice(saveGesturePreset(selectedGesture)));
               return;
             }
             void exports.onExportAction(a);
@@ -169,10 +175,7 @@ export function EditorPanels(props: Props) {
           routes={routes}
           scene={sources}
           onSave={() => {
-            if (!selectedGesture) return null;
-            const name = saveGesturePreset(selectedGesture);
-            props.onNotice(name ? `${name.toUpperCase()} GUARDADO EN LA BIBLIOTECA` : "BIBLIOTECA LLENA · BORRA UN GESTO");
-            return name;
+            if (selectedGesture) props.onNotice(saveGestureNotice(saveGesturePreset(selectedGesture)));
           }}
           trailVisible={props.trail.visible}
           onToggleTrail={props.trail.onToggle}

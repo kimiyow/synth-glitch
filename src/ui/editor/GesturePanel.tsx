@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { MAX_GESTURE_NAME } from "../../actions/gestureLibrary";
+import { findSameGesture, MAX_GESTURE_NAME } from "../../actions/gestureLibrary";
 import type { GestureTransform } from "../../actions/sceneEdits";
 import type { GestureDirection, GesturePreset, Route, SourceConfig } from "../../domain/types";
 import { gestureSpeed, GESTURE_SPEEDS } from "../../modulation/sources";
@@ -23,8 +23,8 @@ type Props = {
   routes: readonly Route[];
   scene: SourceConfig;
   onRecord: () => void;
-  // guarda el gesto de la capa en la biblioteca; devuelve el nombre o null si está llena
-  onSave: () => string | null;
+  // guarda el gesto de la capa en la biblioteca (no lo duplica si ya está)
+  onSave: () => void;
   onRemove: () => void;
   // velocidad, dirección y espejo del gesto de la capa
   onTransform: (patch: GestureTransform) => void;
@@ -68,10 +68,10 @@ export function GesturePanel(props: Props) {
     setEditing(null);
   };
   const [scopeW, setScopeW] = useState(0);
-  // nombre con el que se guardó el gesto actual (se olvida al grabar otro)
-  const [savedAs, setSavedAs] = useState<{ routeId: string; samples: number; name: string } | null>(null);
   const clip = route?.settings?.gesture ?? null;
-  const saved = savedAs && route && clip && savedAs.routeId === route.id && savedAs.samples === clip.samples.length ? savedAs.name : null;
+  // el gesto de la capa ya está en la biblioteca (recién guardado o aplicado desde ella): no se
+  // ofrece guardarlo otra vez. Muestra el nombre actual, también si se renombró
+  const saved = clip ? (findSameGesture(presets, clip)?.name ?? null) : null;
 
   return (
     <View style={styles.root}>
@@ -130,15 +130,12 @@ export function GesturePanel(props: Props) {
               accessibilityRole="button"
               accessibilityState={{ disabled: saved !== null }}
               disabled={saved !== null}
-              onPress={() => {
-                const name = onSave();
-                if (name) setSavedAs({ routeId: route.id, samples: clip.samples.length, name });
-              }}
+              onPress={onSave}
               style={({ pressed }) => [styles.action, styles.actionPrimary, saved !== null && styles.actionDone, pressed && styles.pressed]}
             >
               <Icon name={saved ? "checkmark" : "tray.and.arrow.down"} size={15} color={saved ? colors.inkText : colors.paperText} />
               <Text style={[styles.actionText, !saved && styles.actionTextPrimary]} maxFontSizeMultiplier={COMPACT_FONT_SCALE} numberOfLines={1}>
-                {saved ? "Guardado en biblioteca" : "Guardar en biblioteca"}
+                {saved ? `En la biblioteca · ${saved}` : "Guardar en biblioteca"}
               </Text>
             </Pressable>
             <Pressable accessibilityRole="button" onPress={onRecord} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>

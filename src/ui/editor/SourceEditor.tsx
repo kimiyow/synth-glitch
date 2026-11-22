@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
-import { saveGesturePreset } from "../../actions/gestureLibrary";
+import { saveGestureNotice, saveGesturePreset } from "../../actions/gestureLibrary";
 import type { Route, RouteSettings, SourceConfig } from "../../domain/types";
 import { dbToUnit } from "../../modulation/micEnvelope";
 import { DEFAULT_MIC_ROUTE, DIVISIONS, LFO_SHAPES, MAX_BPM, MIN_BPM, SEQ_DIRECTIONS } from "../../modulation/sources";
@@ -306,8 +306,7 @@ function GestureControls({ route }: { route: Route }) {
       <Btn
         label="GUARDAR"
         onPress={() => {
-          const name = saveGesturePreset(g);
-          rec?.notice(name ? `${name.toUpperCase()} GUARDADO` : "BIBLIOTECA LLENA · BORRA UN GESTO");
+          rec?.notice(saveGestureNotice(saveGesturePreset(g)));
         }}
       />
     </View>
