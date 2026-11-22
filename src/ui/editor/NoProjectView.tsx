@@ -39,12 +39,12 @@ export function NoProjectView() {
     else void reportError({ title: "No se pudo abrir el proyecto", error: result.error, retry: () => openRecent(project) });
   };
 
-  const create = async (aspect: GenerativeAspect, generator: GeneratorId) => {
+  const create = async (aspect: GenerativeAspect, generator: GeneratorId, animated: boolean) => {
     setCreating(true);
     setMessage(null);
-    const result = await createGenerativeProject(aspect, generator);
+    const result = await createGenerativeProject(aspect, generator, animated);
     if (result.ok) router.push("/project");
-    else void reportError({ title: "No se pudo crear el proyecto", error: result.error, retry: () => create(aspect, generator) });
+    else void reportError({ title: "No se pudo crear el proyecto", error: result.error, retry: () => create(aspect, generator, animated) });
     setCreating(false);
   };
 

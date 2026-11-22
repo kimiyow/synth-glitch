@@ -30,8 +30,9 @@ type Props = {
   onCamera: () => void;
   onOpenRecent: (project: ProjectSummary) => void;
   onSeeAll: () => void;
-  // crea un proyecto generativo con el aspecto y el generador elegidos
-  onCreate: (aspect: GenerativeAspect, generator: GeneratorId) => void;
+  // crea un proyecto generativo con el aspecto y el generador elegidos; animado = generador en vivo
+  // con una modulación LFO
+  onCreate: (aspect: GenerativeAspect, generator: GeneratorId, animated: boolean) => void;
   // miniatura de un generador (vive en editor/, que sí conoce Skia)
   renderGeneratorThumb: (generator: GeneratorId) => ReactNode;
   onDismissMessage: () => void;
@@ -149,6 +150,7 @@ function QuickAction({ icon, label, disabled, onPress }: { icon: "camera" | "spa
 function CreateGenerative({ busy, onCreate, renderGeneratorThumb, initial, onCancel }: Props & { initial: GeneratorId; onCancel: () => void }) {
   const [aspect, setAspect] = useState<GenerativeAspect>("9:16");
   const [generator, setGenerator] = useState<GeneratorId>(initial);
+  const [motion, setMotion] = useState<"animated" | "still">("animated");
 
   return (
     <View style={styles.create}>
@@ -180,8 +182,28 @@ function CreateGenerative({ busy, onCreate, renderGeneratorThumb, initial, onCan
         })}
       </View>
 
+      <Text style={styles.label}>MOVIMIENTO</Text>
+      <Segmented
+        options={[
+          { id: "animated", label: "Animado" },
+          { id: "still", label: "Fijo" },
+        ]}
+        value={motion}
+        onChange={setMotion}
+      />
+      <Text style={styles.motionNote}>
+        {motion === "animated"
+          ? "El generador se mueve solo y un LFO lo hace respirar. Ajusta o quita la modulación en Capas."
+          : "Un cuadro congelado del generador. Ideal para pintar con el pincel."}
+      </Text>
+
       <View style={styles.buttons}>
-        <Button label={busy ? "Creando…" : "Crear"} icon="sparkles" disabled={busy} onPress={() => onCreate(aspect, generator)} />
+        <Button
+          label={busy ? "Creando…" : "Crear"}
+          icon="sparkles"
+          disabled={busy}
+          onPress={() => onCreate(aspect, generator, motion === "animated")}
+        />
         <Button label="Cancelar" variant="secondary" disabled={busy} onPress={onCancel} />
       </View>
     </View>
@@ -236,6 +258,14 @@ const styles = StyleSheet.create({
     fontFamily: type.family,
     fontSize: type.micro,
     letterSpacing: 1.2,
+  },
+  motionNote: {
+    alignSelf: "stretch",
+    marginTop: space.sm,
+    color: colors.inkMute,
+    fontFamily: type.family,
+    fontSize: type.label + 1,
+    lineHeight: 18,
   },
   genRow: { alignSelf: "stretch", flexDirection: "row", gap: space.sm, justifyContent: "space-between", marginTop: space.md },
   gen: { alignItems: "center", gap: 6 },

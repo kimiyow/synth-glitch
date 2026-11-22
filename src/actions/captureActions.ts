@@ -3,10 +3,11 @@ import { getThumbnailAsync } from "expo-video-thumbnails";
 
 import { PREVIEW_LONG_SIDE, renderGeneratorJpeg, renderSceneJpeg, THUMB_LONG_SIDE } from "../render/renderPreviews";
 import { cropRectFor } from "../engine/crop";
-import { createProject } from "../project/schema";
+import { GENERATOR_BY_ID } from "../engine/registry";
+import { createProject, createScene } from "../project/schema";
 import { createProjectFiles, newProjectId } from "../project/storage";
 import { projectFs, sceneStore } from "../state/activeScene";
-import type { CropAspect, GeneratorId, Project } from "../domain/types";
+import type { CropAspect, GeneratorId, Project, SourceConfig } from "../domain/types";
 
 type Result = { ok: true; project: Project } | { ok: false; error: string };
 
@@ -33,6 +34,8 @@ async function createFromMedia(args: {
   poster: SkImage;
   aspect: CropAspect;
   seed?: number;
+  // capas y modulaciones con las que abre (p. ej. el generador en vivo)
+  start?: Pick<Project["scene"], "layers" | "routes">;
 }): Promise<Result> {
   const now = new Date();
   const width = args.poster.width();
@@ -45,7 +48,7 @@ async function createFromMedia(args: {
   });
   const project: Project = {
     ...base,
-    scene: { ...base.scene, crop: { aspect: args.aspect, rect: cropRectFor(width, height, args.aspect) } },
+    scene: { ...base.scene, ...args.start, crop: { aspect: args.aspect, rect: cropRectFor(width, height, args.aspect) } },
   };
   const preview = await renderSceneJpeg(args.poster, project.scene, PREVIEW_LONG_SIDE);
   const thumb = await renderSceneJpeg(args.poster, project.scene, THUMB_LONG_SIDE, 80);
@@ -93,8 +96,33 @@ export const GENERATIVE_SIZE: Record<Exclude<CropAspect, "free">, { width: numbe
   "4:5": { width: 1440, height: 1800 },
 };
 
-// proyecto sin imagen; la base es un cuadro fijo del generador elegido
-export function createGenerativeProject(aspect: Exclude<CropAspect, "free">, generator: GeneratorId): Promise<Result> {
+// generador en vivo sobre su cuadro fijo: se mueve con su propia velocidad (eje Y) y un LFO lento
+// hace respirar el eje X. Es una capa y una modulación normales: se ajustan o quitan en Capas
+const LIVE_LFO_HZ = 0.2;
+const LIVE_LFO_AMOUNT = 0.3;
+
+function liveGeneratorStart(generator: GeneratorId, sources: SourceConfig): Pick<Project["scene"], "layers" | "routes"> {
+  const layerId = `${generator}-vivo`;
+  return {
+    layers: [{ kind: "generator", id: layerId, generator, params: { ...GENERATOR_BY_ID[generator].defaults }, visible: true, blend: "replace" }],
+    routes: [
+      {
+        id: `mod-${layerId}`,
+        source: "lfo",
+        sourceIndex: 0,
+        target: { layerId, param: "x" },
+        amount: LIVE_LFO_AMOUNT,
+        curve: "lin",
+        mode: "add",
+        settings: { lfo: { ...sources.lfo, rateHz: LIVE_LFO_HZ } },
+      },
+    ],
+  };
+}
+
+// proyecto sin imagen; la base es un cuadro fijo del generador elegido. Animado = además el
+// generador en vivo con su modulación
+export function createGenerativeProject(aspect: Exclude<CropAspect, "free">, generator: GeneratorId, animated = false): Promise<Result> {
   return guard(async () => {
     const { width, height } = GENERATIVE_SIZE[aspect];
     const seed = Math.floor(Math.random() * 2 ** 31);
@@ -102,7 +130,8 @@ export function createGenerativeProject(aspect: Exclude<CropAspect, "free">, gen
     const poster = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBytes(bytes));
     if (!poster) throw new Error("NO SE PUDO LEER EL GENERADOR");
     try {
-      return await createFromMedia({ kind: "generative", source: { bytes }, fileName: "media.jpg", poster, aspect, seed });
+      const start = animated ? liveGeneratorStart(generator, createScene({ kind: "generative", width, height }, seed).sources) : undefined;
+      return await createFromMedia({ kind: "generative", source: { bytes }, fileName: "media.jpg", poster, aspect, seed, start });
     } finally {
       poster.dispose();
     }
