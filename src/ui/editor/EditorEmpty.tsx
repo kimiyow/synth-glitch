@@ -9,6 +9,7 @@ import { AppHeader } from "../AppHeader";
 import { Button } from "../kit/Button";
 import { Icon } from "../kit/Icon";
 import { Segmented } from "../kit/Segmented";
+import { Toast } from "../kit/Toast";
 import { colors, radius, space, type } from "../tokens";
 import { CONTENT_MAX_WIDTH } from "../useLayout";
 
@@ -53,11 +54,7 @@ export function EditorEmpty(props: Props) {
             </View>
           </>
         )}
-        {message && (
-          <Text style={styles.message} onPress={onDismissMessage}>
-            {message}
-          </Text>
-        )}
+        {message && <Toast text={message} onPress={onDismissMessage} style={styles.message} />}
       </View>
     </SafeAreaView>
   );
@@ -154,15 +151,5 @@ const styles = StyleSheet.create({
   genThumbOn: { borderColor: colors.paper },
   genLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8 },
   genLabelOn: { color: colors.inkText },
-  message: {
-    marginTop: space.lg,
-    color: colors.paperText,
-    backgroundColor: colors.paper,
-    fontFamily: type.family,
-    fontSize: type.label,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.sm,
-    overflow: "hidden",
-  },
+  message: { marginTop: space.lg },
 });

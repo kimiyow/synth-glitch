@@ -15,6 +15,8 @@ import { AspectPicker } from "../../ui/camera/AspectPicker";
 import { RecBadge } from "../../ui/camera/RecBadge";
 import { Shutter } from "../../ui/camera/Shutter";
 import { reportError } from "../../ui/errors";
+import { Toast } from "../../ui/kit/Toast";
+import { useImportMedia } from "../../ui/useImportMedia";
 import { PermissionScreen } from "../../ui/PermissionScreen";
 import { colors, radius, space, type } from "../../ui/tokens";
 
@@ -63,8 +65,11 @@ function CameraCapture() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [mode, setMode] = useState<"picture" | "video">("picture");
   const [recording, setRecording] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [capturing, setBusy] = useState(false);
+  const [captureMessage, setMessage] = useState<string | null>(null);
+  const imports = useImportMedia();
+  const message = captureMessage ?? imports.message;
+  const busy = capturing || imports.busy;
   const aspect = useSettings((s) => s.cameraAspect);
   const holdHintSeen = useSettings((s) => s.holdHintSeen);
 
@@ -208,12 +213,24 @@ function CameraCapture() {
 
         <View style={styles.controls}>
           {message && (
-            <Text style={styles.message} onPress={() => setMessage(null)}>
-              {message}
-            </Text>
+            <Toast
+              text={message}
+              onPress={() => {
+                setMessage(null);
+                imports.setMessage(null);
+              }}
+            />
           )}
           <View style={styles.shutterRow}>
-            <View style={styles.sideSlot} />
+            <View style={styles.sideSlot}>
+              <IconButton
+                icon="photo.on.rectangle"
+                label="Importar desde Fotos"
+                size={SIDE_BUTTON}
+                disabled={busy || recording}
+                onPress={() => void imports.importMedia()}
+              />
+            </View>
             <Shutter
               recording={recording}
               disabled={busy}
@@ -264,14 +281,4 @@ const styles = StyleSheet.create({
   shutterRow: { flexDirection: "row", alignItems: "center", gap: 44 },
   sideSlot: { width: SIDE_BUTTON, height: SIDE_BUTTON },
   hint: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
-  message: {
-    color: colors.paperText,
-    backgroundColor: colors.paper,
-    fontFamily: type.family,
-    fontSize: type.label,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.pill,
-    overflow: "hidden",
-  },
 });

@@ -45,7 +45,8 @@ import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } fro
 import { useExportJob } from "../ui/editor/useExportJob";
 import { askConfirm } from "../state/confirm";
 import { announce } from "../ui/errors";
-import { colors, type } from "../ui/tokens";
+import { Toast } from "../ui/kit/Toast";
+import { colors, space, type } from "../ui/tokens";
 import { useLayout } from "../ui/useLayout";
 
 // pantalla del proyecto abierto, apilada sobre las pestañas: se entra desde Cámara, Galería o el
@@ -341,7 +342,9 @@ function ProjectView({ project }: { project: Project }) {
                 <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
               </View>
             )}
-            {showCostWarning && <Text style={styles.warning}>RENDIMIENTO BAJO · {layers.length} CAPAS</Text>}
+            {showCostWarning && (
+              <Toast tone="status" icon="gauge.with.dots.needle.67percent" text={`RENDIMIENTO BAJO · ${layers.length} CAPAS`} style={styles.warning} />
+            )}
             {recordingRoute && image && !stage && (
               <GestureRecorder bus={bus} routeId={recordingRoute} onDone={onGestureDone} onCancel={() => setRecordingRoute(null)} />
             )}
@@ -355,11 +358,7 @@ function ProjectView({ project }: { project: Project }) {
             style={[styles.overlay, landscape && styles.overlaySide, recordingRoute !== null && styles.hidden]}
             pointerEvents="box-none"
           >
-            {notice && (
-              <Text style={styles.notice} pointerEvents="none">
-                {notice}
-              </Text>
-            )}
+            {notice && <Toast text={notice} style={styles.notice} />}
             {openPanel && (
               <LiveModContext.Provider value={{ bus, micLevel: mic.level, seed: project.scene.seed }}>
                 <GestureRecordContext.Provider value={gestureRecord}>
@@ -429,26 +428,6 @@ const styles = StyleSheet.create({
   canvasArea: { flex: 1, marginHorizontal: 18, marginBottom: 8 },
   noImage: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface, borderRadius: 12 },
   label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
-  notice: {
-    alignSelf: "center",
-    marginBottom: 20,
-    color: colors.paperText,
-    backgroundColor: colors.paper,
-    fontFamily: type.family,
-    fontSize: type.label,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  warning: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    color: colors.paperText,
-    backgroundColor: colors.paper,
-    fontFamily: type.family,
-    fontSize: type.micro,
-    letterSpacing: 1.2,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
+  notice: { marginBottom: 20 },
+  warning: { position: "absolute", top: space.sm },
 });
