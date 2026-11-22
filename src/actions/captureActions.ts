@@ -96,15 +96,16 @@ export const GENERATIVE_SIZE: Record<Exclude<CropAspect, "free">, { width: numbe
   "4:5": { width: 1440, height: 1800 },
 };
 
-// generador en vivo sobre su cuadro fijo: se mueve con su propia velocidad (eje Y) y un LFO lento
-// hace respirar el eje X. Es una capa y una modulación normales: se ajustan o quitan en Capas
+// generador en vivo sobre su cuadro fijo. Todo su movimiento viene de la modulación: la velocidad
+// propia (eje Y) empieza en 0, así que quitar la modulación en Capas lo deja igual que Fijo (mismo
+// cuadro que la base). Un LFO lento hace respirar el eje X
 const LIVE_LFO_HZ = 0.2;
-const LIVE_LFO_AMOUNT = 0.3;
+const LIVE_LFO_AMOUNT = 0.4;
 
 function liveGeneratorStart(generator: GeneratorId, sources: SourceConfig): Pick<Project["scene"], "layers" | "routes"> {
   const layerId = `${generator}-vivo`;
   return {
-    layers: [{ kind: "generator", id: layerId, generator, params: { ...GENERATOR_BY_ID[generator].defaults }, visible: true, blend: "replace" }],
+    layers: [{ kind: "generator", id: layerId, generator, params: { ...GENERATOR_BY_ID[generator].defaults, y: 0 }, visible: true, blend: "replace" }],
     routes: [
       {
         id: `mod-${layerId}`,

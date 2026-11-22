@@ -193,7 +193,7 @@ function CreateGenerative({ busy, onCreate, renderGeneratorThumb, initial, onCan
       />
       <Text style={styles.motionNote}>
         {motion === "animated"
-          ? "El generador se mueve solo y un LFO lo hace respirar. Ajusta o quita la modulación en Capas."
+          ? "Una modulación LFO mueve el generador. La ajustas en Capas; si la quitas, queda fijo."
           : "Un cuadro congelado del generador. Ideal para pintar con el pincel."}
       </Text>
 
