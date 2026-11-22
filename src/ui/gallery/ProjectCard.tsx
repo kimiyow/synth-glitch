@@ -10,7 +10,8 @@ type Props = {
   width: number;
   active: boolean;
   onOpen: () => void;
-  onMore: () => void;
+  // sin onMore (p. ej. Recientes del editor vacío) no hay menú al mantener pulsado
+  onMore?: () => void;
 };
 
 // ficha de la Galería: tocar abre; mantener pulsado abre las acciones
@@ -23,7 +24,7 @@ export function ProjectCard({ project, width, active, onOpen, onMore }: Props) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${project.name}. Mantén pulsado para más opciones`}
+      accessibilityLabel={onMore ? `${project.name}. Mantén pulsado para más opciones` : project.name}
       onPress={onOpen}
       onLongPress={onMore}
       delayLongPress={350}
