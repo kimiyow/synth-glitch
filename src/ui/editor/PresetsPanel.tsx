@@ -81,7 +81,9 @@ export function PresetsPanel(props: Props) {
   const bpm = sources.tempo.bpm;
   // la escena guardada que se ve ahora: se marca en su tarjeta y no se puede guardar otra vez
   const active = findSameScene([...FACTORY_PRESETS, ...userScenes], layers, routes);
-  const cardW = width > 0 ? Math.floor((width - GAP) / 2) : 0;
+  // 2 columnas en iPhone y en la tarjeta lateral del iPad; 3 en el panel ancho del iPad vertical
+  const columns = width >= 520 ? 3 : 2;
+  const cardW = width > 0 ? Math.floor((width - GAP * (columns - 1)) / columns) : 0;
 
   const apply = (p: ScenePreset) => {
     if (readOnly) return;

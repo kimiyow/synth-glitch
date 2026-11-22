@@ -36,7 +36,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     alignSelf: "center",
-    maxWidth: "88%",
+    // en iPad no se estira a todo el lienzo (en iPhone el ancho de pantalla ya lo limita)
+    maxWidth: 520,
+    marginHorizontal: space.lg,
     minHeight: 30,
     paddingHorizontal: space.md,
     paddingVertical: 6,

@@ -122,7 +122,8 @@ export function GestureRecorder({ bus, routeId, axes, base, onDone, onCancel }: 
         </Pressable>
       </View>
       {/* qué hacer: antes de tocar, qué mueve cada dirección; grabando, cómo terminar */}
-      <View style={styles.guide} pointerEvents="none">
+      <View style={styles.guideWrap} pointerEvents="none">
+      <View style={styles.guide}>
         {elapsed === null ? (
           <>
             <Text style={styles.guideTitle}>Toca y mueve el dedo sobre la imagen</Text>
@@ -138,6 +139,7 @@ export function GestureRecorder({ bus, routeId, axes, base, onDone, onCancel }: 
         ) : (
           <Text style={styles.guideNote}>Suelta para terminar · máximo {GESTURE_MAX_S} s</Text>
         )}
+      </View>
       </View>
       {elapsed !== null && (
         <View style={styles.progress} pointerEvents="none">
@@ -174,11 +176,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.scrim,
   },
+  // contenedor a lo ancho que centra la guía; la guía no pasa de 420 pt (iPad)
+  guideWrap: { position: "absolute", left: space.lg, right: space.lg, bottom: space.xl, alignItems: "center" },
   guide: {
-    position: "absolute",
-    left: space.lg,
-    right: space.lg,
-    bottom: space.xl,
+    maxWidth: 420,
     alignItems: "center",
     gap: 6,
     paddingVertical: space.md,

@@ -10,7 +10,7 @@ import { EffectThumb } from "../../render/EffectThumb";
 import { blankImage, generatorLayer } from "../../render/renderPreviews";
 import { reportError } from "../errors";
 import { useImportMedia } from "../useImportMedia";
-import { EditorEmpty, GEN_THUMB, type GenerativeAspect } from "./EditorEmpty";
+import { EditorEmpty, type GenerativeAspect } from "./EditorEmpty";
 
 // editor sin proyecto. las importaciones no se recortan (aspecto libre); crear sin imagen usa un
 // cuadro fijo del generador como base
@@ -56,7 +56,7 @@ export function NoProjectView() {
       busy={busy}
       message={message}
       onCreate={create}
-      renderGeneratorThumb={(g) => <EffectThumb image={blankImage()} layer={thumbs[g]} seed={7} size={GEN_THUMB} />}
+      renderGeneratorThumb={(g, size) => <EffectThumb image={blankImage()} layer={thumbs[g]} seed={7} size={size} />}
       recents={recents}
       onOpenRecent={openRecent}
       onSeeAll={() => router.navigate("/gallery")}
