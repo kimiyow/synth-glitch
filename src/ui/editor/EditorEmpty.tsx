@@ -1,3 +1,4 @@
+import type { SFSymbol } from "expo-symbols";
 import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,18 +14,21 @@ import { Icon } from "../kit/Icon";
 import { Segmented } from "../kit/Segmented";
 import { Toast } from "../kit/Toast";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
-import { CONTENT_MAX_WIDTH, useLayout } from "../useLayout";
+import { CONTENT_MAX_WIDTH, PANEL_MAX_WIDTH, useLayout } from "../useLayout";
 
 export type GenerativeAspect = "9:16" | "1:1" | "4:5";
 const ASPECTS: readonly GenerativeAspect[] = ["9:16", "1:1", "4:5"];
-// lado de la miniatura de un generador en iPhone
-const GEN_THUMB = 88;
-const RECENT_WIDTH = 104;
 const MAX_RECENTS = 8;
-// iPad: dos columnas (empezar | generadores) dentro de este ancho, recientes y generadores más grandes
-const WIDE_MAX = 760;
-const WIDE_RECENT_WIDTH = 150;
-const WIDE_GEN_MAX = 150;
+const GAP = space.sm;
+// en "Crear sin imagen" (formulario angosto)
+const FORM_GEN_THUMB = 88;
+
+// qué hace cada generador, en una línea
+const GENERATOR_NOTE: Record<GeneratorId, string> = {
+  noise: "Grano y nubes",
+  bars: "Barras de datos",
+  voronoi: "Celdas",
+};
 
 type Props = {
   busy: boolean;
@@ -43,27 +47,28 @@ type Props = {
   onDismissMessage: () => void;
 };
 
-// editor sin proyecto: empezar (Fotos, cámara, sin imagen), seguir con un proyecto reciente o
-// partir de un generador. En iPad, empezar y generadores van en dos columnas
+// editor sin proyecto: una sola columna con los modos de empezar en orden de jerarquía. Con una
+// imagen (Fotos, la principal, y Cámara) y sin imagen (los tres generadores), todos como tarjetas
+// del mismo sistema; al final, los recientes. En iPad es la misma columna, más ancha
 export function EditorEmpty(props: Props) {
   const { busy, message, recents, onImport, onCamera, onOpenRecent, onSeeAll, renderGeneratorThumb, onDismissMessage } = props;
   // generador con el que se abre "Crear sin imagen"; null = pantalla de inicio
   const [creating, setCreating] = useState<GeneratorId | null>(null);
   const { regular } = useLayout();
   const { width } = useWindowDimensions();
-  const blockW = Math.min(width, regular ? WIDE_MAX : CONTENT_MAX_WIDTH);
-  // la tira de recientes empieza alineada con los bloques centrados
+  const blockW = Math.min(width, regular ? PANEL_MAX_WIDTH : CONTENT_MAX_WIDTH);
+  const inner = blockW - space.xl * 2;
+  const genSize = Math.floor((inner - GAP * 2) / 3);
+  const recentW = Math.floor(regular ? (inner - GAP * 3) / 4 : (inner - GAP * 2) / 3);
+  // la tira de recientes empieza alineada con la columna
   const stripInset = Math.max(space.xl, (width - blockW) / 2 + space.xl);
-  // generadores: en iPad, la columna derecha; en iPhone, el ancho del bloque
-  const genColumn = regular ? (blockW - space.xl * 3) / 2 : blockW - space.xl * 2;
-  const genSize = Math.max(56, Math.floor(Math.min(regular ? WIDE_GEN_MAX : GEN_THUMB, (genColumn - space.sm * 2) / 3 - 6)));
 
   if (creating) {
     return (
       <SafeAreaView style={styles.root} edges={["top"]}>
         <AppHeader />
         <View style={styles.createWrap}>
-          <CreateGenerative {...props} initial={creating} genSize={regular ? WIDE_GEN_MAX - 30 : GEN_THUMB} onCancel={() => setCreating(null)} />
+          <CreateGenerative {...props} initial={creating} genSize={FORM_GEN_THUMB} onCancel={() => setCreating(null)} />
           {message && <Toast text={message} onPress={onDismissMessage} style={styles.message} />}
         </View>
       </SafeAreaView>
@@ -71,89 +76,82 @@ export function EditorEmpty(props: Props) {
   }
 
   const shown = recents.slice(0, MAX_RECENTS);
-  const blockStyle = [styles.block, { maxWidth: blockW }];
-
-  const start = (
-    <View style={regular && styles.column}>
-      <Text style={styles.title} accessibilityRole="header">
-        Nuevo proyecto
-      </Text>
-      <Text style={styles.subtitle}>Elige una imagen o un clip y transfórmalo con efectos.</Text>
-      <View style={styles.actions}>
-        <Button label={busy ? "Importando…" : "Importar desde Fotos"} icon="photo.badge.plus" disabled={busy} onPress={onImport} />
-        <View style={styles.actionRow}>
-          <QuickAction icon="camera" label="Cámara" disabled={busy} onPress={onCamera} />
-          <QuickAction icon="sparkles" label="Sin imagen" disabled={busy} onPress={() => setCreating("noise")} />
-        </View>
-      </View>
-      {message && <Toast text={message} onPress={onDismissMessage} style={styles.message} />}
-    </View>
-  );
-
-  const generators = (
-    <View style={regular ? styles.column : styles.section}>
-      <Text style={styles.sectionTitle} accessibilityRole="header">
-        Empieza con un generador
-      </Text>
-      <Text style={styles.sectionNote}>Imagen sintetizada, sin foto: ruido, barras o celdas que respondes con el dedo.</Text>
-      <View style={styles.genRow}>
-        {GENERATORS.map((g) => (
-          <Pressable
-            key={g.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Crear con ${g.label}`}
-            disabled={busy}
-            onPress={() => {
-              selectFeedback();
-              setCreating(g.id);
-            }}
-            style={({ pressed }) => [styles.gen, pressed && styles.pressed]}
-          >
-            <View style={[styles.genThumb, { width: genSize + 6, height: genSize + 6 }]}>{renderGeneratorThumb(g.id, genSize)}</View>
-            <Text style={styles.genLabelOn}>{g.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-
-  const recentsSection = shown.length > 0 && (
-    <View style={styles.section}>
-      <View style={[styles.sectionHeader, ...blockStyle]}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">
-          Recientes
-        </Text>
-        <Pressable accessibilityRole="button" hitSlop={12} onPress={onSeeAll}>
-          <Text style={styles.link} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
-            Ver todos
-          </Text>
-        </Pressable>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.recents, { paddingHorizontal: stripInset }]}>
-        {shown.map((p) => (
-          <ProjectCard key={p.id} project={p} width={regular ? WIDE_RECENT_WIDTH : RECENT_WIDTH} active={false} onOpen={() => onOpenRecent(p)} />
-        ))}
-      </ScrollView>
-    </View>
-  );
+  const block = [styles.block, { maxWidth: blockW }];
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <AppHeader />
       <ScrollView contentContainerStyle={[styles.scroll, regular && styles.scrollWide]} showsVerticalScrollIndicator={false}>
-        {regular ? (
+        <View style={block}>
+          <Text style={[styles.title, regular && styles.titleWide]} accessibilityRole="header">
+            Nuevo proyecto
+          </Text>
+          <Text style={styles.subtitle}>Parte de una imagen o de un generador y transfórmalo con efectos.</Text>
+
+          <Text style={styles.section} accessibilityRole="header">
+            Con una imagen
+          </Text>
+          <View style={styles.row}>
+            <ModeCard
+              primary
+              icon="photo.on.rectangle"
+              title={busy ? "Importando…" : "Fotos"}
+              note="Una foto o un clip de hasta 10 s"
+              tall={regular}
+              disabled={busy}
+              onPress={onImport}
+            />
+            <ModeCard icon="camera" title="Cámara" note="Toma una foto o graba un clip" tall={regular} disabled={busy} onPress={onCamera} />
+          </View>
+          {message && <Toast text={message} onPress={onDismissMessage} style={styles.message} />}
+
+          <Text style={styles.section} accessibilityRole="header">
+            Sin imagen
+          </Text>
+          <View style={styles.row}>
+            {GENERATORS.map((g) => (
+              <Pressable
+                key={g.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Crear sin imagen con ${g.label}: ${GENERATOR_NOTE[g.id]}`}
+                disabled={busy}
+                onPress={() => {
+                  selectFeedback();
+                  setCreating(g.id);
+                }}
+                style={({ pressed }) => [styles.genCard, { width: genSize }, pressed && styles.pressed, busy && styles.disabled]}
+              >
+                <View style={[styles.genThumb, { width: genSize, height: genSize }]}>{renderGeneratorThumb(g.id, genSize)}</View>
+                <View style={styles.genText}>
+                  <Text style={styles.cardTitle} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+                    {g.label.charAt(0) + g.label.slice(1).toLowerCase()}
+                  </Text>
+                  <Text style={styles.cardNote} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+                    {GENERATOR_NOTE[g.id]}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {shown.length > 0 && (
           <>
-            <View style={[...blockStyle, styles.columns]}>
-              {start}
-              {generators}
+            <View style={[...block, styles.sectionRow]}>
+              <Text style={[styles.section, styles.sectionInRow]} accessibilityRole="header">
+                Recientes
+              </Text>
+              <Pressable accessibilityRole="button" hitSlop={12} onPress={onSeeAll}>
+                <Text style={styles.link} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+                  Ver todos
+                </Text>
+              </Pressable>
             </View>
-            {recentsSection}
-          </>
-        ) : (
-          <>
-            <View style={blockStyle}>{start}</View>
-            {recentsSection}
-            <View style={blockStyle}>{generators}</View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.recents, { paddingHorizontal: stripInset }]}>
+              {shown.map((p) => (
+                <ProjectCard key={p.id} project={p} width={recentW} active={false} onOpen={() => onOpenRecent(p)} />
+              ))}
+            </ScrollView>
           </>
         )}
       </ScrollView>
@@ -161,22 +159,48 @@ export function EditorEmpty(props: Props) {
   );
 }
 
-function QuickAction({ icon, label, disabled, onPress }: { icon: "camera" | "sparkles"; label: string; disabled: boolean; onPress: () => void }) {
+// tarjeta de un modo de empezar: icono, título y qué hace. La principal va en blanco
+function ModeCard({
+  icon,
+  title,
+  note,
+  primary = false,
+  tall,
+  disabled,
+  onPress,
+}: {
+  icon: SFSymbol;
+  title: string;
+  note: string;
+  primary?: boolean;
+  tall: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const fg = primary ? colors.paperText : colors.inkText;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${title}. ${note}`}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={() => {
         tapFeedback();
         onPress();
       }}
-      style={({ pressed }) => [styles.quick, pressed && styles.pressed, disabled && styles.disabled]}
+      style={({ pressed }) => [styles.mode, tall && styles.modeTall, primary && styles.modePrimary, pressed && styles.pressed, disabled && styles.disabled]}
     >
-      <Icon name={icon} size={18} />
-      <Text style={styles.quickText} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
-        {label}
-      </Text>
+      <View style={[styles.modeIcon, primary && styles.modeIconPrimary]}>
+        <Icon name={icon} size={20} color={fg} />
+      </View>
+      <View style={styles.modeText}>
+        <Text style={[styles.cardTitle, { color: fg }]} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+          {title}
+        </Text>
+        <Text style={[styles.cardNote, primary && styles.cardNotePrimary]} numberOfLines={2} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+          {note}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -201,7 +225,7 @@ function CreateGenerative({
       <Segmented options={ASPECTS.map((a) => ({ id: a, label: a }))} value={aspect} onChange={setAspect} />
 
       <Text style={styles.label}>GENERADOR</Text>
-      <View style={styles.genRow}>
+      <View style={styles.formGenRow}>
         {GENERATORS.map((g) => {
           const on = g.id === generator;
           return (
@@ -214,12 +238,12 @@ function CreateGenerative({
                 selectFeedback();
                 setGenerator(g.id);
               }}
-              style={styles.gen}
+              style={styles.formGen}
             >
-              <View style={[styles.genThumb, { width: genSize + 6, height: genSize + 6 }, on && styles.genThumbOn]}>
+              <View style={[styles.formGenThumb, { width: genSize + 6, height: genSize + 6 }, on && styles.formGenThumbOn]}>
                 {renderGeneratorThumb(g.id, genSize)}
               </View>
-              <Text style={[styles.genLabel, on && styles.genLabelOn]}>{g.label}</Text>
+              <Text style={[styles.formGenLabel, on && styles.formGenLabelOn]}>{g.label}</Text>
             </Pressable>
           );
         })}
@@ -256,36 +280,62 @@ function CreateGenerative({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
   scroll: { paddingTop: space.lg, paddingBottom: 48 },
-  // iPad: el contenido baja un poco para no quedar pegado al encabezado en una pantalla alta
-  scrollWide: { paddingTop: 56 },
-  // bloques centrados; el ancho máximo depende del dispositivo (blockStyle)
+  // iPad: más aire arriba en una pantalla alta
+  scrollWide: { paddingTop: 48 },
+  // columna centrada; su ancho máximo depende del dispositivo
   block: { width: "100%", alignSelf: "center", paddingHorizontal: space.xl },
-  columns: { flexDirection: "row", gap: space.xl },
-  column: { flex: 1 },
+
+  // jerarquía: título > secciones > tarjetas
   title: { color: colors.inkText, fontFamily: type.family, fontSize: type.display - 6, fontWeight: "700", letterSpacing: -0.4 },
+  titleWide: { fontSize: type.display },
   subtitle: { color: colors.inkMute, fontFamily: type.family, fontSize: type.body, marginTop: space.xs, lineHeight: 20 },
-  actions: { marginTop: space.xl, gap: space.sm },
-  actionRow: { flexDirection: "row", gap: space.sm },
-  quick: {
+  section: {
+    marginTop: space.xl + space.sm,
+    marginBottom: space.md,
+    color: colors.inkText,
+    fontFamily: type.family,
+    fontSize: type.body,
+    fontWeight: "600",
+  },
+  sectionRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  sectionInRow: { marginBottom: 0 },
+  link: { color: colors.inkMute, fontFamily: type.family, fontSize: type.body - 1, fontWeight: "600" },
+  row: { flexDirection: "row", gap: GAP },
+
+  // tarjetas (modo y generador comparten superficie, radio y textos)
+  mode: {
     flex: 1,
-    minHeight: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.sm,
+    minHeight: 112,
+    padding: space.md,
+    gap: space.md,
+    justifyContent: "space-between",
     borderRadius: radius.md,
     backgroundColor: colors.inkRaised,
   },
-  quickText: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600" },
+  modeTall: { minHeight: 140, padding: space.lg },
+  modePrimary: { backgroundColor: colors.paper },
+  modeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.inkSurface,
+  },
+  modeIconPrimary: { backgroundColor: colors.paperLine },
+  modeText: { gap: 2 },
+  cardTitle: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600" },
+  cardNote: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, lineHeight: 16 },
+  cardNotePrimary: { color: colors.paperMute },
+  genCard: { borderRadius: radius.md, backgroundColor: colors.inkRaised, overflow: "hidden" },
+  genThumb: { backgroundColor: colors.inkSurface },
+  genText: { padding: space.md, gap: 2 },
   pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.5 },
-  message: { marginTop: space.lg },
-  section: { marginTop: 40 },
-  sectionHeader: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
-  sectionTitle: { color: colors.inkText, fontFamily: type.family, fontSize: type.title - 2, fontWeight: "600" },
-  sectionNote: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, marginTop: space.xs, lineHeight: 18 },
-  link: { color: colors.inkMute, fontFamily: type.family, fontSize: type.body - 1, fontWeight: "600" },
-  recents: { gap: space.md, paddingTop: space.md },
+  message: { marginTop: space.md },
+  recents: { gap: GAP },
+
+  // formulario "Crear sin imagen"
   createWrap: {
     flex: 1,
     justifyContent: "center",
@@ -314,9 +364,9 @@ const styles = StyleSheet.create({
     fontSize: type.label + 1,
     lineHeight: 18,
   },
-  genRow: { alignSelf: "stretch", flexDirection: "row", gap: space.sm, justifyContent: "space-between", marginTop: space.md },
-  gen: { alignItems: "center", gap: 6 },
-  genThumb: {
+  formGenRow: { alignSelf: "stretch", flexDirection: "row", gap: space.sm, justifyContent: "space-between", marginTop: space.md },
+  formGen: { alignItems: "center", gap: 6 },
+  formGenThumb: {
     padding: 1,
     borderRadius: radius.md,
     borderWidth: 2,
@@ -324,7 +374,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.inkRaised,
     overflow: "hidden",
   },
-  genThumbOn: { borderColor: colors.paper },
-  genLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8 },
-  genLabelOn: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8 },
+  formGenThumbOn: { borderColor: colors.paper },
+  formGenLabel: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8 },
+  formGenLabelOn: { color: colors.inkText },
 });
