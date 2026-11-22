@@ -225,7 +225,8 @@ function ProjectView({ project }: { project: Project }) {
   // el dedo; al soltar, el gesto queda en su modulación y se repite en bucle
   const [recordingRoute, setRecordingRoute] = useState<string | null>(null);
   const gestureRecord = { start: (routeId: string) => setRecordingRoute(routeId), notice: setNotice };
-  // estela del gesto de la capa seleccionada sobre el lienzo (se oculta desde el panel Gesto)
+  // estela del gesto de la capa seleccionada sobre el lienzo: solo con el panel Gesto abierto (al
+  // cerrarlo la imagen queda limpia); el ojo de la tarjeta la oculta también ahí
   const [trailVisible, setTrailVisible] = useState(true);
   const selectedClip = selected
     ? project.scene.routes.find((r) => r.target.layerId === selected.id && r.source === "track" && r.amount !== 0 && (r.settings?.gesture?.samples.length ?? 0) >= 4)
@@ -340,7 +341,7 @@ function ProjectView({ project }: { project: Project }) {
                 <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
               </View>
             )}
-            {trailVisible && selectedClip && selected?.visible && image && !stage && !recordingRoute && (
+            {openPanel === "gesture" && trailVisible && selectedClip && selected?.visible && image && !stage && !recordingRoute && (
               <GestureTrail bus={bus} clip={selectedClip} />
             )}
             {showCostWarning && (
