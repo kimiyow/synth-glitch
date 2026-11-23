@@ -144,20 +144,22 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
     "worklet";
     return PAD_X + (k / (N - 1)) * span;
   };
-  // tramo de una pista: hasta la bolita (behind) o desde ella (ahead)
-  const toPoints = (track: 0 | 1, part: "all" | "behind" | "ahead") => {
+  // tramo de una pista: hasta la bolita (behind) o desde ella (ahead). Recibe los valores ya leídos:
+  // cada useDerivedValue lee shown y ball en su propio cuerpo, porque Reanimated solo se suscribe a
+  // los valores compartidos que ve ahí (leídos dentro de una función auxiliar, la curva no se
+  // redibujaba al cambiar y solo la bolita se movía)
+  const toPoints = (b: number[], u: number, track: 0 | 1, part: "all" | "behind" | "ahead") => {
     "worklet";
-    const b = shown.get();
-    const cut = Math.round(ball.get().u * (N - 1));
+    const cut = Math.round(u * (N - 1));
     const from = part === "ahead" ? cut : 0;
     const to = part === "behind" ? cut : N - 1;
     const out = [];
     for (let k = from; k <= to; k++) out.push({ x: xAt(k), y: PAD + (1 - b[k * 2 + track]) * h });
     return out;
   };
-  const resultPts = useDerivedValue(() => toPoints(1, "all"));
-  const behindPts = useDerivedValue(() => toPoints(0, "behind"));
-  const aheadPts = useDerivedValue(() => toPoints(0, "ahead"));
+  const resultPts = useDerivedValue(() => toPoints(shown.get(), ball.get().u, 1, "all"));
+  const behindPts = useDerivedValue(() => toPoints(shown.get(), ball.get().u, 0, "behind"));
+  const aheadPts = useDerivedValue(() => toPoints(shown.get(), ball.get().u, 0, "ahead"));
   const ballX = useDerivedValue(() => PAD_X + ball.get().u * span);
   const ballY = useDerivedValue(() => PAD + (1 - ball.get().s) * h);
   const resultY = useDerivedValue(() => PAD + (1 - ball.get().r) * h);
