@@ -1,7 +1,7 @@
 import { askConfirm } from "../state/confirm";
 
 import { PREVIEW_LONG_SIDE, renderSceneJpeg, sceneFrameAt, THUMB_LONG_SIDE } from "../render/renderPreviews";
-import { writeImages } from "../project/storage";
+import { newProjectId, normalizeName, TEMP_FILE, writeImages } from "../project/storage";
 import { projectFs, sceneStore } from "../state/activeScene";
 import { loadOriginal } from "./exportActions";
 import { hasUnsavedWork } from "../state/sceneStore";
@@ -37,6 +37,25 @@ export async function saveActiveProject(): Promise<Result> {
     console.warn("No se pudo renovar la miniatura", error);
   }
   return { ok: true };
+}
+
+// "guardar como": copia la carpeta del proyecto (medio incluido) con id nuevo y "<nombre> COPIA", y
+// guarda ahí la escena actual. El original se queda como estaba en disco; el editor sigue en la copia
+export async function saveActiveProjectAs(): Promise<Result> {
+  const { project, readOnly } = sceneStore.getState();
+  if (!project || readOnly) return { ok: false, error: "NO SE PUDO GUARDAR" };
+  const now = new Date();
+  const id = newProjectId(now);
+  try {
+    projectFs.copyDir(project.id, id);
+    projectFs.remove(id, TEMP_FILE);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+  const iso = now.toISOString();
+  const name = normalizeName(`${project.name} COPIA`) ?? project.name;
+  sceneStore.setState({ project: { ...project, id, name, createdAt: iso, updatedAt: iso } });
+  return saveActiveProject();
 }
 
 // antes de dejar el proyecto activo (volver, abrir otro, capturar uno nuevo): si hay trabajo sin

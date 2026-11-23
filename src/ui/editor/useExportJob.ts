@@ -1,7 +1,9 @@
 import { useRef, useState } from "react";
 
 import { exportGif, exportJpeg, importRecipe, shareRecipe } from "../../actions/exportActions";
-import { saveActiveProject } from "../../actions/leaveGuard";
+import { saveActiveProject, saveActiveProjectAs } from "../../actions/leaveGuard";
+import { sceneStore } from "../../state/activeScene";
+import { askConfirm } from "../../state/confirm";
 import type { Project } from "../../domain/types";
 import { shareFile } from "../../platform/photos";
 import { reportError } from "../errors";
@@ -31,8 +33,24 @@ export function useExportJob(project: Project, previewTime: () => number, notify
   const runExportAction = async (action: ExportAction): Promise<void> => {
     const retry = () => onExportAction(action);
     if (action === "project") {
-      const r = await saveActiveProject();
-      if (r.ok) return notify("PROYECTO GUARDADO");
+      // ya guardado antes y con cambios: sobrescribir o guardar como proyecto nuevo
+      const { draft, saveStatus, project: active } = sceneStore.getState();
+      let asNew = false;
+      if (!draft && saveStatus.state !== "saved") {
+        const choice = await askConfirm({
+          section: "PROYECTO",
+          title: "¿Sobrescribir el proyecto?",
+          message: `«${active?.name ?? ""}» ya está guardado. Puedes reemplazarlo con los cambios o guardarlos como un proyecto nuevo.`,
+          actions: [
+            { id: "overwrite", label: "Sobrescribir", icon: "square.and.arrow.down", variant: "primary" },
+            { id: "saveAs", label: "Guardar como nuevo", icon: "plus.square.on.square", variant: "secondary" },
+          ],
+        });
+        if (!choice) return;
+        asNew = choice === "saveAs";
+      }
+      const r = asNew ? await saveActiveProjectAs() : await saveActiveProject();
+      if (r.ok) return notify(asNew ? `GUARDADO COMO ${sceneStore.getState().project?.name ?? "NUEVO"}` : "PROYECTO GUARDADO");
       return void reportError({ title: "No se pudo guardar el proyecto", error: r.error, retry });
     }
     if (action === "share") {
