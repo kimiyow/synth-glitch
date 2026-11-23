@@ -270,7 +270,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
               style={({ pressed }) => [styles.footBtn, pressed && styles.pressed]}
             >
               <Icon name="slider.horizontal.3" size={13} color={colors.inkMute} />
-              <Text style={styles.footText}>{more ? "OCULTAR AJUSTES FINOS" : "AJUSTES FINOS"}</Text>
+              <Text style={styles.footText}>{more ? "OCULTAR OPCIONES AVANZADAS" : "OPCIONES AVANZADAS"}</Text>
             </Pressable>
           </View>
         </View>
