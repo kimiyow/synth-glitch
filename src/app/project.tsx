@@ -26,7 +26,7 @@ import { GestureRecorder } from "../canvas/GestureRecorder";
 import { LiveModContext, useModBus } from "../canvas/modBus";
 import { StageView, type StageMode } from "../canvas/StageView";
 import { useSlowFrames } from "../canvas/useSlowFrames";
-import type { Layer, Project, Route, ScenePreset } from "../domain/types";
+import type { GestureClip, Layer, Project, Route, ScenePreset } from "../domain/types";
 import { FACTORY_PRESETS } from "../engine/factoryPresets";
 import { croppedSize } from "../engine/crop";
 import { isCostHigh, MAX_LAYERS } from "../engine/layerCost";
@@ -296,6 +296,9 @@ function ProjectView({ project }: { project: Project }) {
   // estela del gesto de la capa seleccionada sobre el lienzo: solo con el panel Gesto abierto (al
   // cerrarlo la imagen queda limpia); el ojo de la tarjeta la oculta también ahí
   const [trailVisible, setTrailVisible] = useState(true);
+  // gesto guardado en vista previa (panel Gesto): se dibuja sobre la imagen, en la misma zona y
+  // proporción en que se grabó, en lugar de la estela del gesto de la capa
+  const [gesturePreview, setGesturePreview] = useState<GestureClip | null>(null);
   const selectedClip = selected
     ? project.scene.routes.find((r) => r.target.layerId === selected.id && r.source === "track" && r.amount !== 0 && (r.settings?.gesture?.samples.length ?? 0) >= 4)
         ?.settings?.gesture
@@ -416,8 +419,16 @@ function ProjectView({ project }: { project: Project }) {
                 <Text style={styles.label}>{media.file ? "CARGANDO…" : "SIN IMAGEN"}</Text>
               </View>
             )}
-            {openPanel === "gesture" && trailVisible && selectedClip && selected?.visible && image && !stage && !recordingRoute && (
-              <GestureTrail bus={bus} clip={selectedClip} />
+            {openPanel === "gesture" && gesturePreview && image && !stage && !recordingRoute ? (
+              <GestureTrail bus={bus} clip={gesturePreview} />
+            ) : (
+              openPanel === "gesture" &&
+              trailVisible &&
+              selectedClip &&
+              selected?.visible &&
+              image &&
+              !stage &&
+              !recordingRoute && <GestureTrail bus={bus} clip={selectedClip} />
             )}
             {showCostWarning && (
               <Toast tone="status" icon="gauge.with.dots.needle.67percent" text={`RENDIMIENTO BAJO · ${layers.length} CAPAS`} style={styles.warning} />
@@ -486,6 +497,7 @@ function ProjectView({ project }: { project: Project }) {
                   onTriggerScene={triggerScene}
                     exports={exports}
                     trail={{ visible: trailVisible, onToggle: () => setTrailVisible((v) => !v) }}
+                    onGesturePreview={setGesturePreview}
                     onImportRecipe={() => void onImportRecipe()}
                   />
                 </GestureRecordContext.Provider>

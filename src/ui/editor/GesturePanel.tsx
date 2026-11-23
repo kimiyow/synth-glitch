@@ -1,13 +1,10 @@
-import { Canvas, Circle, Path, Skia } from "@shopify/react-native-skia";
-import { useMemo, useState } from "react";
-import { useDerivedValue, useSharedValue } from "react-native-reanimated";
-import { Pressable, StyleSheet, Switch, Text, TextInput, View, type LayoutChangeEvent } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import { findSameGesture, MAX_GESTURE_NAME } from "../../actions/gestureLibrary";
 import type { GestureTransform } from "../../actions/sceneEdits";
-import { useLiveMod } from "../../canvas/modBus";
 import type { GestureClip, GestureDirection, GesturePreset, Route, SourceConfig } from "../../domain/types";
-import { gestureSpeed, gestureValue, GESTURE_SPEEDS } from "../../modulation/sources";
+import { gestureSpeed, GESTURE_SPEEDS } from "../../modulation/sources";
 import { useSettings } from "../../state/appSettings";
 import { MAX_GESTURE_PRESETS } from "../../state/settings";
 import { Segmented } from "../kit/Segmented";
@@ -35,6 +32,8 @@ type Props = {
   onApply: (preset: GesturePreset) => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  // gesto guardado en vista previa, para dibujarlo sobre la imagen (null al cerrar la vista previa)
+  onPreview?: (clip: GestureClip | null) => void;
 };
 
 // glifo del recorrido de un gesto guardado (se dibuja como una modulación GESTO)
@@ -79,15 +78,17 @@ export function GesturePanel(props: Props) {
   const [advanced, setAdvanced] = useState(false);
   // gesto de la biblioteca en vista previa
   const [previewId, setPreviewId] = useState<string | null>(null);
-  // ancho del panel, medido al abrirlo: la vista previa se dibuja con su tamaño desde el primer
-  // toque en «Ver» (si esperaba a medir su recuadro, la primera vez salía vacía)
-  const [previewW, setPreviewW] = useState(0);
-  const measure = (e: LayoutChangeEvent) => setPreviewW(Math.round(e.nativeEvent.layout.width));
 
   // biblioteca: «usa uno guardado» (sin gesto) o «gestos guardados» (con gesto). Tocar un gesto
   // abre su vista previa (el recorrido y un punto que lo sigue en bucle); desde ahí se usa, se
   // renombra o se borra
   const previewed = presets.find((p) => p.id === previewId) ?? null;
+  const { onPreview } = props;
+  useEffect(() => {
+    onPreview?.(previewed ? { durationMs: previewed.durationMs, samples: previewed.samples, loop: "smooth" } : null);
+  }, [previewed, onPreview]);
+  // al cerrar el panel, la imagen queda limpia
+  useEffect(() => () => onPreview?.(null), [onPreview]);
   const library = (
     <View style={styles.block}>
       <Text style={styles.section}>
@@ -97,9 +98,6 @@ export function GesturePanel(props: Props) {
         <Text style={styles.note}>Aún no hay gestos guardados. Graba uno y toca Guardar para usarlo en otras capas o proyectos.</Text>
       ) : previewed ? (
         <View style={styles.preview}>
-          <View style={styles.previewBox}>
-            {previewW > 0 && <GesturePreview preset={previewed} width={previewW} height={PREVIEW_H} />}
-          </View>
           <View ref={editing ? revealRef : undefined} collapsable={false}>
             {editing ? (
               <TextInput
@@ -122,7 +120,8 @@ export function GesturePanel(props: Props) {
             )}
           </View>
           <Text style={styles.note}>
-            El punto es el dedo: lo horizontal mueve {layer?.axes.x ?? "el primer parámetro"} y lo vertical, {layer?.axes.y ?? "el segundo"}.
+            Míralo sobre la imagen: el punto blanco es el dedo. Lo horizontal mueve {layer?.axes.x ?? "el primer parámetro"} y lo vertical,{" "}
+            {layer?.axes.y ?? "el segundo"}.
           </Text>
           <View style={styles.actions}>
             <Pressable accessibilityRole="button" onPress={() => setPreviewId(null)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
@@ -195,7 +194,7 @@ export function GesturePanel(props: Props) {
 
   if (!layer) {
     return (
-      <View style={styles.root} onLayout={measure}>
+      <View style={styles.root}>
         <Text style={styles.note}>Elige una capa en Efectos o Capas para grabar su gesto.</Text>
       </View>
     );
@@ -204,7 +203,7 @@ export function GesturePanel(props: Props) {
   // sin gesto: qué hacer y cómo, el botón para grabar y la biblioteca debajo
   if (!route || !clip) {
     return (
-      <View style={styles.root} onLayout={measure}>
+      <View style={styles.root}>
         <View style={styles.block}>
           <Text style={styles.title}>Graba un movimiento para {layer.label}</Text>
           <Text style={styles.note}>
@@ -225,7 +224,7 @@ export function GesturePanel(props: Props) {
 
   // con gesto: el gesto y su señal, regrabar o guardar, lo avanzado plegado y la biblioteca
   return (
-    <View style={styles.root} onLayout={measure}>
+    <View style={styles.root}>
       <View style={styles.block}>
         <Text style={styles.title}>
           Tu gesto <Text style={styles.titleMute}>· {(clip.durationMs / 1000).toFixed(1)} s en bucle</Text>
@@ -303,38 +302,6 @@ export function GesturePanel(props: Props) {
         <Text style={styles.removeText}>Quitar gesto de {layer.label}</Text>
       </Pressable>
     </View>
-  );
-}
-
-// vista previa de un gesto guardado: su recorrido tenue y un punto que lo sigue en bucle a su
-// velocidad real, con el reloj del editor (leído en el cuerpo de cada valor derivado)
-const PREVIEW_H = 120;
-const PREVIEW_PAD = 10;
-function GesturePreview({ preset, width, height }: { preset: GesturePreset; width: number; height: number }) {
-  const live = useLiveMod();
-  const noClock = useSharedValue(0);
-  const clock = live ? live.bus.time : noClock;
-  const clip: GestureClip = { durationMs: preset.durationMs, samples: preset.samples, loop: "smooth" };
-  const w = width - PREVIEW_PAD * 2;
-  const h = height - PREVIEW_PAD * 2;
-  const path = useMemo(() => {
-    const b = Skia.PathBuilder.Make();
-    const frames = Math.floor(preset.samples.length / 2);
-    for (let i = 0; i < frames; i++) {
-      const x = PREVIEW_PAD + preset.samples[i * 2] * w;
-      const y = PREVIEW_PAD + (1 - preset.samples[i * 2 + 1]) * h;
-      if (i === 0) b.moveTo(x, y);
-      else b.lineTo(x, y);
-    }
-    return b.detach();
-  }, [preset, w, h]);
-  const cx = useDerivedValue(() => PREVIEW_PAD + (gestureValue(clip, clock.get(), 0) ?? 0.5) * w);
-  const cy = useDerivedValue(() => PREVIEW_PAD + (1 - (gestureValue(clip, clock.get(), 1) ?? 0.5)) * h);
-  return (
-    <Canvas style={{ width, height }} pointerEvents="none">
-      <Path path={path} style="stroke" strokeWidth={1.5} strokeJoin="round" strokeCap="round" color={colors.inkLineStrong} />
-      <Circle cx={cx} cy={cy} r={7} color={colors.paper} />
-    </Canvas>
   );
 }
 
@@ -429,7 +396,6 @@ const styles = StyleSheet.create({
   },
   dur: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontVariant: ["tabular-nums"] },
   preview: { gap: space.sm },
-  previewBox: { height: PREVIEW_H, borderRadius: radius.md, backgroundColor: colors.inkRaised, overflow: "hidden" },
   linkRow: { flexDirection: "row", justifyContent: "space-between", minHeight: 32, alignItems: "center" },
   link: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1, textDecorationLine: "underline" },
   rowAction: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, paddingRight: space.xs },

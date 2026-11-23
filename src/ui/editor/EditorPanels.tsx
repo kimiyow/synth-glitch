@@ -11,7 +11,7 @@ import {
 } from "../../actions/gestureLibrary";
 import { removeModulation, setGestureTransform, setSources, setTempo } from "../../actions/sceneEdits";
 import type { StageMode } from "../../canvas/StageView";
-import type { Layer, Project, ScenePreset } from "../../domain/types";
+import type { GestureClip, Layer, Project, ScenePreset } from "../../domain/types";
 import { hasFastLuminanceRoute } from "../../modulation/safety";
 import { MAX_STROKES } from "../../paint/strokeInterpolate";
 import { EffectThumb } from "../../render/EffectThumb";
@@ -62,6 +62,8 @@ type Props = {
   onImportRecipe: () => void;
   // estela del gesto sobre el lienzo
   trail: { visible: boolean; onToggle: () => void };
+  // gesto guardado en vista previa: se dibuja sobre la imagen (null = ninguno)
+  onGesturePreview: (clip: GestureClip | null) => void;
 };
 
 const PANEL_TITLE: Record<PanelId, string> = {
@@ -216,6 +218,7 @@ export function EditorPanels(props: Props) {
             if (ok && props.backTo) props.onClose();
           }}
           onRename={(id, name) => void renameGesturePreset(id, name)}
+          onPreview={props.onGesturePreview}
           onDelete={removeGesturePreset}
         />
       )}
