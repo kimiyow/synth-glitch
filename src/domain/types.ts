@@ -29,6 +29,8 @@ export type EffectLayer = {
   visible: boolean;
   // cómo se mezcla con la capa de abajo (FX-06). Sin él o "replace" = normal: el efecto la reemplaza
   blend?: BlendMode;
+  // cuánto se ve el resultado sobre la capa de abajo (0..1). Sin él = 1
+  opacity?: number;
 };
 export type GeneratorLayer = {
   kind: "generator";
@@ -39,6 +41,8 @@ export type GeneratorLayer = {
   blend: BlendMode;
   // semilla propia de la capa (0-999), sumada a la del proyecto. Es opcional
   seed?: number;
+  // cuánto se ve el resultado sobre la capa de abajo (0..1). Sin él = 1
+  opacity?: number;
 };
 export type Layer = EffectLayer | GeneratorLayer;
 

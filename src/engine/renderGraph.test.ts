@@ -61,6 +61,7 @@ describe("nodeUniforms", () => {
       time: 2,
       seed: 7,
       blend: 0,
+      opacity: 1,
     });
   });
 

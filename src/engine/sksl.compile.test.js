@@ -17,14 +17,14 @@ beforeAll(async () => {
 }, 30_000);
 
 describe("SkSL de los efectos", () => {
-  // con la mezcla de FX-06 (withEffectBlend) cada efecto declara también blend
+  // con la mezcla de FX-06 (withEffectBlend) cada efecto declara también blend y opacity
   it.each(EFFECTS.map((e) => [e.id, e.sksl]))("%s compila con el contrato y blend", (_id, sksl) => {
     let error = "";
     const effect = CK.RuntimeEffect.Make(sksl, (m) => (error += m));
     expect(error).toBe("");
     expect(effect).not.toBeNull();
     const names = Array.from({ length: effect.getUniformCount() }, (_, i) => effect.getUniformName(i));
-    expect(names).toEqual(["resolution", "param", "time", "seed", "blend"]);
+    expect(names).toEqual(["resolution", "param", "time", "seed", "blend", "opacity"]);
   });
 });
 
@@ -35,7 +35,7 @@ describe("SkSL de los generadores", () => {
     expect(error).toBe("");
     expect(effect).not.toBeNull();
     const names = Array.from({ length: effect.getUniformCount() }, (_, i) => effect.getUniformName(i));
-    expect(names).toEqual(["resolution", "param", "time", "seed", "blend"]);
+    expect(names).toEqual(["resolution", "param", "time", "seed", "blend", "opacity"]);
   });
 });
 

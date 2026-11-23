@@ -105,6 +105,20 @@ export function setBlend(layerId: string, blend: BlendMode) {
   });
 }
 
+// opacidad de una capa (0..1). Con label entra al historial; sin label es solo vista previa. Al
+// 100 % no se guarda
+export function setLayerOpacity(layerId: string, opacity: number, label: string | null) {
+  const recipe = (scene: { layers: Layer[] }) => {
+    const layer = scene.layers.find((l) => l.id === layerId);
+    if (!layer) return;
+    const v = Math.round(Math.min(1, Math.max(0, opacity)) * 100) / 100;
+    if (v >= 1) delete layer.opacity;
+    else layer.opacity = v;
+  };
+  if (label) commit(label, recipe);
+  else sceneStore.getState().adjust(recipe);
+}
+
 export function rerollSeed(layerId: string) {
   commit("semilla", (scene) => {
     const layer = scene.layers.find((l) => l.id === layerId);

@@ -8,6 +8,8 @@ export type ChainNode = {
   layerId: string;
   // valores base (x, y) de la capa; la modulación los sobrescribe por cuadro
   base: { x: number; y: number };
+  // opacidad de la capa sobre la de abajo (0..1)
+  opacity: number;
 } & (
   | { kind: "effect"; effect: EffectId; blend: number }
   | { kind: "generator"; generator: GeneratorId; blend: number; seedOffset: number }
@@ -26,7 +28,7 @@ export type EffectUniforms = {
   seed: number;
 };
 // generadores y efectos reciben blend (modo de mezcla con la capa de abajo)
-export type NodeUniforms = EffectUniforms & { blend: number };
+export type NodeUniforms = EffectUniforms & { blend: number; opacity: number };
 
 // capas visibles (efectos y generadores), la primera se aplica antes; nunca más de MAX_LAYERS
 export function buildLayerChain(layers: readonly Layer[]): ChainNode[] {
@@ -35,15 +37,17 @@ export function buildLayerChain(layers: readonly Layer[]): ChainNode[] {
     if (!layer.visible) continue;
     if (chain.length === MAX_LAYERS) break;
     const base = { ...layer.params };
+    const opacity = Math.min(1, Math.max(0, layer.opacity ?? 1));
     chain.push(
       layer.kind === "effect"
-        ? { kind: "effect", layerId: layer.id, effect: layer.effect, blend: BLEND_INDEX[layer.blend ?? "replace"], base }
+        ? { kind: "effect", layerId: layer.id, effect: layer.effect, blend: BLEND_INDEX[layer.blend ?? "replace"], opacity, base }
         : {
             kind: "generator",
             layerId: layer.id,
             generator: layer.generator,
             blend: BLEND_INDEX[layer.blend],
             seedOffset: layer.seed ?? 0,
+            opacity,
             base,
           },
     );
@@ -85,6 +89,7 @@ export function nodeUniforms(
     time: frame.time,
     seed: shaderSeed(node.kind === "generator" ? seed + node.seedOffset : seed),
     blend: node.blend,
+    opacity: node.opacity,
   };
   return uniforms;
 }

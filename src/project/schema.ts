@@ -153,10 +153,13 @@ function paint(v: unknown, path: string, layers: readonly Layer[]): PaintLayer {
 export function parseLayer(v: unknown, path: string): Layer {
   const o = obj(v, path);
   const kind = oneOf(o.kind, ["effect", "generator"] as const, `${path}.kind`);
+  // opacidad opcional; al 100 % no se guarda
+  const opacity = o.opacity === undefined ? 1 : unit(o.opacity, `${path}.opacity`);
   const base = {
     id: str(o.id, `${path}.id`),
     params: xy(o.params, `${path}.params`),
     visible: bool(o.visible, `${path}.visible`),
+    ...(opacity >= 1 ? {} : { opacity }),
   };
   if (kind === "effect") {
     // modo de mezcla opcional (FX-06); normal no se guarda

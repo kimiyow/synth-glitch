@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { addModulation, MAX_MODS_PER_LAYER, rerollSeed, resetLayer, setBlend, toggleLayerVisible } from "../../actions/sceneEdits";
+import { addModulation, MAX_MODS_PER_LAYER, rerollSeed, resetLayer, setBlend, setLayerOpacity, toggleLayerVisible } from "../../actions/sceneEdits";
+import { sceneStore } from "../../state/activeScene";
 import type { BlendMode, Layer, Route, SourceConfig } from "../../domain/types";
 import { EFFECT_BY_ID, GENERATOR_BY_ID } from "../../engine/registry";
 import { askConfirm } from "../../state/confirm";
@@ -51,6 +52,50 @@ type Props = ParamDrag & {
   // fuera del panel Modulación (Capas, Efectos) las modulaciones solo se resumen: tocarlas abre el
   // panel Modulación con esa abierta (null = la primera)
   onOpenMod?: (layerId: string, routeId: string | null, fresh: boolean) => void;
+};
+
+// opacidad de la capa: vista previa sin historial mientras se arrastra (cada 60 ms como mucho) y un
+// solo cambio deshacible al soltar, como los parámetros
+function OpacitySlider({ layer }: { layer: Layer }) {
+  const start = useRef<number | null>(null);
+  const pending = useRef<number | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flush = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    if (pending.current !== null) setLayerOpacity(layer.id, pending.current, null);
+    pending.current = null;
+  };
+  const value = layer.opacity ?? 1;
+  return (
+    <Slider
+      label="Opacidad"
+      value={value}
+      valueText={`${Math.round(value * 100)} %`}
+      onSlidingStart={() => {
+        start.current = value;
+      }}
+      onChange={(v) => {
+        pending.current = v;
+        if (!timer.current) timer.current = setTimeout(flush, 60);
+      }}
+      onSlidingEnd={() => {
+        flush();
+        const from = start.current;
+        start.current = null;
+        const now = currentOpacity(layer.id);
+        if (from === null || now === null || Math.abs(from - now) < 0.005) return;
+        // se vuelve al valor inicial sin historial y se confirma el final como un solo cambio
+        setLayerOpacity(layer.id, from, null);
+        setLayerOpacity(layer.id, now, "opacidad");
+      }}
+    />
+  );
+}
+
+const currentOpacity = (layerId: string): number | null => {
+  const l = sceneStore.getState().project?.scene.layers.find((x) => x.id === layerId);
+  return l ? (l.opacity ?? 1) : null;
 };
 
 export function layerDef(layer: Layer) {
@@ -172,6 +217,7 @@ export function LayerInspector(props: Props) {
           </View>
         </View>
       )}
+      {!focusMod && layer.kind === "effect" && <OpacitySlider layer={layer} />}
 
       {!focusMod && layer.kind === "generator" && (
         <>
@@ -181,6 +227,7 @@ export function LayerInspector(props: Props) {
               <ChipRow chips={BLENDS} value={layer.blend} onChange={(b) => setBlend(layer.id, b)} />
             </View>
           </View>
+          <OpacitySlider layer={layer} />
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Semilla</Text>
             <Text style={styles.seed}>{layer.seed ?? 0}</Text>
