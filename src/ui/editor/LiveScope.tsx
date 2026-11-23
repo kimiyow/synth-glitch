@@ -1,4 +1,5 @@
 import { Canvas, Circle, Line, Points, vec } from "@shopify/react-native-skia";
+import { useEffect } from "react";
 import { useAnimatedReaction, useDerivedValue, useSharedValue } from "react-native-reanimated";
 
 import { oriInput, recInput, useLiveMod } from "../../canvas/modBus";
@@ -127,7 +128,15 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
       const inpNow = calc ? previewInputs(route, sources, t, inputs) : inputs;
       ball.set({ u, s: calc ? signalAt(t, inpNow) : s, r: calc ? resultAt(t, inpNow) : r });
     },
+    // sin esta lista la reacción solo se rehace cuando cambia lo que lee del reloj y sigue dibujando
+    // con los ajustes anteriores: la curva quedaba vieja aunque la bolita siguiera avanzando
+    [route, routes, sources, base, index, bipolar, computed, sweepS, live],
   );
+  // al cambiar un ajuste, el trazo en vivo (micrófono, giro, azar) empieza de nuevo desde el valor
+  // actual: no queda a la vista la vuelta anterior con los ajustes viejos
+  useEffect(() => {
+    lastSlot.set(-1);
+  }, [route, routes, sources, base, lastSlot]);
 
   const h = height - PAD * 2;
   const span = width - PAD_X * 2;
