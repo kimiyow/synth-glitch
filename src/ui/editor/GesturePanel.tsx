@@ -119,10 +119,7 @@ export function GesturePanel(props: Props) {
               </Text>
             )}
           </View>
-          <Text style={styles.note}>
-            Míralo sobre la imagen: el punto blanco es el dedo. Lo horizontal mueve {layer?.axes.x ?? "el primer parámetro"} y lo vertical,{" "}
-            {layer?.axes.y ?? "el segundo"}.
-          </Text>
+          <Text style={styles.note}>Míralo sobre la imagen: el punto blanco es el dedo.</Text>
           <View style={styles.actions}>
             <Pressable accessibilityRole="button" onPress={() => setPreviewId(null)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
               <Text style={styles.actionText}>Cancelar</Text>
@@ -191,6 +188,11 @@ export function GesturePanel(props: Props) {
       )}
     </View>
   );
+
+  // vista previa de un gesto guardado: solo ese bloque, así la hoja se encoge y deja ver la imagen
+  if (previewed) {
+    return <View style={styles.root}>{library}</View>;
+  }
 
   if (!layer) {
     return (

@@ -1,10 +1,10 @@
 import { Canvas, Circle, Group, Line, Points, rect, vec } from "@shopify/react-native-skia";
 import { useEffect } from "react";
-import { useAnimatedReaction, useDerivedValue, useSharedValue } from "react-native-reanimated";
+import { useAnimatedReaction, useDerivedValue, useReducedMotion, useSharedValue } from "react-native-reanimated";
 
 import { recInput, useLiveMod, type ModBus } from "../../canvas/modBus";
 import type { Route, SourceConfig } from "../../domain/types";
-import { evaluateAxis, type ModInputs } from "../../modulation/evaluate";
+import { evaluateAxis, NO_INPUTS, type ModInputs } from "../../modulation/evaluate";
 import { adsrActive, LIVE_WINDOW_S, previewInputs, scopeComputed, scopeWindowS } from "../../modulation/scopeWindow";
 import { colors } from "../tokens";
 
@@ -34,6 +34,8 @@ type ScopeConfig = {
   seed: number;
   computed: boolean;
   sweepS: number;
+  // Reducir movimiento: la curva calculada queda quieta, sin bolita ni cabezal
+  still: boolean;
   version: number;
 };
 
@@ -74,6 +76,7 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
   const noClock = useSharedValue(0);
   const clock = bus ? bus.time : noClock;
   const seed = live ? live.seed : 0;
+  const reduced = useReducedMotion();
 
   const make = (version: number): ScopeConfig => ({
     route,
@@ -83,6 +86,7 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
     seed,
     computed: scopeComputed(route, sources),
     sweepS: scopeWindowS(route, sources),
+    still: reduced,
     version,
   });
   const cfg = useSharedValue<ScopeConfig>(make(0));
@@ -93,7 +97,7 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
     cfg.set(make(v));
     // make lee estas mismas props
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route, routes, sources, base, seed, cfg, version]);
+  }, [route, routes, sources, base, seed, reduced, cfg, version]);
 
   // curva a dibujar (N valores 0..1) y la bolita
   const curve = useSharedValue<number[]>(new Array(N).fill(0));
@@ -116,6 +120,9 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
       const u = (t - start) / w;
       const m = memo.get();
       const changed = m.version !== c.version;
+      // Reducir movimiento: la vuelta que se muestra es siempre la primera (no cambia con el reloj)
+      const frozen = c.still && calc;
+      const curveStart = frozen ? 0 : start;
 
       // barrido en vivo: se escribe siempre (al pasar a en vivo no queda vacío); con un ajuste
       // nuevo o la primera vez, empieza como línea plana en el valor actual
@@ -139,10 +146,10 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
 
       if (calc) {
         // la curva calculada solo cambia al empezar una vuelta o con un ajuste nuevo
-        if (changed || !m.calc || m.start !== start) {
+        if (changed || !m.calc || m.start !== curveStart) {
           const out = new Array<number>(N);
           for (let k = 0; k < N; k++) {
-            const tk = start + (k / (N - 1)) * w;
+            const tk = curveStart + (k / (N - 1)) * w;
             out[k] = valueAt(c, tk, previewInputs(c.route, c.sources, tk, inputs));
           }
           curve.set(out);
@@ -150,9 +157,10 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
       } else if (changed || m.calc || m.slot !== slot) {
         curve.set(trace.get().slice());
       }
-      memo.set({ version: c.version, start, calc, slot });
+      memo.set({ version: c.version, start: curveStart, calc, slot });
       // la bolita marca el valor de este instante (en el ADSR de muestra, el del disparo de muestra)
-      ball.set({ u, v: calc ? valueAt(c, t, previewInputs(c.route, c.sources, t, inputs)) : v });
+      // quieta: u < 0 oculta bolita y cabezal y deja toda la curva brillante
+      ball.set({ u: frozen ? -1 : u, v: calc ? valueAt(c, t, previewInputs(c.route, c.sources, t, inputs)) : v });
     },
     // sin lista de dependencias: en iOS se ignora (Reanimated avisa en cada render). La reacción
     // solo usa valores compartidos estables; los ajustes le llegan por cfg
@@ -168,9 +176,10 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
     for (let k = 0; k < N; k++) out.push({ x: PAD_X + (k / (N - 1)) * span, y: PAD + (1 - b[k]) * h });
     return out;
   });
-  const ballX = useDerivedValue(() => PAD_X + ball.get().u * span);
+  const ballX = useDerivedValue(() => PAD_X + Math.max(0, ball.get().u) * span);
   const ballY = useDerivedValue(() => PAD + (1 - ball.get().v) * h);
-  const behind = useDerivedValue(() => rect(0, 0, ballX.get(), height));
+  const moving = useDerivedValue(() => (ball.get().u < 0 ? 0 : 1));
+  const behind = useDerivedValue(() => rect(0, 0, ball.get().u < 0 ? width : ballX.get(), height));
   const headTop = useDerivedValue(() => vec(ballX.get(), 0));
   const headBottom = useDerivedValue(() => vec(ballX.get(), height));
 
@@ -181,8 +190,27 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
         <Points points={points} mode="polygon" color={colors.inkText} strokeWidth={2} style="stroke" strokeJoin="round" />
       </Group>
       {/* cabezal: dónde va el barrido */}
-      <Line p1={headTop} p2={headBottom} color={colors.inkLine} strokeWidth={1} />
-      <Circle cx={ballX} cy={ballY} r={BALL_R} color={colors.inkText} />
+      <Line p1={headTop} p2={headBottom} color={colors.inkLine} strokeWidth={1} opacity={moving} />
+      <Circle cx={ballX} cy={ballY} r={BALL_R} color={colors.inkText} opacity={moving} />
     </Canvas>
   );
+}
+
+// la gráfica en palabras, para VoiceOver: qué mueve, entre qué valores y cuánto dura una vuelta. El
+// rango se calcula como en el lienzo (evaluateAxis) sobre una vuelta; lo que depende de ti o del
+// azar solo se nombra
+export function describeScope(route: Route, routes: readonly Route[], sources: SourceConfig, base: { x: number; y: number }, seed: number, source: string, param: string): string {
+  if (!scopeComputed(route, sources)) return `Gráfica: ${source} mueve ${param} según lo que pase en el momento`;
+  const w = scopeWindowS(route, sources);
+  let lo = 1;
+  let hi = 0;
+  for (let k = 0; k < 48; k++) {
+    const t = (k / 47) * w;
+    const v = evaluateAxis(route.target.layerId, route.target.param, base, routes, sources, t, previewInputs(route, sources, t, NO_INPUTS), seed);
+    lo = Math.min(lo, v);
+    hi = Math.max(hi, v);
+  }
+  const pct = (v: number) => `${Math.round(v * 100)} %`;
+  const range = hi - lo < 0.01 ? `queda fijo en ${pct(lo)}` : `va de ${pct(lo)} a ${pct(hi)}`;
+  return `Gráfica: con ${source}, ${param} ${range}; cada vuelta de la gráfica dura ${Math.round(w * 10) / 10} s`;
 }

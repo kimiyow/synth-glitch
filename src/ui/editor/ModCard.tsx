@@ -13,7 +13,7 @@ import { SheetPin } from "../kit/Sheet";
 import { useLiveMod } from "../../canvas/modBus";
 import { defaultRouteSetting } from "../../modulation/sources";
 import { colors, radius, space, type } from "../tokens";
-import { LiveScope } from "./LiveScope";
+import { describeScope, LiveScope } from "./LiveScope";
 import { SourceGlyph } from "./SourceGlyph";
 import { useGestureRecord } from "./gestureRecord";
 import { CommitSlider, hasAdvanced, RoutePreview, RouteSourceEditor, type MicView } from "./SourceEditor";
@@ -172,7 +172,13 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
         <RoutePreview.Provider value={preview}>
         <View style={styles.body}>
           {/* blanco: la señal de la fuente · gris: cómo queda el parámetro */}
-          <View style={styles.scope} onLayout={(e) => setScopeW(Math.round(e.nativeEvent.layout.width))}>
+          <View
+            style={styles.scope}
+            onLayout={(e) => setScopeW(Math.round(e.nativeEvent.layout.width))}
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={describeScope(route, routes, scene, base, live ? live.seed : 0, src.label, resultName)}
+          >
             {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={base} width={scopeW} height={SCOPE_H} />}
           </View>
           <Text style={styles.caption}>Así se mueve {resultName}</Text>
