@@ -95,7 +95,8 @@ export type SourceConfig = {
   tempo: { bpm: number };
   lfo: { shape: LfoShape; rateHz: number; sync: boolean; division: number; phase: number; depth: number };
   adsr: { attack: number; decay: number; sustain: number; release: number };
-  sh: { division: number; slew: number };
+  // sync = cambia en cada división del reloj; libre = rateHz cambios por segundo
+  sh: { division: number; slew: number; sync: boolean; rateHz: number };
   seq: { steps: number[]; division: number; direction: SeqDirection };
   orientation: { sensitivity: number; deadzone: number; swapAxes: boolean };
   mic: { floor: number; ceiling: number; attack: number; release: number; hitThreshold: number };

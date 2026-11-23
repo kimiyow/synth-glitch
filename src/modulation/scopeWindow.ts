@@ -1,6 +1,6 @@
 import type { Route, SourceConfig } from "../domain/types";
 import { MIC_HIT_GATE_S, type ModInputs } from "./evaluate";
-import { cycleHz, gesturePeriodS, routeLfo, routeSeq, routeSh } from "./sources";
+import { cycleHz, gesturePeriodS, routeLfo, routeSeq, routeSh, shStepS } from "./sources";
 
 // ventana de la gráfica en vivo de una modulación. Las fuentes que dependen solo del tiempo se
 // dibujan calculadas (la curva completa desde el primer cuadro y al instante al cambiar un ajuste);
@@ -67,7 +67,7 @@ export function scopeWindowS(route: Route, sources: SourceConfig): number {
       return periodWindow(1 / Math.max(0.01, cycleHz(l.rateHz, l.sync, l.division, sources.tempo.bpm)));
     }
     case "sh":
-      return periodWindow(4 * routeSh(route, sources).division * beat);
+      return periodWindow(4 * shStepS(routeSh(route, sources), sources.tempo.bpm));
     case "seq": {
       const q = routeSeq(route, sources);
       const steps = q.direction === "pingpong" ? Math.max(1, 2 * q.steps.length - 2) : q.steps.length;

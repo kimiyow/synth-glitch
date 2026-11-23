@@ -5,7 +5,7 @@ export const DEFAULT_SOURCES: SourceConfig = {
   tempo: { bpm: 120 },
   lfo: { shape: "sine", rateHz: 0.5, sync: false, division: 4, phase: 0, depth: 1 },
   adsr: { attack: 0.05, decay: 0.3, sustain: 0.6, release: 0.6 },
-  sh: { division: 1, slew: 0.15 },
+  sh: { division: 1, slew: 0.15, sync: true, rateHz: 2 },
   seq: { steps: [1, 0, 0.5, 0, 0.75, 0, 0.25, 0], division: 0.5, direction: "forward" },
   orientation: { sensitivity: 1, deadzone: 0.04, swapAxes: false },
   mic: { floor: -50, ceiling: -10, attack: 0.02, release: 0.25, hitThreshold: 0.7 },
@@ -62,7 +62,13 @@ export function parseSources(raw: unknown): SourceConfig {
       sustain: num(adsr.sustain, d.adsr.sustain, 0, 1),
       release: num(adsr.release, d.adsr.release, 0, 10),
     },
-    sh: { division: num(sh.division, d.sh.division, 0.25, 64), slew: num(sh.slew, d.sh.slew, 0, 1) },
+    // proyectos anteriores: siempre al reloj
+    sh: {
+      division: num(sh.division, d.sh.division, 0.25, 64),
+      slew: num(sh.slew, d.sh.slew, 0, 1),
+      sync: typeof sh.sync === "boolean" ? sh.sync : d.sh.sync,
+      rateHz: num(sh.rateHz, d.sh.rateHz, 0.05, 20),
+    },
     seq: { steps, division: num(seq.division, d.seq.division, 0.25, 64), direction: pick(seq.direction, SEQ_DIRECTIONS, d.seq.direction) },
     orientation: {
       sensitivity: num(ori.sensitivity, d.orientation.sensitivity, 0.1, 4),
@@ -268,9 +274,15 @@ export function adsrValue(cfg: SourceConfig["adsr"], t: number, onAt: number | n
 
 // sample & hold bipolar: nuevo valor de ruido en cada pulso, con deslizamiento (slew = fracción del
 // paso)
+// duración de un valor del azar (s): una división del reloj o, libre, 1 / cambios por segundo
+export function shStepS(cfg: SourceConfig["sh"], bpm: number): number {
+  "worklet";
+  return cfg.sync === false ? 1 / Math.max(0.05, cfg.rateHz) : (60 / bpm) * cfg.division;
+}
+
 export function shValue(cfg: SourceConfig["sh"], bpm: number, t: number, seed: number): number {
   "worklet";
-  const stepLen = (60 / bpm) * cfg.division;
+  const stepLen = shStepS(cfg, bpm);
   const k = Math.floor(t / stepLen);
   const cur = hash01(seed + 17, k) * 2 - 1;
   const prev = hash01(seed + 17, k - 1) * 2 - 1;

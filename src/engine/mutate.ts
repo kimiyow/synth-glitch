@@ -2,6 +2,9 @@ import type { EffectId, Layer, Route, RouteSettings, SourceConfig, SourceId } fr
 import { defaultRouteSetting, DIVISIONS, LFO_SHAPES } from "../modulation/sources";
 import { EFFECTS } from "./registry";
 
+// formas de onda del LFO que se ofrecen (lo aleatorio vive en la fuente AZAR)
+const WAVE_SHAPES = LFO_SHAPES.filter((s) => s !== "random");
+
 // MUTAR y ALEATORIZAR: funciones puras con semilla (misma semilla → misma escena). No tocan la
 // pintura, el medio ni el recorte; devuelven capas y rutas nuevas
 
@@ -42,7 +45,7 @@ function mutateSettings(s: RouteSettings, r: () => number, amount: number, divs:
     const l = out.lfo;
     // la velocidad varía en escala logarítmica
     l.rateHz = round(clamp(l.rateHz * Math.exp(jitter(r, amount * 1.5)), 0.05, MAX_RANDOM_HZ), 2);
-    if (r() < amount * 0.5) l.shape = pick(r, LFO_SHAPES);
+    if (r() < amount * 0.5) l.shape = pick(r, WAVE_SHAPES);
     l.depth = round(clamp(l.depth + jitter(r, amount * 0.5), 0.1, 1), 2);
     l.phase = round(clamp(l.phase + jitter(r, amount), 0, 1), 2);
     if (l.sync && r() < amount * 0.5) l.division = pick(r, divs);
@@ -115,9 +118,9 @@ export function randomScene(seed: number, scene: SourceConfig): { layers: Layer[
       const source = pick(r, sources);
       const settings = defaultRouteSetting(source, scene);
       if (settings.lfo) {
-        settings.lfo = { ...settings.lfo, shape: pick(r, LFO_SHAPES), rateHz: round(0.1 + r() * (MAX_RANDOM_HZ - 0.1), 2), sync: false, phase: round(r(), 2), depth: 1 };
+        settings.lfo = { ...settings.lfo, shape: pick(r, WAVE_SHAPES), rateHz: round(0.1 + r() * (MAX_RANDOM_HZ - 0.1), 2), sync: false, phase: round(r(), 2), depth: 1 };
       }
-      if (settings.sh) settings.sh = { division: pick(r, divs), slew: round(r() * 0.6, 2) };
+      if (settings.sh) settings.sh = { ...settings.sh, division: pick(r, divs), slew: round(r() * 0.6, 2), sync: true };
       if (settings.seq) settings.seq = { ...settings.seq, steps: settings.seq.steps.map(() => round(r(), 2)), division: pick(r, divs) };
       routes.push({
         id: `mod-r${tag}${i}${m}`,

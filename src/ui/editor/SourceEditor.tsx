@@ -45,6 +45,12 @@ function lfoSpeed(hz: number): string {
   return `${(Math.round(hz * 10) / 10).toString()} vueltas por s`;
 }
 
+// velocidad del azar libre: cada cuánto salta a un valor nuevo
+function shSpeed(hz: number): string {
+  if (hz < 1) return `1 cambio cada ${(Math.round(10 / hz) / 10).toString()} s`;
+  return `${(Math.round(hz * 10) / 10).toString()} cambios por s`;
+}
+
 // vista previa mientras se arrastra: la tarjeta de la modulación ejecuta el onCommit dado sin
 // tocar la escena y la gráfica en vivo muestra el valor provisional. Al soltar se confirma
 export const RoutePreview = createContext<((commit: () => void) => void) | null>(null);
@@ -80,7 +86,11 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
     }
     return (
       <View style={styles.root}>
-        <ChipRow chips={LFO_SHAPES.map((s) => ({ id: s, label: SHAPE_LABEL[s] }))} value={lfo.shape} onChange={(shape) => patch("lfo", "forma del LFO", { shape })} />
+        <ChipRow
+          chips={LFO_SHAPES.filter((s) => s !== "random" || lfo.shape === "random").map((s) => ({ id: s, label: SHAPE_LABEL[s] }))}
+          value={lfo.shape}
+          onChange={(shape) => patch("lfo", "forma del LFO", { shape })}
+        />
         {lfo.sync ? (
           <ChipRow chips={DIVISION_CHIPS} value={lfo.division} onChange={(division) => patch("lfo", "división del LFO", { division })} />
         ) : (
@@ -130,9 +140,37 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
   if (route.source === "sh") {
     const sh = own.sh ?? scene.sh;
     if (advanced) {
-      return <CommitSlider label="Suavizado" format={two} value={sh.slew} onCommit={(slew) => patch("sh", "suavizado del azar", { slew })} />;
+      return (
+        <Segmented
+          options={[
+            { id: "free", label: "LIBRE" },
+            { id: "sync", label: `AL RELOJ · ${scene.tempo.bpm}` },
+          ]}
+          value={sh.sync ? "sync" : "free"}
+          onChange={(m) => patch("sh", "modo del azar", { sync: m === "sync" })}
+        />
+      );
     }
-    return <ChipRow chips={DIVISION_CHIPS} value={sh.division} onChange={(division) => patch("sh", "división del azar", { division })} />;
+    // lo aleatorio vive aquí (el LFO ya no ofrece forma aleatoria): cada cuánto cambia y cómo pasa
+    // de un valor al siguiente
+    return (
+      <View style={styles.root}>
+        {sh.sync ? (
+          <ChipRow chips={DIVISION_CHIPS} value={sh.division} onChange={(division) => patch("sh", "división del azar", { division })} />
+        ) : (
+          <CommitSlider
+            label="Velocidad"
+            format={shSpeed}
+            // escala logarítmica de 0.1 a 10 cambios por segundo
+            toValue={(u) => Math.round(0.1 * Math.pow(100, u) * 100) / 100}
+            fromValue={(hz) => Math.log(hz / 0.1) / Math.log(100)}
+            value={sh.rateHz}
+            onCommit={(rateHz) => patch("sh", "velocidad del azar", { rateHz })}
+          />
+        )}
+        <CommitSlider label="Suavizado" format={two} value={sh.slew} onCommit={(slew) => patch("sh", "suavizado del azar", { slew })} />
+      </View>
+    );
   }
 
   if (route.source === "seq") {

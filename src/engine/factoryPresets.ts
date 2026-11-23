@@ -27,7 +27,7 @@ export const FACTORY_PRESETS: readonly ScenePreset[] = [
     ],
     routes: [
       // el tracking se desajusta a saltos lentos; las líneas respiran
-      route("f-cinta-r1", "f-cinta-vhs", "y", "sh", 0.3, { sh: { division: 2, slew: 0.5 } }),
+      route("f-cinta-r1", "f-cinta-vhs", "y", "sh", 0.3, { sh: { division: 2, slew: 0.5, sync: true, rateHz: 2 } }),
       route("f-cinta-r2", "f-cinta-scan", "x", "lfo", 0.2, { lfo: { ...DEFAULT_SOURCES.lfo, shape: "sine", rateHz: 0.3 } }),
     ],
   },
@@ -51,7 +51,7 @@ export const FACTORY_PRESETS: readonly ScenePreset[] = [
         { seq: { steps: [0.9, 0.1, 0.6, 0.1, 1, 0.2, 0.4, 0], division: 1, direction: "forward" } },
         "replace",
       ),
-      route("f-glitch-r2", "f-glitch-chroma", "x", "sh", 0.4, { sh: { division: 1, slew: 0.1 } }),
+      route("f-glitch-r2", "f-glitch-chroma", "x", "sh", 0.4, { sh: { division: 1, slew: 0.1, sync: true, rateHz: 2 } }),
     ],
   },
   {
