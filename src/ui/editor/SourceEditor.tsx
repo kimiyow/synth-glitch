@@ -249,8 +249,8 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
   return null;
 }
 
-// la fuente GESTO en Modulación: solo el resumen. Grabar, transformar y guardar se hacen en el
-// panel Gesto, que se abre encima
+// la fuente GESTO en Modulación: su estado y «Ver gestos grabados», que abre el panel Gesto encima
+// (grabar uno nuevo, ver los grabados con su vista previa y usarlos)
 function GestureSummary({ route }: { route: Route }) {
   const rec = useGestureRecord();
   const g = route.settings?.gesture;
@@ -260,13 +260,12 @@ function GestureSummary({ route }: { route: Route }) {
       <Text style={[styles.note, styles.flex]}>{has ? `En bucle · ${(g.durationMs / 1000).toFixed(1)} s` : "Sin gesto grabado"}</Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityHint="Abre el panel Gesto para grabar, transformar o guardar el gesto"
+        accessibilityHint="Abre el panel Gesto: grabar uno nuevo o ver y usar los gestos grabados"
         hitSlop={{ top: 6, bottom: 6 }}
         onPress={() => rec?.open()}
         style={({ pressed }) => [styles.btn, styles.btnRow, pressed && styles.pressed]}
       >
-        {!has && <View style={styles.recDotSmall} />}
-        <Text style={styles.btnText}>{has ? "EDITAR EN GESTO" : "GRABAR EN GESTO"}</Text>
+        <Text style={styles.btnText}>VER GESTOS GRABADOS</Text>
       </Pressable>
     </View>
   );

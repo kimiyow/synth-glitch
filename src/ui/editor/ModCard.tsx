@@ -96,13 +96,14 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
   const rec = useGestureRecord();
   const pickSource = (s: SourceId) => {
     if (s === "track" && route.source !== "track") {
-      // el panel Gesto trabaja con la modulación GESTO de la capa: si ya hay otra, se edita esa
+      // una sola modulación GESTO por capa (el panel Gesto trabaja con ella). Elegir GESTO deja la
+      // tarjeta con sus opciones; el panel Gesto se abre desde «Ver gestos grabados»
       const other = routes.some((r) => r.id !== route.id && r.target.layerId === route.target.layerId && r.source === "track");
-      if (other) rec?.notice("ESTA CAPA YA TIENE UN GESTO · SE ABRE EN GESTO");
-      else setModulationSource(route.id, s);
-      setPicking(false);
-      rec?.open();
-      return;
+      if (other) {
+        rec?.notice("ESTA CAPA YA TIENE UN GESTO EN OTRA MODULACIÓN");
+        setPicking(false);
+        return;
+      }
     }
     setModulationSource(route.id, s);
     setPicking(false);
