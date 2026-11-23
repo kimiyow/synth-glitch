@@ -235,6 +235,7 @@ export function GesturePanel(props: Props) {
         <View style={styles.scope} onLayout={(e) => setScopeW(e.nativeEvent.layout.width)}>
           {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={layer.params} width={scopeW} height={SCOPE_H} />}
         </View>
+        <Text style={styles.note}>{describeGesture(clip, layer.axes)}</Text>
       </View>
 
       <View style={styles.actions}>
@@ -305,6 +306,27 @@ export function GesturePanel(props: Props) {
       </Pressable>
     </View>
   );
+}
+
+// el gesto en palabras, bajo su gráfica: entre qué valores lleva cada parámetro (con el espejo
+// aplicado) y, si no es la normal, su velocidad y dirección
+function describeGesture(clip: GestureClip, axes: { x: string; y: string }): string {
+  let x0 = 1, x1 = 0, y0 = 1, y1 = 0;
+  for (let i = 0; i + 1 < clip.samples.length; i += 2) {
+    const x = clip.mirrorX ? 1 - clip.samples[i] : clip.samples[i];
+    const y = clip.mirrorY ? 1 - clip.samples[i + 1] : clip.samples[i + 1];
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x);
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+  }
+  const pct = (v: number) => `${Math.round(v * 100)} %`;
+  const span = (lo: number, hi: number) => (hi - lo < 0.02 ? `queda en ${pct(lo)}` : `va de ${pct(lo)} a ${pct(hi)}`);
+  const speed = gestureSpeed(clip);
+  const extra = [speed !== 1 ? `a ${SPEED_LABEL[speed] ?? `${speed}×`}` : null, clip.direction === "reverse" ? "en reversa" : clip.direction === "pingpong" ? "de ida y vuelta" : null]
+    .filter(Boolean)
+    .join(", ");
+  return `${axes.x} ${span(x0, x1)} y ${axes.y} ${span(y0, y1)}${extra ? `, ${extra}` : ""}.`;
 }
 
 function MirrorToggle({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
