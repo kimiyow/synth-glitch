@@ -14,6 +14,14 @@ import { colors, radius, space, type } from "../tokens";
 import { ModCard, SOURCE_ICON, SOURCE_LABEL } from "./ModCard";
 import type { MicView } from "./SourceEditor";
 
+// efectos (FX-06): normal primero, que es como se ven sin modo
+const EFFECT_BLENDS: readonly Chip<BlendMode>[] = [
+  { id: "replace", label: "NORMAL" },
+  { id: "screen", label: "SCREEN" },
+  { id: "multiply", label: "MULTIPLY" },
+  { id: "difference", label: "DIFFERENCE" },
+];
+
 const BLENDS: readonly Chip<BlendMode>[] = [
   { id: "screen", label: "SCREEN" },
   { id: "multiply", label: "MULTIPLY" },
@@ -154,6 +162,15 @@ export function LayerInspector(props: Props) {
         })}
       </View>
 
+      )}
+
+      {!focusMod && layer.kind === "effect" && (
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Mezcla</Text>
+          <View style={styles.flex}>
+            <ChipRow chips={EFFECT_BLENDS} value={layer.blend ?? "replace"} onChange={(b) => setBlend(layer.id, b)} />
+          </View>
+        </View>
       )}
 
       {!focusMod && layer.kind === "generator" && (

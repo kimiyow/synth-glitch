@@ -27,6 +27,8 @@ export type EffectLayer = {
   effect: EffectId;
   params: { x: number; y: number };
   visible: boolean;
+  // cómo se mezcla con la capa de abajo (FX-06). Sin él o "replace" = normal: el efecto la reemplaza
+  blend?: BlendMode;
 };
 export type GeneratorLayer = {
   kind: "generator";

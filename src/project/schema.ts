@@ -159,7 +159,9 @@ export function parseLayer(v: unknown, path: string): Layer {
     visible: bool(o.visible, `${path}.visible`),
   };
   if (kind === "effect") {
-    return { kind, ...base, effect: oneOf(o.effect, EFFECT_IDS, `${path}.effect`) };
+    // modo de mezcla opcional (FX-06); normal no se guarda
+    const blend = o.blend === undefined ? "replace" : oneOf(o.blend, BLENDS, `${path}.blend`);
+    return { kind, ...base, effect: oneOf(o.effect, EFFECT_IDS, `${path}.effect`), ...(blend === "replace" ? {} : { blend }) };
   }
   return {
     kind,

@@ -17,13 +17,14 @@ beforeAll(async () => {
 }, 30_000);
 
 describe("SkSL de los efectos", () => {
-  it.each(EFFECTS.map((e) => [e.id, e.sksl]))("%s compila con el contrato", (_id, sksl) => {
+  // con la mezcla de FX-06 (withEffectBlend) cada efecto declara también blend
+  it.each(EFFECTS.map((e) => [e.id, e.sksl]))("%s compila con el contrato y blend", (_id, sksl) => {
     let error = "";
     const effect = CK.RuntimeEffect.Make(sksl, (m) => (error += m));
     expect(error).toBe("");
     expect(effect).not.toBeNull();
     const names = Array.from({ length: effect.getUniformCount() }, (_, i) => effect.getUniformName(i));
-    expect(names).toEqual(["resolution", "param", "time", "seed"]);
+    expect(names).toEqual(["resolution", "param", "time", "seed", "blend"]);
   });
 });
 

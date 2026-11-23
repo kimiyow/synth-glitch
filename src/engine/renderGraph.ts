@@ -9,7 +9,7 @@ export type ChainNode = {
   // valores base (x, y) de la capa; la modulación los sobrescribe por cuadro
   base: { x: number; y: number };
 } & (
-  | { kind: "effect"; effect: EffectId }
+  | { kind: "effect"; effect: EffectId; blend: number }
   | { kind: "generator"; generator: GeneratorId; blend: number; seedOffset: number }
 );
 
@@ -25,8 +25,8 @@ export type EffectUniforms = {
   time: number;
   seed: number;
 };
-// los generadores suman blend; los efectos no lo declaran
-export type NodeUniforms = EffectUniforms & { blend?: number };
+// generadores y efectos reciben blend (modo de mezcla con la capa de abajo)
+export type NodeUniforms = EffectUniforms & { blend: number };
 
 // capas visibles (efectos y generadores), la primera se aplica antes; nunca más de MAX_LAYERS
 export function buildLayerChain(layers: readonly Layer[]): ChainNode[] {
@@ -37,7 +37,7 @@ export function buildLayerChain(layers: readonly Layer[]): ChainNode[] {
     const base = { ...layer.params };
     chain.push(
       layer.kind === "effect"
-        ? { kind: "effect", layerId: layer.id, effect: layer.effect, base }
+        ? { kind: "effect", layerId: layer.id, effect: layer.effect, blend: BLEND_INDEX[layer.blend ?? "replace"], base }
         : {
             kind: "generator",
             layerId: layer.id,
@@ -84,7 +84,7 @@ export function nodeUniforms(
     param: [clamp01(x), clamp01(y)],
     time: frame.time,
     seed: shaderSeed(node.kind === "generator" ? seed + node.seedOffset : seed),
+    blend: node.blend,
   };
-  if (node.kind === "generator") uniforms.blend = node.blend;
   return uniforms;
 }

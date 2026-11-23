@@ -97,6 +97,11 @@ export function setBlend(layerId: string, blend: BlendMode) {
   commit("modo de mezcla", (scene) => {
     const layer = scene.layers.find((l) => l.id === layerId);
     if (layer?.kind === "generator") layer.blend = blend;
+    // en un efecto, normal es no tener modo (así coincide con los guardados antes de FX-06)
+    if (layer?.kind === "effect") {
+      if (blend === "replace") delete layer.blend;
+      else layer.blend = blend;
+    }
   });
 }
 

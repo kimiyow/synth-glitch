@@ -62,6 +62,16 @@ describe("validateProject", () => {
     expect(result.ok && result.value.scene.routes.map((r) => r.id)).toEqual(["r"]);
   });
 
+  it("guarda el modo de mezcla de un efecto y omite el normal (FX-06)", () => {
+    const raw = JSON.parse(JSON.stringify(sample()));
+    raw.scene.layers[0].blend = "difference";
+    raw.scene.layers.push({ kind: "effect", id: "n", effect: "crt", params: { x: 0, y: 0 }, visible: true, blend: "replace" });
+    const result = validateProject(raw);
+    const layers = result.ok ? result.value.scene.layers : [];
+    expect(layers[0]).toMatchObject({ blend: "difference" });
+    expect(layers[2]).not.toHaveProperty("blend");
+  });
+
   it("descarta campos desconocidos", () => {
     const raw = { ...sample(), extra: true };
     const result = validateProject(raw);

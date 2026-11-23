@@ -1,4 +1,5 @@
 import type { BlendMode, EffectId, GeneratorId } from "../domain/types";
+import { withEffectBlend } from "./effects/contract";
 import { CHROMATIC_SKSL } from "./effects/chromatic.sksl";
 import { CRT_SKSL } from "./effects/crt.sksl";
 import { DATABEND_SKSL } from "./effects/databend.sksl";
@@ -28,8 +29,8 @@ export type EffectDef = {
   sksl: string;
 };
 
-// orden de los efectos
-export const EFFECTS: readonly EffectDef[] = [
+// orden de los efectos. Cada SkSL lleva además la mezcla con la capa de abajo (withEffectBlend)
+export const EFFECTS: readonly EffectDef[] = ([
   { id: "chromatic", label: "CHROMATIC", defaults: { x: 0.3, y: 0.0 }, samples: 3, axes: { x: "Desplazamiento", y: "Ángulo" }, sksl: CHROMATIC_SKSL },
   { id: "scanlines", label: "SCANLINES", defaults: { x: 0.4, y: 0.2 }, samples: 1, axes: { x: "Líneas", y: "Ruido" }, sksl: SCANLINES_SKSL },
   { id: "datamosh", label: "DATAMOSH", defaults: { x: 0.3, y: 0.3 }, samples: 1, axes: { x: "Alto de franja", y: "Desplazamiento" }, sksl: DATAMOSH_SKSL },
@@ -39,7 +40,7 @@ export const EFFECTS: readonly EffectDef[] = [
   { id: "crt", label: "CRT", defaults: { x: 0.25, y: 0.5 }, samples: 2, axes: { x: "Curvatura", y: "Máscara" }, sksl: CRT_SKSL },
   { id: "pixelsort", label: "SORT", defaults: { x: 0.35, y: 0.35 }, samples: 9, axes: { x: "Largo de tramo", y: "Umbral" }, sksl: PIXELSORT_SKSL },
   { id: "databend", label: "DATABEND", defaults: { x: 0.35, y: 0.3 }, samples: 3, axes: { x: "Corrupción", y: "Canales" }, sksl: DATABEND_SKSL },
-];
+] satisfies EffectDef[]).map((e) => ({ ...e, sksl: withEffectBlend(e.sksl) }));
 
 export const EFFECT_BY_ID: Readonly<Record<EffectId, EffectDef>> = Object.fromEntries(
   EFFECTS.map((e) => [e.id, e]),
@@ -69,5 +70,5 @@ export const GENERATOR_BY_ID: Readonly<Record<GeneratorId, GeneratorDef>> = Obje
   GENERATORS.map((g) => [g.id, g]),
 ) as Record<GeneratorId, GeneratorDef>;
 
-// valor del uniform blend de los generadores (ver generators/contract.ts)
+// valor del uniform blend de generadores y efectos (ver generators/contract.ts y withEffectBlend)
 export const BLEND_INDEX: Readonly<Record<BlendMode, number>> = { replace: 0, screen: 1, multiply: 2, difference: 3 };

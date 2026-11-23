@@ -66,7 +66,7 @@ function remember(key: string, uri: string) {
 }
 
 function layerKey(layer: Layer): string {
-  const kind = layer.kind === "effect" ? `e:${layer.effect}` : `g:${layer.generator}:${layer.blend}:${layer.seed ?? 0}`;
+  const kind = layer.kind === "effect" ? `e:${layer.effect}:${layer.blend ?? "replace"}` : `g:${layer.generator}:${layer.blend}:${layer.seed ?? 0}`;
   return `${kind}:${layer.visible ? 1 : 0}:${layer.params.x.toFixed(3)},${layer.params.y.toFixed(3)}`;
 }
 

@@ -28,12 +28,14 @@ describe("buildLayerChain", () => {
     expect(chain[1]).toMatchObject({ kind: "generator", generator: "bars", blend: 2 });
   });
 
-  it("solo los generadores reciben el uniform blend", () => {
+  it("efectos y generadores reciben el uniform blend (un efecto sin modo es normal)", () => {
     const gen: Layer = { kind: "generator", id: "g", generator: "noise", params: { x: 0.5, y: 0.5 }, visible: true, blend: "screen" };
-    const chain = buildLayerChain([fx("a", "vhs"), gen]);
+    const diff: Layer = { kind: "effect", id: "d", effect: "crt", params: { x: 0.5, y: 0.5 }, visible: true, blend: "difference" };
+    const chain = buildLayerChain([fx("a", "vhs"), gen, diff]);
     const frame = { time: 0, params: [] };
-    expect(nodeUniforms(chain, 0, frame, [1, 1], 0)).not.toHaveProperty("blend");
+    expect(nodeUniforms(chain, 0, frame, [1, 1], 0).blend).toBe(0);
     expect(nodeUniforms(chain, 1, frame, [1, 1], 0).blend).toBe(1);
+    expect(nodeUniforms(chain, 2, frame, [1, 1], 0).blend).toBe(3);
   });
 
   it("corta en el tope técnico", () => {
@@ -58,6 +60,7 @@ describe("nodeUniforms", () => {
       param: [0.3, 0.4],
       time: 2,
       seed: 7,
+      blend: 0,
     });
   });
 
