@@ -2,7 +2,7 @@ import { parseSources, withRouteSettings } from "../modulation/sources";
 import { MAX_LAYERS } from "../engine/layerCost";
 import { clampPaintIndex } from "../paint/paintStack";
 import type { Scene, SynthFx } from "../domain/types";
-import { Invalid, parseLayer, parseRoute, type ValidationResult } from "./schema";
+import { Invalid, parseLayer, parseRoute, withoutRemovedSources, type ValidationResult } from "./schema";
 
 // synthfx: receta declarativa de una escena (capas, rutas, fuentes y semilla), sin pintura ni SkSL
 // propio. Funciones puras: el archivo lo leen y escriben los adaptadores de plataforma
@@ -55,7 +55,7 @@ export function parseSynthFx(text: string): ValidationResult<SynthFx> {
     const layers = o.layers.map((l, i) => parseLayer(l, `layers[${i}]`));
     const ids = new Set(layers.map((l) => l.id));
     if (ids.size !== layers.length) throw new Invalid("HAY CAPAS CON EL MISMO ID");
-    const routes = o.routes.map((r, i) => parseRoute(r, `routes[${i}]`));
+    const routes = withoutRemovedSources(o.routes).map((r, i) => parseRoute(r, `routes[${i}]`));
     for (const r of routes) {
       if (!ids.has(r.target.layerId)) throw new Invalid(`la ruta ${r.id} apunta a una capa que no existe`);
     }

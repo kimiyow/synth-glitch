@@ -23,7 +23,6 @@ import { applyScenePreset, findSameScene } from "../actions/scenePresets";
 import type { SceneFade } from "../canvas/FadeOutScene";
 import { GestureTrail } from "../canvas/GestureTrail";
 import { GestureRecorder } from "../canvas/GestureRecorder";
-import { OrientationSensor } from "../canvas/OrientationSensor";
 import { LiveModContext, useModBus } from "../canvas/modBus";
 import { StageView, type StageMode } from "../canvas/StageView";
 import { useSlowFrames } from "../canvas/useSlowFrames";
@@ -254,8 +253,6 @@ function ProjectView({ project }: { project: Project }) {
     setNotice(notice);
   };
 
-  // GIRO: el sensor solo se enciende si alguna capa lo usa (se añade como fuente en Modulación)
-  const usesGyro = focused && project.scene.routes.some((r) => r.source === "orientation" && r.amount !== 0);
 
   // grabación de un gesto: el panel se oculta (sin desmontarse) y una capa sobre el lienzo captura
   // el dedo; al soltar, el gesto queda en su modulación y se repite en bucle
@@ -452,7 +449,6 @@ function ProjectView({ project }: { project: Project }) {
           </View>
         </View>
 
-        {usesGyro && <OrientationSensor bus={bus} />}
         {stage && image && (
           <StageView
             mode={stage}

@@ -23,7 +23,14 @@ const EFFECT_IDS: readonly EffectId[] = ["chromatic", "scanlines", "datamosh", "
 const GENERATOR_IDS: readonly GeneratorId[] = ["noise", "bars", "voronoi"];
 const STAMP_EFFECTS: readonly StampEffect[] = ["datamosh", "chromatic", "pixel", "smear"];
 const BLENDS = ["replace", "screen", "multiply", "difference"] as const;
-const SOURCES = ["touch", "lfo", "adsr", "sh", "seq", "orientation", "mic", "track", "tempo"] as const;
+const SOURCES = ["touch", "lfo", "adsr", "sh", "seq", "mic", "track", "tempo"] as const;
+// fuentes que existieron y se quitaron: sus rutas se descartan al leer (GIRO, 22 nov 2026)
+const REMOVED_SOURCES: readonly string[] = ["orientation"];
+
+// rutas guardadas sin las de fuentes que ya no existen
+export function withoutRemovedSources(raw: unknown[]): unknown[] {
+  return raw.filter((r) => !(typeof r === "object" && r !== null && REMOVED_SOURCES.includes((r as { source?: unknown }).source as string)));
+}
 const CURVES = ["lin", "exp", "log", "scurve"] as const;
 const ASPECTS: readonly CropAspect[] = ["9:16", "1:1", "4:5", "free"];
 const MEDIA_KINDS = ["photo", "clip", "generative"] as const;
@@ -216,7 +223,7 @@ function scene(v: unknown, path: string): Scene {
     paint: paint(o.paint, `${path}.paint`, layers),
     layers,
     // cada modulación lleva sus propios ajustes; los proyectos anteriores los toman de la escena
-    routes: arr(o.routes, `${path}.routes`).map((r, i) => withRouteSettings(parseRoute(r, `${path}.routes[${i}]`), sources)),
+    routes: withoutRemovedSources(arr(o.routes, `${path}.routes`)).map((r, i) => withRouteSettings(parseRoute(r, `${path}.routes[${i}]`), sources)),
     sources,
     tracks: arr(o.tracks, `${path}.tracks`).map((t, i) => track(t, `${path}.tracks[${i}]`)),
     seed: num(o.seed, `${path}.seed`),

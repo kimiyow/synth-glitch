@@ -54,6 +54,14 @@ describe("validateProject", () => {
     expect(validateProject(JSON.parse(JSON.stringify(p)))).toEqual({ ok: true, value: p });
   });
 
+  it("abre un proyecto con una modulación GIRO (fuente quitada) sin esa modulación", () => {
+    const raw = JSON.parse(JSON.stringify(sample()));
+    raw.scene.routes.push({ id: "giro", source: "orientation", sourceIndex: 0, target: { layerId: "a", param: "y" }, amount: 0.5, curve: "lin", mode: "add" });
+    raw.scene.sources.orientation = { sensitivity: 1, deadzone: 0.04, swapAxes: false };
+    const result = validateProject(raw);
+    expect(result.ok && result.value.scene.routes.map((r) => r.id)).toEqual(["r"]);
+  });
+
   it("descarta campos desconocidos", () => {
     const raw = { ...sample(), extra: true };
     const result = validateProject(raw);

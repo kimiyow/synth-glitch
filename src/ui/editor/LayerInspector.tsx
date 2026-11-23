@@ -75,7 +75,7 @@ export function LayerInspector(props: Props) {
 
   // modulaciones que tocan un eje (el gesto y el giro mueven los dos)
   const onAxis = (axis: "x" | "y") =>
-    mods.filter((r) => (r.target.param === axis || r.source === "track" || r.source === "orientation") && r.amount !== 0);
+    mods.filter((r) => (r.target.param === axis || r.source === "track") && r.amount !== 0);
   // con intensidad 1 en reemplazo, la fuente manda y el valor del usuario no cambia nada
   const lockedBy = (axis: "x" | "y") => onAxis(axis).find((r) => r.mode === "replace" && r.amount >= 0.99) ?? null;
 

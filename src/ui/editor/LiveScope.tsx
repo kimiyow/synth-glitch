@@ -2,7 +2,7 @@ import { Canvas, Circle, Group, Line, Points, rect, vec } from "@shopify/react-n
 import { useEffect } from "react";
 import { useAnimatedReaction, useDerivedValue, useSharedValue } from "react-native-reanimated";
 
-import { oriInput, recInput, useLiveMod, type ModBus } from "../../canvas/modBus";
+import { recInput, useLiveMod, type ModBus } from "../../canvas/modBus";
 import type { Route, SourceConfig } from "../../domain/types";
 import { evaluateAxis, type ModInputs } from "../../modulation/evaluate";
 import { adsrActive, LIVE_WINDOW_S, previewInputs, scopeComputed, scopeWindowS } from "../../modulation/scopeWindow";
@@ -37,14 +37,13 @@ type ScopeConfig = {
   version: number;
 };
 
-// entradas en vivo del instante (dedo, giro, micrófono, grabación)
+// entradas en vivo del instante (dedo, micrófono, grabación)
 function readInputs(bus: ModBus | undefined, mic: number): ModInputs {
   "worklet";
   return {
     touch: {},
     gateOnAt: bus ? bus.gateOn.get() : null,
     gateOffAt: bus ? bus.gateOff.get() : null,
-    orientation: bus ? oriInput(bus) : { x: 0, y: 0 },
     mic,
     micHitAt: bus ? bus.micHitAt.get() : null,
     track: null,

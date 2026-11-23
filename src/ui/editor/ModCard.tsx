@@ -27,7 +27,6 @@ export const MOD_SOURCES: { id: SourceId; label: string; icon: SFSymbol; what: s
   { id: "tempo", label: "PULSO", icon: "metronome", what: "Una rampa en cada tiempo del reloj" },
   { id: "mic", label: "MIC", icon: "mic", what: "Responde al sonido del micrófono" },
   { id: "track", label: "GESTO", icon: "hand.draw", what: "Repite en bucle un movimiento que grabas con el dedo" },
-  { id: "orientation", label: "GIRO", icon: "gyroscope", what: "Inclina el teléfono para mover el efecto" },
 ];
 export const SOURCE_LABEL = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.label])) as Record<SourceId, string>;
 export const SOURCE_ICON = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.icon])) as Record<SourceId, SFSymbol>;
@@ -36,7 +35,7 @@ export const SOURCE_ICON = Object.fromEntries(MOD_SOURCES.map((s) => [s.id, s.ic
 const tilesFor = (ids: SourceId[]): IconTile<SourceId>[] =>
   ids.map((id) => MOD_SOURCES.find((s) => s.id === id)).flatMap((s) => (s ? [{ id: s.id, label: s.label, icon: s.icon, hint: s.what }] : []));
 const AUTO_TILES = tilesFor(["lfo", "sh", "seq", "tempo"]);
-const REACT_TILES = tilesFor(["adsr", "mic", "track", "orientation"]);
+const REACT_TILES = tilesFor(["adsr", "mic", "track"]);
 const inGroup = (tiles: IconTile<SourceId>[], id: SourceId) => (tiles.some((t) => t.id === id) ? id : null);
 const SCOPE_H = 76;
 
@@ -106,15 +105,13 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
       return;
     }
     setModulationSource(route.id, s);
-    // GIRO toma como centro la posición actual del teléfono
-    if (s === "orientation") live?.bus.oriCalibrate.set(live.bus.oriCalibrate.get() + 1);
     setPicking(false);
   };
   const sheet = useContext(SheetPin);
   const cardRef = useRef<ComponentRef<typeof View>>(null);
   const src = MOD_SOURCES.find((s) => s.id === route.source) ?? MOD_SOURCES[0];
   // el gesto mueve los dos parámetros (horizontal → el primero, vertical → el segundo)
-  const isGesture = route.source === "track" || route.source === "orientation";
+  const isGesture = route.source === "track";
   const paramName = isGesture ? `${params.x} + ${params.y}` : params[route.target.param];
   // la línea gris muestra el parámetro de la ruta (en el gesto y el giro, el primero de los dos)
   const resultName = params[route.target.param];

@@ -1,6 +1,5 @@
 import type { Layer, Route, SourceConfig } from "../domain/types";
 import { curve01, curveSigned } from "./curves";
-import { shapeTilt } from "./orientation";
 import { adsrValue, gestureValue, lfoValue, routeLfo, routeSeq, routeSh, seqValue, shValue } from "./sources";
 import { beatPhase } from "./tempo";
 
@@ -12,7 +11,6 @@ export type ModInputs = {
   gateOnAt: number | null;
   gateOffAt: number | null;
   // inclinación filtrada y calibrada, -1..1
-  orientation: { x: number; y: number };
   // nivel del micrófono 0..1 y momento (s) del último golpe
   mic: number;
   micHitAt: number | null;
@@ -26,7 +24,6 @@ export const NO_INPUTS: ModInputs = {
   touch: {},
   gateOnAt: null,
   gateOffAt: null,
-  orientation: { x: 0, y: 0 },
   mic: 0,
   micHitAt: null,
   track: null,
@@ -39,7 +36,7 @@ export const MIC_HIT_GATE_S = 0.12;
 // fuentes bipolares: en modo suma mueven el parámetro hacia ambos lados
 function isBipolar(source: Route["source"]): boolean {
   "worklet";
-  return source === "lfo" || source === "sh" || source === "orientation";
+  return source === "lfo" || source === "sh";
 }
 
 // valor de una fuente en t (s)
@@ -73,13 +70,6 @@ export function sourceValue(
       return seqValue(routeSeq(route, sources), bpm, t, seed);
     case "tempo":
       return beatPhase(bpm, t);
-    case "orientation": {
-      // GIRO mueve los dos ejes: lateral → x, frontal → y (o cruzados)
-      const own = route.settings === undefined ? undefined : route.settings.orientation;
-      const o = own === undefined ? sources.orientation : own;
-      const lateral = o.swapAxes ? param === "y" : param === "x";
-      return shapeTilt(lateral ? inputs.orientation.x : inputs.orientation.y, o.deadzone, o.sensitivity);
-    }
     case "mic": {
       const m = route.settings === undefined ? undefined : route.settings.mic;
       if (m === undefined) return inputs.mic;
@@ -131,7 +121,7 @@ export function evaluateAxis(
   for (let i = 0; i < routes.length; i++) {
     const r = routes[i];
     // el gesto y el giro mueven los dos ejes de su capa
-    if (r.target.layerId !== layerId || (r.target.param !== param && r.source !== "track" && r.source !== "orientation")) continue;
+    if (r.target.layerId !== layerId || (r.target.param !== param && r.source !== "track")) continue;
     // cada ruta tiene su propio azar: dos S&H en capas distintas no se mueven igual
     const v = sourceValue(r, sources, t, inputs, seed + i * 7919, base, param);
     if (r.mode === "replace") {

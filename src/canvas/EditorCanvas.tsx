@@ -17,7 +17,7 @@ import { FULL_CROP, type CropRect } from "../engine/crop";
 import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate } from "../modulation/evaluate";
 import { FadeOutScene, type SceneFade } from "./FadeOutScene";
-import { oriInput, recInput, useModBus, type ModBus } from "./modBus";
+import { recInput, useModBus, type ModBus } from "./modBus";
 import {
   advanceStroke,
   MAX_SIZE,
@@ -200,7 +200,6 @@ export function EditorCanvas(props: Props) {
       touch,
       gateOnAt: gateOn.get(),
       gateOffAt: gateOff.get(),
-      orientation: oriInput(bus),
       mic: micLevel.get(),
       micHitAt: micHitAt.get(),
       track: null,

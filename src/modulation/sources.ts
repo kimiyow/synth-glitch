@@ -7,7 +7,6 @@ export const DEFAULT_SOURCES: SourceConfig = {
   adsr: { attack: 0.05, decay: 0.3, sustain: 0.6, release: 0.6 },
   sh: { division: 1, slew: 0.15, sync: true, rateHz: 2 },
   seq: { steps: [1, 0, 0.5, 0, 0.75, 0, 0.25, 0], division: 0.5, direction: "forward" },
-  orientation: { sensitivity: 1, deadzone: 0.04, swapAxes: false },
   mic: { floor: -50, ceiling: -10, attack: 0.02, release: 0.25, hitThreshold: 0.7 },
 };
 
@@ -42,7 +41,7 @@ function o(v: unknown): Record<string, unknown> {
 export function parseSources(raw: unknown): SourceConfig {
   const r = o(raw);
   const d = DEFAULT_SOURCES;
-  const lfo = o(r.lfo), adsr = o(r.adsr), sh = o(r.sh), seq = o(r.seq), ori = o(r.orientation), mic = o(r.mic);
+  const lfo = o(r.lfo), adsr = o(r.adsr), sh = o(r.sh), seq = o(r.seq), mic = o(r.mic);
   const steps = Array.isArray(seq.steps) && (seq.steps.length === 8 || seq.steps.length === 16)
     ? seq.steps.map((s) => num(s, 0, 0, 1))
     : [...d.seq.steps];
@@ -70,11 +69,6 @@ export function parseSources(raw: unknown): SourceConfig {
       rateHz: num(sh.rateHz, d.sh.rateHz, 0.05, 20),
     },
     seq: { steps, division: num(seq.division, d.seq.division, 0.25, 64), direction: pick(seq.direction, SEQ_DIRECTIONS, d.seq.direction) },
-    orientation: {
-      sensitivity: num(ori.sensitivity, d.orientation.sensitivity, 0.1, 4),
-      deadzone: num(ori.deadzone, d.orientation.deadzone, 0, 0.5),
-      swapAxes: typeof ori.swapAxes === "boolean" ? ori.swapAxes : d.orientation.swapAxes,
-    },
     mic: {
       floor: num(mic.floor, d.mic.floor, -120, 0),
       ceiling: num(mic.ceiling, d.mic.ceiling, -120, 0),
@@ -164,8 +158,6 @@ export function defaultRouteSetting(source: SourceId, scene: SourceConfig): Rout
       return { mic: { ...DEFAULT_MIC_ROUTE } };
     case "track":
       return { gesture: { durationMs: 0, samples: [], loop: "smooth" } };
-    case "orientation":
-      return { orientation: { ...scene.orientation } };
     default:
       return {};
   }
@@ -188,7 +180,6 @@ export function parseRouteSettings(raw: unknown): RouteSettings | undefined {
   if (r.lfo !== undefined) out.lfo = full.lfo;
   if (r.adsr !== undefined) out.adsr = { ...full.adsr, trigger: o(r.adsr).trigger === "mic" ? "mic" : "touch" };
   if (r.sh !== undefined) out.sh = full.sh;
-  if (r.orientation !== undefined) out.orientation = full.orientation;
   if (r.seq !== undefined) out.seq = full.seq;
   if (r.gesture !== undefined) {
     const g = o(r.gesture);

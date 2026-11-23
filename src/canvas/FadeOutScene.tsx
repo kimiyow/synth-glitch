@@ -7,7 +7,7 @@ import { buildLayerChain, type FrameInputs } from "../engine/renderGraph";
 import { evaluate } from "../modulation/evaluate";
 import { paintChainIndex } from "../paint/paintStack";
 import { SceneRenderer, type PaintInput } from "../render/SceneRenderer";
-import { oriInput, type ModBus } from "./modBus";
+import type { ModBus } from "./modBus";
 
 // escena que se va durante un crossfade: sus capas y modulaciones, cuándo empezó (reloj del
 // preview, s) y cuánto dura
@@ -41,7 +41,6 @@ export function FadeOutScene({ fade, bus, micLevel, image, width, height, source
       touch: {},
       gateOnAt: bus.gateOn.get(),
       gateOffAt: bus.gateOff.get(),
-      orientation: oriInput(bus),
       mic: micLevel.get(),
       micHitAt: bus.micHitAt.get(),
       track: null,

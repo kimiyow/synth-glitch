@@ -15,20 +15,10 @@ export type ModBus = {
   recRoute: SharedValue<string>;
   recX: SharedValue<number>;
   recY: SharedValue<number>;
-  // GIRO: inclinación filtrada (-1..1), contador para recalibrar la neutral y si hay sensor (1/0)
-  oriX: SharedValue<number>;
-  oriY: SharedValue<number>;
-  oriCalibrate: SharedValue<number>;
-  oriAvailable: SharedValue<number>;
   // modulaciones provisionales mientras se arrastra un ajuste (null = las de la escena). El lienzo
   // las usa en el acto, sin esperar a que la escena cambie al soltar
   draftRoutes: SharedValue<Route[] | null>;
 };
-
-export function oriInput(bus: ModBus): { x: number; y: number } {
-  "worklet";
-  return { x: bus.oriX.get(), y: bus.oriY.get() };
-}
 
 // entrada de grabación para evaluate(), leída en el hilo de UI
 export function recInput(bus: ModBus): { routeId: string; x: number; y: number } | null {
@@ -45,12 +35,8 @@ export function useModBus(): ModBus {
   const recRoute = useSharedValue("");
   const recX = useSharedValue(0.5);
   const recY = useSharedValue(0.5);
-  const oriX = useSharedValue(0);
-  const oriY = useSharedValue(0);
-  const oriCalibrate = useSharedValue(0);
-  const oriAvailable = useSharedValue(1);
   const draftRoutes = useSharedValue<Route[] | null>(null);
-  return { time, gateOn, gateOff, micHitAt, recRoute, recX, recY, oriX, oriY, oriCalibrate, oriAvailable, draftRoutes };
+  return { time, gateOn, gateOff, micHitAt, recRoute, recX, recY, draftRoutes };
 }
 
 // lo que necesita la vista en vivo además del bus: nivel del micrófono y semilla de la escena

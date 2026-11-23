@@ -40,7 +40,7 @@ export type GeneratorLayer = {
 };
 export type Layer = EffectLayer | GeneratorLayer;
 
-export type SourceId = "touch" | "lfo" | "adsr" | "sh" | "seq" | "orientation" | "mic" | "track" | "tempo";
+export type SourceId = "touch" | "lfo" | "adsr" | "sh" | "seq" | "mic" | "track" | "tempo";
 export type RouteCurve = "lin" | "exp" | "log" | "scurve";
 export type Route = {
   id: string;
@@ -84,7 +84,6 @@ export type RouteSettings = {
   sh?: SourceConfig["sh"];
   seq?: SourceConfig["seq"];
   mic?: MicRouteConfig;
-  orientation?: SourceConfig["orientation"];
 };
 
 // configuración de las fuentes. Una instancia de cada tipo por escena (sourceIndex = 0). Divisiones
@@ -98,7 +97,6 @@ export type SourceConfig = {
   // sync = cambia en cada división del reloj; libre = rateHz cambios por segundo
   sh: { division: number; slew: number; sync: boolean; rateHz: number };
   seq: { steps: number[]; division: number; direction: SeqDirection };
-  orientation: { sensitivity: number; deadzone: number; swapAxes: boolean };
   mic: { floor: number; ceiling: number; attack: number; release: number; hitThreshold: number };
 };
 
