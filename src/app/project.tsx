@@ -55,7 +55,7 @@ import { useLayout } from "../ui/useLayout";
 // pantalla del proyecto abierto, apilada sobre las pestañas: se entra desde Cámara, Galería o el
 // editor vacío y "volver" regresa a la pestaña de donde se vino
 // paneles que abre la barra de herramientas (Exportar y Escenario son de la barra superior)
-const TOOLBAR_PANELS: readonly ToolButtonId[] = ["brush", "effects", "layers", "mod", "presets", "gesture"];
+const TOOLBAR_PANELS: readonly ToolButtonId[] = ["brush", "effects", "layers", "mod", "presets"];
 const isToolbarPanel = (id: PanelId): id is ToolButtonId => (TOOLBAR_PANELS as readonly string[]).includes(id);
 
 export default function ProjectScreen() {
@@ -163,7 +163,8 @@ function ProjectView({ project }: { project: Project }) {
 
   // la barra es un juego de interruptores: el botón marcado (el panel abierto o, sin panel de la
   // barra, la herramienta del dedo) se apaga al tocarlo; uno sin marcar se enciende
-  const toolbarPanel = openPanel !== null && isToolbarPanel(openPanel) ? openPanel : null;
+  // el panel Gesto se abre desde Modulación: mientras está abierto, la barra marca Modulación
+  const toolbarPanel = openPanel === "gesture" ? "mod" : openPanel !== null && isToolbarPanel(openPanel) ? openPanel : null;
   const highlighted: ToolButtonId | null = toolbarPanel ?? activeTool;
   // con Capas o Modulación abiertos el dedo ajusta X/Y de la capa abierta solo mientras siguen
   // abiertos; al cerrarlos vuelve la herramienta que había
@@ -175,7 +176,8 @@ function ProjectView({ project }: { project: Project }) {
   const onToolPress = (id: ToolButtonId) => {
     setToolTouched(true);
     if (id === highlighted) {
-      if (openPanel === id) setOverlays([]);
+      // Modulación encendida por el panel Gesto (abierto desde ella) también lo cierra
+      if (openPanel === id || (id === "mod" && openPanel === "gesture")) setOverlays([]);
       if (id === activeTool) setActiveTool(null);
       return;
     }

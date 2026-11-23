@@ -174,7 +174,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
           <View style={styles.scope} onLayout={(e) => setScopeW(Math.round(e.nativeEvent.layout.width))}>
             {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={base} width={scopeW} height={SCOPE_H} />}
           </View>
-          <Text style={styles.caption}>ASÍ SE MUEVE {resultName.toUpperCase()}</Text>
+          <Text style={styles.caption}>Así se mueve {resultName}</Text>
 
           {picking ? (
             <>
@@ -288,8 +288,8 @@ const styles = StyleSheet.create({
   amount: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
   body: { gap: space.md, paddingHorizontal: space.md, paddingBottom: space.xs },
   scope: { height: SCOPE_H, borderRadius: radius.sm, backgroundColor: colors.ink, overflow: "hidden" },
-  caption: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8, textAlign: "center", marginTop: -space.sm },
-  hint: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, lineHeight: 15, marginTop: -space.sm },
+  caption: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, textAlign: "center", marginTop: -space.sm },
+  hint: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, lineHeight: 17, marginTop: -space.sm },
   group: { gap: 6 },
   chosen: { flexDirection: "row", alignItems: "center", gap: space.sm },
   chosenTile: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center" },

@@ -42,7 +42,7 @@ type RouteProps = {
 function Beats({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <View style={styles.beats}>
-      <Text style={styles.note}>{label} · TIEMPOS</Text>
+      <Text style={styles.note}>{label} (tiempos del ritmo)</Text>
       <ChipRow chips={DIVISION_CHIPS} value={value} onChange={onChange} />
     </View>
   );
@@ -101,7 +101,7 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
           onChange={(m) => patch("lfo", "modo del LFO", { sync: m === "sync" })}
         />
         {lfo.sync ? (
-          <Beats label="UNA VUELTA CADA" value={lfo.division} onChange={(division) => patch("lfo", "división del LFO", { division })} />
+          <Beats label="Una vuelta cada" value={lfo.division} onChange={(division) => patch("lfo", "división del LFO", { division })} />
         ) : (
           <CommitSlider
             label="Velocidad"
@@ -162,7 +162,7 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
           onChange={(m) => patch("sh", "modo del azar", { sync: m === "sync" })}
         />
         {sh.sync ? (
-          <Beats label="CAMBIA CADA" value={sh.division} onChange={(division) => patch("sh", "división del azar", { division })} />
+          <Beats label="Cambia cada" value={sh.division} onChange={(division) => patch("sh", "división del azar", { division })} />
         ) : (
           <CommitSlider
             label="Velocidad"
@@ -199,7 +199,7 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
     return (
       <View style={styles.root}>
         <StepBars steps={seq.steps} onCommit={(steps) => patch("seq", "pasos", { steps })} />
-        <Beats label="AVANZA UN PASO CADA" value={seq.division} onChange={(division) => patch("seq", "división de pasos", { division })} />
+        <Beats label="Avanza un paso cada" value={seq.division} onChange={(division) => patch("seq", "división de pasos", { division })} />
       </View>
     );
   }
@@ -258,7 +258,7 @@ function GestureSummary({ route }: { route: Route }) {
   const has = !!g && g.samples.length >= 4;
   return (
     <View style={styles.micRow}>
-      <Text style={[styles.note, styles.flex]}>{has ? `EN BUCLE · ${(g.durationMs / 1000).toFixed(1)} S` : "SIN GESTO GRABADO"}</Text>
+      <Text style={[styles.note, styles.flex]}>{has ? `En bucle · ${(g.durationMs / 1000).toFixed(1)} s` : "Sin gesto grabado"}</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityHint="Abre el panel Gesto para grabar, transformar o guardar el gesto"
@@ -287,11 +287,11 @@ function MicCheck({ mic, scene }: { mic: MicView; scene: SourceConfig["mic"] }) 
         <Btn label={mic.calibrating ? "ESCUCHANDO…" : "CALIBRAR"} onPress={mic.onCalibrate} />
       </View>
       {mic.calibrating ? (
-        <Text style={styles.note}>GUARDA SILENCIO 2 S</Text>
+        <Text style={styles.note}>Guarda silencio 2 s</Text>
       ) : health === "quiet" ? (
-        <Text style={styles.warn}>NO LLEGA SONIDO · CALIBRA O SUBE LA SENSIBILIDAD</Text>
+        <Text style={styles.warn}>No llega sonido: calibra o sube la sensibilidad</Text>
       ) : health === "loud" ? (
-        <Text style={styles.warn}>SATURADO · CALIBRA O BAJA LA SENSIBILIDAD</Text>
+        <Text style={styles.warn}>Saturado: calibra o baja la sensibilidad</Text>
       ) : null}
     </View>
   );
@@ -316,7 +316,7 @@ function useMicHealth(mic: MicView, scene: SourceConfig["mic"]): "ok" | "quiet" 
 function MicStatus({ mic }: { mic: MicView }) {
   return (
     <Text style={styles.note}>
-      {mic.state === "denied" ? "SIN PERMISO DE MICRÓFONO" : mic.state === "error" ? "NO SE PUDO ABRIR EL MICRÓFONO" : "ABRIENDO MICRÓFONO…"}
+      {mic.state === "denied" ? "Sin permiso de micrófono" : mic.state === "error" ? "No se pudo abrir el micrófono" : "Abriendo micrófono…"}
     </Text>
   );
 }
@@ -473,7 +473,24 @@ function StepBars({ steps, onCommit }: { steps: number[]; onCommit: (steps: numb
       style={styles.bars}
     >
       {shown.map((v, i) => (
-        <View key={i} style={styles.barSlot} pointerEvents="none">
+        <View
+          key={i}
+          style={styles.barSlot}
+          pointerEvents="none"
+          // VoiceOver: cada paso es un control ajustable (desliza arriba o abajo: ±10 %)
+          accessible
+          accessibilityRole="adjustable"
+          accessibilityLabel={`Paso ${i + 1} de ${shown.length}`}
+          accessibilityValue={{ min: 0, max: 100, now: Math.round(v * 100), text: `${Math.round(v * 100)} %` }}
+          accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+          onAccessibilityAction={(e) => {
+            const d = e.nativeEvent.actionName === "increment" ? 0.1 : e.nativeEvent.actionName === "decrement" ? -0.1 : 0;
+            if (d === 0) return;
+            const next = [...steps];
+            next[i] = Math.round(Math.min(1, Math.max(0, next[i] + d)) * 100) / 100;
+            onCommit(next);
+          }}
+        >
           <View style={[styles.bar, { height: `${Math.max(4, v * 100)}%` }]} />
         </View>
       ))}
@@ -529,9 +546,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   pair: { flexDirection: "row", gap: space.lg },
   beats: { gap: 6 },
-  note: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
+  // notas y avisos en tipo oración (se leen mejor que las mayúsculas pequeñas en paneles densos)
+  note: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1 },
   // aviso: texto claro sobre gris oscuro (sin color de acento, como el resto de la app)
-  warn: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1 },
+  warn: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1, fontWeight: "600" },
   micCheck: { gap: 6 },
   section: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   sectionGap: { marginTop: space.sm },

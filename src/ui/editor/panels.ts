@@ -1,5 +1,6 @@
 // botones de la barra inferior. Modulación es un atajo a las modulaciones de la capa seleccionada
-export type ToolButtonId = "brush" | "effects" | "layers" | "mod" | "presets" | "gesture";
+// Gesto no está en la barra: se abre desde su tarjeta en Modulación
+export type ToolButtonId = "brush" | "effects" | "layers" | "mod" | "presets";
 export type PanelId = "brush" | "effects" | "layers" | "mod" | "presets" | "gesture" | "export" | "stage";
 
 // gestor de superposiciones como pila pura:

@@ -7,7 +7,7 @@ import { clearPaint, moveLayer, toggleLayerVisible, togglePaintVisible } from ".
 import type { Layer, PaintLayer, Route, SourceConfig } from "../../domain/types";
 import { hasPaint, PAINT_ROW_ID, stackIds } from "../../paint/paintStack";
 import { selectFeedback, tapFeedback } from "../../platform/haptics";
-import { askConfirm, confirmDelete } from "../../state/confirm";
+import { askConfirm } from "../../state/confirm";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
 import { SheetScrollLock } from "../kit/Sheet";
@@ -34,8 +34,8 @@ type RowProps = {
   // insignias de modulación
   badges: ReactNode;
   a11yExtra: string;
-  // confirmación antes de quitar
-  remove: { title: string; message: string; label: string };
+  // aviso al quitar (se deshace con ↶)
+  removed: string;
   selected: boolean;
   // desplazamiento para abrir hueco mientras se arrastra otra fila
   offset: number;
@@ -87,9 +87,7 @@ function StackRow(props: RowProps) {
           label={`Quitar ${label}`}
           size={36}
           bare
-          onPress={() => {
-            void confirmDelete({ section: "CAPA", ...props.remove }).then((ok) => ok && props.onRemove());
-          }}
+          onPress={props.onRemove}
         />
         {count > 1 && (
           <GestureDetector gesture={pan}>
@@ -120,11 +118,7 @@ function layerRowInfo(layer: Layer, mods: Route[]) {
     label: def.label,
     suffix: layer.kind === "generator" ? "GENERADOR" : null,
     a11yExtra: n ? `, ${n} modulaciones` : "",
-    remove: {
-      title: `¿Quitar ${def.label}?`,
-      message: n > 0 ? `También se quitan sus ${n === 1 ? "modulación" : `${n} modulaciones`}. Puedes deshacerlo con ↶.` : "Puedes deshacerlo con ↶.",
-      label: "Quitar capa",
-    },
+    removed: `${def.label.toUpperCase()} QUITADO · ↶ PARA DESHACER`,
     badges:
       n > 0 ? (
         <View style={styles.badges}>
@@ -145,11 +139,7 @@ function paintRowInfo(strokes: number, modulation: boolean) {
     label: "PINTURA",
     suffix: modulation ? "SIN MODULACIÓN" : trazos,
     a11yExtra: `, ${trazos.toLowerCase()}`,
-    remove: {
-      title: "¿Borrar la pintura?",
-      message: `${strokes === 1 ? "Se quita el trazo" : `Se quitan los ${strokes} trazos`} del pincel. Puedes deshacerlo con ↶.`,
-      label: "Borrar pintura",
-    },
+    removed: "PINTURA BORRADA · ↶ PARA DESHACER",
     badges: null,
   };
 }
@@ -313,7 +303,12 @@ export function LayersPanel(props: Props) {
                   )
                 }
                 onToggleVisible={() => (layer ? toggleLayerVisible(layer.id) : togglePaintVisible())}
-                onRemove={() => (layer ? props.onRemove(layer.id) : clearPaint())}
+                onRemove={() => {
+                  tapFeedback();
+                  if (layer) props.onRemove(layer.id);
+                  else clearPaint();
+                  props.onNotice(info.removed);
+                }}
                 onOpen={() => {
                   selectFeedback();
                   // la fila PINTURA abre el pincel (en Modulación avisa que no se modula); una capa, su inspector
