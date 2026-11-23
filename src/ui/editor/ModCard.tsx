@@ -11,7 +11,6 @@ import { IconTiles, type IconTile } from "../kit/IconTiles";
 import { Segmented } from "../kit/Segmented";
 import { SheetPin } from "../kit/Sheet";
 import { useLiveMod } from "../../canvas/modBus";
-import { scopeWindowS } from "../../modulation/scopeWindow";
 import { defaultRouteSetting } from "../../modulation/sources";
 import { confirmDelete } from "../../state/confirm";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
@@ -66,8 +65,7 @@ type Props = {
 };
 
 const percent = (v: number) => `${Math.round(v * 100)} %`;
-// escala de tiempo bajo la gráfica: lo que dura un barrido de la bolita
-const formatWindow = (s: number) => (s < 10 ? `${Math.round(s * 10) / 10} s` : `${Math.round(s)} s`);
+
 
 // tarjeta de una modulación. Cerrada: una línea (forma, fuente → parámetro, intensidad). Abierta:
 // la señal en vivo, la fuente, el parámetro, su ajuste principal y la intensidad; lo demás plegado
@@ -170,30 +168,8 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
           {/* blanco: la señal de la fuente · gris: cómo queda el parámetro */}
           <View style={styles.scope} onLayout={(e) => setScopeW(Math.round(e.nativeEvent.layout.width))}>
             {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={base} width={scopeW} height={SCOPE_H} />}
-            <Text style={styles.timeScale} pointerEvents="none">
-              {formatWindow(scopeWindowS(route, scene))}
-            </Text>
           </View>
-          {/* qué es cada línea, con los nombres reales */}
-          <View style={styles.legend} accessible accessibilityLabel={`Línea blanca: la señal de ${src.label}. Línea gris: cómo se mueve ${resultName}. Punteada: tu valor`}>
-            <View style={styles.legendItem}>
-              <View style={[styles.swatch, styles.swatchSignal]} />
-              <Text style={styles.legendText}>{src.label} · LA SEÑAL</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.swatch, styles.swatchResult]} />
-              <Text style={styles.legendText} numberOfLines={1}>
-                {resultName.toUpperCase()} · CÓMO SE MUEVE
-              </Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={styles.swatchDash}>
-                <View style={[styles.dash, styles.swatchResult]} />
-                <View style={[styles.dash, styles.swatchResult]} />
-              </View>
-              <Text style={styles.legendText}>TU VALOR</Text>
-            </View>
-          </View>
+          <Text style={styles.caption}>ASÍ SE MUEVE {resultName.toUpperCase()}</Text>
 
           {picking ? (
             <>
@@ -259,9 +235,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
             value={route.amount}
             onCommit={(amount) => edit("intensidad", (r) => void (r.amount = amount))}
           />
-          <Text style={styles.hint}>
-            Cuánto mueve la señal a {resultName}: 0 % no lo mueve, 100 % lo lleva de un extremo al otro. En negativo se mueve al revés.
-          </Text>
+          <Text style={styles.hint}>Cuánto se mueve. En negativo, al revés.</Text>
 
           {more && (
             <View style={styles.more}>
@@ -327,16 +301,8 @@ const styles = StyleSheet.create({
   amount: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
   body: { gap: space.md, paddingHorizontal: space.md, paddingBottom: space.xs },
   scope: { height: SCOPE_H, borderRadius: radius.sm, backgroundColor: colors.ink, overflow: "hidden" },
-  legend: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: space.md, rowGap: 4, marginTop: -space.sm },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 1 },
-  swatch: { width: 10, height: 2, borderRadius: 1 },
-  swatchDash: { flexDirection: "row", gap: 2, width: 10 },
-  dash: { width: 4, height: 1.5, borderRadius: 1 },
-  timeScale: { position: "absolute", right: 6, bottom: 3, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontVariant: ["tabular-nums"] },
+  caption: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.8, textAlign: "center", marginTop: -space.sm },
   hint: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, lineHeight: 15, marginTop: -space.sm },
-  swatchSignal: { backgroundColor: colors.inkText },
-  swatchResult: { backgroundColor: colors.inkMute },
-  legendText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.6 },
   group: { gap: 6 },
   chosen: { flexDirection: "row", alignItems: "center", gap: space.sm },
   chosenTile: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center" },

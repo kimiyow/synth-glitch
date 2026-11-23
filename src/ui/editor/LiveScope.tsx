@@ -1,4 +1,4 @@
-import { Canvas, Circle, DashPathEffect, Line, Points, vec } from "@shopify/react-native-skia";
+import { Canvas, Circle, Line, Points, vec } from "@shopify/react-native-skia";
 import { useEffect } from "react";
 import { useAnimatedReaction, useDerivedValue, useSharedValue } from "react-native-reanimated";
 
@@ -159,39 +159,27 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
     for (let k = from; k <= to; k++) out.push({ x: PAD_X + (k / (N - 1)) * span, y: PAD + (1 - b[k * 2 + track]) * h });
     return out;
   };
-  const resultPts = useDerivedValue(() => {
-    const f = scope.get();
-    return toPoints(f.curve, f.u, 1, "all");
-  });
+  // se dibuja solo cómo se mueve el parámetro del efecto (lo que se ve en la imagen): la intensidad
+  // agranda o achica la onda y en negativo la invierte, sin una segunda línea que explicar
   const behindPts = useDerivedValue(() => {
     const f = scope.get();
-    return toPoints(f.curve, f.u, 0, "behind");
+    return toPoints(f.curve, f.u, 1, "behind");
   });
   const aheadPts = useDerivedValue(() => {
     const f = scope.get();
-    return toPoints(f.curve, f.u, 0, "ahead");
+    return toPoints(f.curve, f.u, 1, "ahead");
   });
   const ballX = useDerivedValue(() => PAD_X + scope.get().u * span);
-  const ballY = useDerivedValue(() => PAD + (1 - scope.get().s) * h);
-  const resultY = useDerivedValue(() => PAD + (1 - scope.get().r) * h);
+  const ballY = useDerivedValue(() => PAD + (1 - scope.get().r) * h);
   const headTop = useDerivedValue(() => vec(ballX.get(), 0));
   const headBottom = useDerivedValue(() => vec(ballX.get(), height));
-  const mid = bipolar ? PAD + h / 2 : PAD + h;
-  // tu valor: el del parámetro sin modular (la línea gris se mueve alrededor de él)
-  const baseY = PAD + (1 - (route.target.param === "x" ? base.x : base.y)) * h;
 
   return (
     <Canvas style={{ width, height }} pointerEvents="none">
-      <Line p1={vec(0, mid)} p2={vec(width, mid)} color={colors.inkLine} strokeWidth={1} />
-      <Line p1={vec(0, baseY)} p2={vec(width, baseY)} color={colors.inkMute} strokeWidth={1} opacity={0.6}>
-        <DashPathEffect intervals={[3, 4]} />
-      </Line>
-      <Points points={resultPts} mode="polygon" color={colors.inkMute} strokeWidth={1.5} style="stroke" opacity={0.7} />
       <Points points={aheadPts} mode="polygon" color={colors.inkText} strokeWidth={2} style="stroke" strokeJoin="round" opacity={0.3} />
       <Points points={behindPts} mode="polygon" color={colors.inkText} strokeWidth={2} style="stroke" strokeJoin="round" />
       {/* cabezal: dónde va el barrido */}
       <Line p1={headTop} p2={headBottom} color={colors.inkLine} strokeWidth={1} />
-      <Circle cx={ballX} cy={resultY} r={3} color={colors.inkMute} />
       <Circle cx={ballX} cy={ballY} r={BALL_R} color={colors.inkText} />
     </Canvas>
   );
