@@ -128,13 +128,9 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
     });
   };
 
-  // abierta dentro de una hoja: la vista en vivo queda fija arriba (los ajustes se desplazan debajo
-  // sin taparla) y la tarjeta se lleva a la vista
-  useEffect(() => {
-    if (!expanded || !sheet) return;
-    sheet.pin(<PinnedScope route={route} routes={routes} scene={scene} base={base} source={src.label} param={paramName} />);
-    return () => sheet.pin(null);
-  }, [expanded, sheet, route, routes, scene, base, src.label, paramName]);
+  // abierta dentro de una hoja: la tarjeta se lleva a la vista. La gráfica en vivo va dentro de la
+  // tarjeta (no fijada en la hoja): sale siempre que la tarjeta esté abierta, se llegue desde
+  // Modulación, Capas o Efectos
   useEffect(() => {
     if (!expanded || !sheet) return;
     const id = setTimeout(() => sheet.scrollIntoView(cardRef), 60);
@@ -166,8 +162,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
       {expanded && (
         <RoutePreview.Provider value={preview}>
         <View style={styles.body}>
-          {/* blanco: la señal de la fuente · gris: cómo queda el parámetro. En una hoja va fija arriba */}
-          {!sheet && (
+          {/* blanco: la señal de la fuente · gris: cómo queda el parámetro */}
           <View style={styles.scope} onLayout={(e) => setScopeW(Math.round(e.nativeEvent.layout.width))}>
             {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={base} width={scopeW} height={SCOPE_H} />}
             <View style={styles.legend} pointerEvents="none">
@@ -179,7 +174,6 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
               </Text>
             </View>
           </View>
-          )}
 
           {picking ? (
             <>
@@ -299,43 +293,6 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
   );
 }
 
-// vista en vivo fijada en la hoja mientras la tarjeta está abierta: dice qué modulación es (la
-// cabecera de la tarjeta puede quedar fuera de la vista) y muestra señal y resultado
-const PINNED_SCOPE_H = 64;
-function PinnedScope({
-  route,
-  routes,
-  scene,
-  base,
-  source,
-  param,
-}: {
-  route: Route;
-  routes: readonly Route[];
-  scene: SourceConfig;
-  base: { x: number; y: number };
-  source: string;
-  param: string;
-}) {
-  const [w, setW] = useState(0);
-  return (
-    <View style={styles.pinnedWrap}>
-      <View style={styles.pinnedHead}>
-        <Text style={styles.pinnedTitle} numberOfLines={1}>
-          {source} <Text style={styles.mute}>→</Text> {param}
-        </Text>
-        <View style={[styles.swatch, styles.swatchSignal]} />
-        <Text style={styles.legendText}>SEÑAL</Text>
-        <View style={[styles.swatch, styles.swatchResult]} />
-        <Text style={styles.legendText}>RESULTADO</Text>
-      </View>
-      <View style={[styles.scope, { height: PINNED_SCOPE_H }]} onLayout={(e) => setW(Math.round(e.nativeEvent.layout.width))}>
-        {w > 0 && <LiveScope route={route} routes={routes} sources={scene} base={base} width={w} height={PINNED_SCOPE_H} />}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   card: { borderRadius: radius.md, backgroundColor: colors.inkSurface, overflow: "hidden" },
   cardOpen: { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.inkLineStrong },
@@ -347,9 +304,6 @@ const styles = StyleSheet.create({
   amount: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
   body: { gap: space.md, paddingHorizontal: space.md, paddingBottom: space.xs },
   scope: { height: SCOPE_H, borderRadius: radius.sm, backgroundColor: colors.ink, overflow: "hidden" },
-  pinnedWrap: { gap: 6 },
-  pinnedHead: { flexDirection: "row", alignItems: "center", gap: 5 },
-  pinnedTitle: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600", letterSpacing: 0.6 },
   legend: { position: "absolute", top: 6, left: 8, flexDirection: "row", alignItems: "center", gap: 4 },
   swatch: { width: 8, height: 2, borderRadius: 1 },
   swatchSignal: { backgroundColor: colors.inkText },
