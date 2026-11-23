@@ -11,12 +11,13 @@ import { IconTiles, type IconTile } from "../kit/IconTiles";
 import { Segmented } from "../kit/Segmented";
 import { SheetPin } from "../kit/Sheet";
 import { useLiveMod } from "../../canvas/modBus";
+import { defaultRouteSetting } from "../../modulation/sources";
 import { confirmDelete } from "../../state/confirm";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
 import { LiveScope } from "./LiveScope";
 import { SourceGlyph } from "./SourceGlyph";
 import { useGestureRecord } from "./gestureRecord";
-import { CommitSlider, hasAdvanced, RouteSourceEditor, type MicView } from "./SourceEditor";
+import { CommitSlider, hasAdvanced, RoutePreview, RouteSourceEditor, type MicView } from "./SourceEditor";
 
 // fuentes que se pueden asignar: nombre corto, icono y qué hacen (para lectores de pantalla)
 export const MOD_SOURCES: { id: SourceId; label: string; icon: SFSymbol; what: string }[] = [
@@ -67,7 +68,29 @@ const signed = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`;
 
 // tarjeta de una modulación. Cerrada: una línea (forma, fuente → parámetro, intensidad). Abierta:
 // la señal en vivo, la fuente, el parámetro, su ajuste principal y la intensidad; lo demás plegado
-export function ModCard({ route, index, routes, params, base, scene, mic, expanded, fresh = false, onToggle }: Props) {
+export function ModCard({ route: committed, index, routes: committedRoutes, params, base, scene, mic, expanded, fresh = false, onToggle }: Props) {
+  // valor provisional mientras se arrastra un ajuste: la gráfica lo muestra al instante y la escena
+  // cambia al soltar (un solo paso de deshacer). Se descarta en cuanto la ruta confirmada cambia
+  const [draft, setDraft] = useState<{ from: Route; value: Route } | null>(null);
+  const route = draft && draft.from === committed ? draft.value : committed;
+  const routes = route === committed ? committedRoutes : committedRoutes.map((r) => (r.id === route.id ? route : r));
+  const previewing = useRef(false);
+  const preview = (commit: () => void) => {
+    previewing.current = true;
+    try {
+      commit();
+    } finally {
+      previewing.current = false;
+    }
+  };
+  const edit = (label: string, recipe: (r: Route) => void) => {
+    if (!previewing.current) return updateModulation(committed.id, label, recipe);
+    setDraft((d) => {
+      const next = JSON.parse(JSON.stringify(d && d.from === committed ? d.value : committed)) as Route;
+      recipe(next);
+      return { from: committed, value: next };
+    });
+  };
   const [scopeW, setScopeW] = useState(0);
   const [more, setMore] = useState(false);
   // elegir fuente es poco frecuente; ajustarla es lo común: los grupos se ven solo al pedirlos
@@ -95,8 +118,15 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
   // el gesto mueve los dos parámetros (horizontal → el primero, vertical → el segundo)
   const isGesture = route.source === "track" || route.source === "orientation";
   const paramName = isGesture ? `${params.x} + ${params.y}` : params[route.target.param];
-  const patch = <K extends keyof RouteSettings>(key: K, label: string, p: Partial<NonNullable<RouteSettings[K]>>) =>
-    patchModulationSettings(route.id, key, label, p);
+  const patch = <K extends keyof RouteSettings>(key: K, label: string, p: Partial<NonNullable<RouteSettings[K]>>) => {
+    if (!previewing.current) return patchModulationSettings(committed.id, key, label, p);
+    // igual que patchModulationSettings, sobre la copia provisional
+    edit(label, (r) => {
+      if (!r.settings?.[key]) r.settings = { ...r.settings, ...defaultRouteSetting(key as SourceId, scene) };
+      const cur = r.settings[key];
+      if (cur) Object.assign(cur, p);
+    });
+  };
 
   // abierta dentro de una hoja: la vista en vivo queda fija arriba (los ajustes se desplazan debajo
   // sin taparla) y la tarjeta se lleva a la vista
@@ -134,6 +164,7 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
       </Pressable>
 
       {expanded && (
+        <RoutePreview.Provider value={preview}>
         <View style={styles.body}>
           {/* blanco: la señal de la fuente · gris: cómo queda el parámetro. En una hoja va fija arriba */}
           {!sheet && (
@@ -212,7 +243,7 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
             toValue={(u) => Math.round((u * 2 - 1) * 100) / 100}
             fromValue={(v) => (v + 1) / 2}
             value={route.amount}
-            onCommit={(amount) => updateModulation(route.id, "intensidad", (r) => void (r.amount = amount))}
+            onCommit={(amount) => edit("intensidad", (r) => void (r.amount = amount))}
           />
 
           {more && (
@@ -262,6 +293,7 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
             </Pressable>
           </View>
         </View>
+        </RoutePreview.Provider>
       )}
     </View>
   );

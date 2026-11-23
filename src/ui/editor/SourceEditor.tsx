@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
 import type { Route, RouteSettings, SourceConfig } from "../../domain/types";
@@ -38,6 +38,10 @@ type RouteProps = {
   // básicos: lo que cambia el carácter de la señal (siempre a la vista); avanzados: el resto
   advanced?: boolean;
 };
+
+// vista previa mientras se arrastra: la tarjeta de la modulación ejecuta el onCommit dado sin
+// tocar la escena y la gráfica en vivo muestra el valor provisional. Al soltar se confirma
+export const RoutePreview = createContext<((commit: () => void) => void) | null>(null);
 
 // true si la fuente tiene ajustes avanzados (para mostrar "Más ajustes")
 export function hasAdvanced(route: Route): boolean {
@@ -420,6 +424,7 @@ export function CommitSlider({
   fromValue?: (v: number) => number;
 }) {
   const [draft, setDraft] = useState<number | null>(null);
+  const preview = useContext(RoutePreview);
   const shown = draft ?? value;
   return (
     <View style={styles.flex}>
@@ -427,7 +432,11 @@ export function CommitSlider({
         label={label}
         valueText={format(shown)}
         value={Math.min(1, Math.max(0, fromValue(shown)))}
-        onChange={(u) => setDraft(toValue(u))}
+        onChange={(u) => {
+          const v = toValue(u);
+          setDraft(v);
+          preview?.(() => onCommit(v));
+        }}
         onSlidingEnd={() => {
           if (draft !== null) onCommit(draft);
           setDraft(null);
@@ -443,6 +452,7 @@ function StepBars({ steps, onCommit }: { steps: number[]; onCommit: (steps: numb
   const [draft, setDraft] = useState<number[] | null>(null);
   const size = useRef({ w: 1, h: 1 });
   const lockSheet = useContext(SheetScrollLock);
+  const preview = useContext(RoutePreview);
   const shown = draft ?? steps;
   const update = (e: GestureResponderEvent) => {
     const { locationX, locationY } = e.nativeEvent;
@@ -450,6 +460,7 @@ function StepBars({ steps, onCommit }: { steps: number[]; onCommit: (steps: numb
     const next = [...shown];
     next[i] = Math.round(Math.min(1, Math.max(0, 1 - locationY / size.current.h)) * 100) / 100;
     setDraft(next);
+    preview?.(() => onCommit(next));
   };
   const end = () => {
     lockSheet(false);
