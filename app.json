@@ -15,6 +15,14 @@
       },
       "supportsTablet": true
     },
+    "android": {
+      "package": "mx.uabc.synthvj",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      }
+    },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
@@ -48,7 +56,11 @@
         {
           "microphonePermission": "SynthVJ usa el micrófono solo para que el sonido mueva los efectos (fuente MIC). El audio no se guarda ni sale del teléfono."
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-status-bar",
+      "expo-video",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
