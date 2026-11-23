@@ -15,6 +15,7 @@ import { confirmDelete } from "../../state/confirm";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
 import { LiveScope } from "./LiveScope";
 import { SourceGlyph } from "./SourceGlyph";
+import { useGestureRecord } from "./gestureRecord";
 import { CommitSlider, hasAdvanced, RouteSourceEditor, type MicView } from "./SourceEditor";
 
 // fuentes que se pueden asignar: nombre corto, icono y qué hacen (para lectores de pantalla)
@@ -71,7 +72,17 @@ export function ModCard({ route, index, routes, params, base, scene, mic, expand
   const [more, setMore] = useState(false);
   // elegir fuente es poco frecuente; ajustarla es lo común: los grupos se ven solo al pedirlos
   const [picking, setPicking] = useState(fresh);
+  const rec = useGestureRecord();
   const pickSource = (s: SourceId) => {
+    if (s === "track" && route.source !== "track") {
+      // el panel Gesto trabaja con la modulación GESTO de la capa: si ya hay otra, se edita esa
+      const other = routes.some((r) => r.id !== route.id && r.target.layerId === route.target.layerId && r.source === "track");
+      if (other) rec?.notice("ESTA CAPA YA TIENE UN GESTO · SE ABRE EN GESTO");
+      else setModulationSource(route.id, s);
+      setPicking(false);
+      rec?.open();
+      return;
+    }
     setModulationSource(route.id, s);
     // GIRO toma como centro la posición actual del teléfono
     if (s === "orientation") live?.bus.oriCalibrate.set(live.bus.oriCalibrate.get() + 1);

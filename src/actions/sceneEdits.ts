@@ -148,7 +148,7 @@ export function setGestureClip(routeId: string, clip: Pick<GestureClip, "duratio
   });
 }
 
-export type GestureTransform = Pick<GestureClip, "speed" | "direction" | "mirrorX" | "mirrorY">;
+export type GestureTransform = Partial<Pick<GestureClip, "speed" | "direction" | "mirrorX" | "mirrorY" | "loop">>;
 
 // velocidad, dirección o espejo del gesto de una modulación (un cambio deshacible)
 export function setGestureTransform(routeId: string, patch: GestureTransform) {

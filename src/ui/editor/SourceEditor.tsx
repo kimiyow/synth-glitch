@@ -1,12 +1,12 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
 
-import { saveGestureNotice, saveGesturePreset } from "../../actions/gestureLibrary";
 import type { Route, RouteSettings, SourceConfig } from "../../domain/types";
 import { dbToUnit } from "../../modulation/micEnvelope";
 import { DEFAULT_MIC_ROUTE, DIVISIONS, LFO_SHAPES, MAX_BPM, MIN_BPM, SEQ_DIRECTIONS } from "../../modulation/sources";
 import { tapTempo } from "../../modulation/tempo";
 import { ChipRow } from "../ChipRow";
+import { Icon } from "../kit/Icon";
 import { Segmented } from "../kit/Segmented";
 import { SheetScrollLock } from "../kit/Sheet";
 import { Slider } from "../Slider";
@@ -41,7 +41,7 @@ type RouteProps = {
 
 // true si la fuente tiene ajustes avanzados (para mostrar "Más ajustes")
 export function hasAdvanced(route: Route): boolean {
-  return ["lfo", "adsr", "sh", "seq", "track", "orientation"].includes(route.source);
+  return ["lfo", "adsr", "sh", "seq", "orientation"].includes(route.source);
 }
 
 // ajustes propios de la fuente de una modulación
@@ -189,20 +189,8 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
   }
 
   if (route.source === "track") {
-    const g = own.gesture;
-    if (advanced) {
-      return (
-        <Segmented
-          options={[
-            { id: "smooth", label: "CIERRE SUAVE" },
-            { id: "cut", label: "CORTE" },
-          ]}
-          value={g?.loop ?? "smooth"}
-          onChange={(loop) => patch("gesture", "cierre del gesto", { loop })}
-        />
-      );
-    }
-    return <GestureControls route={route} />;
+    if (advanced) return null;
+    return <GestureSummary route={route} />;
   }
 
   if (route.source === "mic") {
@@ -278,37 +266,25 @@ function RecalibrateButton() {
   );
 }
 
-// grabar, regrabar y guardar en la biblioteca el gesto de una modulación GESTO
-function GestureControls({ route }: { route: Route }) {
+// la fuente GESTO en Modulación: solo el resumen. Grabar, transformar y guardar se hacen en el
+// panel Gesto, que se abre encima
+function GestureSummary({ route }: { route: Route }) {
   const rec = useGestureRecord();
   const g = route.settings?.gesture;
   const has = !!g && g.samples.length >= 4;
-  if (!has) {
-    return (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityHint="Mueve el dedo sobre la imagen; al soltar se repite en bucle"
-        onPress={() => rec?.start(route.id)}
-        style={({ pressed }) => [styles.recBig, pressed && styles.pressed]}
-      >
-        <View style={styles.recDot} />
-        <Text style={styles.recBigText}>GRABAR GESTO</Text>
-      </Pressable>
-    );
-  }
   return (
     <View style={styles.micRow}>
-      <Pressable accessibilityRole="button" onPress={() => rec?.start(route.id)} style={({ pressed }) => [styles.btn, styles.btnRow, pressed && styles.pressed]}>
-        <View style={styles.recDotSmall} />
-        <Text style={styles.btnText}>REGRABAR</Text>
+      <Text style={[styles.note, styles.flex]}>{has ? `EN BUCLE · ${(g.durationMs / 1000).toFixed(1)} S` : "SIN GESTO GRABADO"}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Abre el panel Gesto para grabar, transformar o guardar el gesto"
+        hitSlop={{ top: 6, bottom: 6 }}
+        onPress={() => rec?.open()}
+        style={({ pressed }) => [styles.btn, styles.btnRow, pressed && styles.pressed]}
+      >
+        {has ? <Icon name="hand.draw" size={13} /> : <View style={styles.recDotSmall} />}
+        <Text style={styles.btnText}>{has ? "EDITAR EN GESTO" : "GRABAR EN GESTO"}</Text>
       </Pressable>
-      <Text style={[styles.note, styles.flex]}>{(g.durationMs / 1000).toFixed(1)} s</Text>
-      <Btn
-        label="GUARDAR"
-        onPress={() => {
-          rec?.notice(saveGestureNotice(saveGesturePreset(g)));
-        }}
-      />
     </View>
   );
 }

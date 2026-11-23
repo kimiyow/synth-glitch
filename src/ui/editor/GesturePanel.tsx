@@ -122,6 +122,15 @@ export function GesturePanel(props: Props) {
           />
           <Text style={styles.label}>DIRECCIÓN</Text>
           <Segmented options={DIRECTIONS} value={clip.direction ?? "forward"} onChange={(direction) => props.onTransform({ direction })} />
+          <Text style={styles.label}>CIERRE DEL BUCLE</Text>
+          <Segmented
+            options={[
+              { id: "smooth", label: "Suave" },
+              { id: "cut", label: "Corte" },
+            ]}
+            value={clip.loop}
+            onChange={(loop) => props.onTransform({ loop })}
+          />
           <Text style={styles.label}>ESPEJO</Text>
           <View style={styles.mirrors}>
             <MirrorToggle icon="arrow.left.and.right" label={`Invertir ${layer.axes.x}`} on={clip.mirrorX === true} onPress={() => props.onTransform({ mirrorX: !clip.mirrorX })} />

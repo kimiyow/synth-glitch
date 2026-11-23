@@ -42,7 +42,7 @@ import { EditorTopBar } from "../ui/editor/EditorTopBar";
 import { layerDef } from "../ui/editor/LayerInspector";
 import { GestureRecordContext } from "../ui/editor/gestureRecord";
 import type { TileRef } from "../ui/editor/EffectsPanel";
-import { toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../ui/editor/panels";
+import { popOverlay, pushOverlay, toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../ui/editor/panels";
 import { useExportJob } from "../ui/editor/useExportJob";
 import { askConfirm } from "../state/confirm";
 import { announce } from "../ui/errors";
@@ -260,7 +260,11 @@ function ProjectView({ project }: { project: Project }) {
   // grabación de un gesto: el panel se oculta (sin desmontarse) y una capa sobre el lienzo captura
   // el dedo; al soltar, el gesto queda en su modulación y se repite en bucle
   const [recordingRoute, setRecordingRoute] = useState<string | null>(null);
-  const gestureRecord = { start: (routeId: string) => setRecordingRoute(routeId), notice: setNotice };
+  const gestureRecord = {
+    start: (routeId: string) => setRecordingRoute(routeId),
+    notice: setNotice,
+    open: () => setOverlays((stack) => (stack.at(-1) === "gesture" ? stack : pushOverlay(stack, "gesture"))),
+  };
   // estela del gesto de la capa seleccionada sobre el lienzo: solo con el panel Gesto abierto (al
   // cerrarlo la imagen queda limpia); el ojo de la tarjeta la oculta también ahí
   const [trailVisible, setTrailVisible] = useState(true);
@@ -435,7 +439,7 @@ function ProjectView({ project }: { project: Project }) {
                     onOpenEffects={() => onToolPress("effects")}
                     onOpenBrush={() => onToolPress("brush")}
                     onNotice={setNotice}
-                    onClose={() => setOverlays([])}
+                    onClose={() => setOverlays(popOverlay)}
                   onStartStage={startStage}
                   onTriggerScene={triggerScene}
                     exports={exports}
