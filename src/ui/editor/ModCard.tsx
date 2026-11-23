@@ -3,9 +3,8 @@ import { useContext, useEffect, useRef, useState, type ComponentRef } from "reac
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { patchModulationSettings, removeModulation, setModulationSource, updateModulation } from "../../actions/sceneEdits";
-import type { Route, RouteCurve, RouteSettings, SourceConfig, SourceId } from "../../domain/types";
+import type { Route, RouteSettings, SourceConfig, SourceId } from "../../domain/types";
 import { selectFeedback } from "../../platform/haptics";
-import { ChipRow, type Chip } from "../ChipRow";
 import { Icon } from "../kit/Icon";
 import { IconButton } from "../kit/IconButton";
 import { IconTiles, type IconTile } from "../kit/IconTiles";
@@ -39,12 +38,6 @@ const tilesFor = (ids: SourceId[]): IconTile<SourceId>[] =>
 const AUTO_TILES = tilesFor(["lfo", "sh", "seq", "tempo"]);
 const REACT_TILES = tilesFor(["adsr", "mic", "track", "orientation"]);
 const inGroup = (tiles: IconTile<SourceId>[], id: SourceId) => (tiles.some((t) => t.id === id) ? id : null);
-const CURVES: readonly Chip<RouteCurve>[] = [
-  { id: "lin", label: "LINEAL" },
-  { id: "scurve", label: "SUAVE" },
-  { id: "exp", label: "LENTA" },
-  { id: "log", label: "RÁPIDA" },
-];
 const SCOPE_H = 76;
 
 type Props = {
@@ -248,7 +241,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
             toValue={(u) => Math.round((u * 2 - 1) * 100) / 100}
             fromValue={(v) => (v + 1) / 2}
             centered
-            marks={{ left: "− AL REVÉS", mid: "0 · QUIETO", right: "NORMAL +" }}
+            marks={{ left: "−100", mid: "0", right: "+100" }}
             value={route.amount}
             onCommit={(amount) => edit("intensidad", (r) => void (r.amount = amount))}
           />
@@ -259,13 +252,12 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
               {hasAdvanced(route) && <RouteSourceEditor route={route} scene={scene} mic={mic} patch={patch} advanced />}
               <Segmented
                 options={[
-                  { id: "add", label: "SUMA AL GESTO" },
-                  { id: "replace", label: "REEMPLAZA" },
+                  { id: "add", label: "SUMA A TU VALOR" },
+                  { id: "replace", label: "TOMA EL CONTROL" },
                 ]}
                 value={route.mode}
                 onChange={(mode) => updateModulation(route.id, "modo de modulación", (r) => void (r.mode = mode))}
               />
-              <ChipRow chips={CURVES} value={route.curve} onChange={(curve) => updateModulation(route.id, "curva", (r) => void (r.curve = curve))} />
             </View>
           )}
 
@@ -278,7 +270,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
               style={({ pressed }) => [styles.footBtn, pressed && styles.pressed]}
             >
               <Icon name="slider.horizontal.3" size={13} color={colors.inkMute} />
-              <Text style={styles.footText}>{more ? "MENOS" : "MÁS"}</Text>
+              <Text style={styles.footText}>{more ? "OCULTAR AJUSTES FINOS" : "AJUSTES FINOS"}</Text>
             </Pressable>
           </View>
         </View>

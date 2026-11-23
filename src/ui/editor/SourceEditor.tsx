@@ -24,7 +24,7 @@ export type MicView = {
 
 const DIVISION_CHIPS = DIVISIONS.map((d) => ({ id: d, label: d < 1 ? `1/${1 / d}` : `${d}` }));
 const SHAPE_LABEL = { sine: "SENO", triangle: "TRIÁNGULO", square: "CUADRADA", saw: "SIERRA", random: "ALEATORIA" };
-const DIR_LABEL = { forward: "→", backward: "←", pingpong: "↔", random: "?" };
+const DIR_LABEL = { forward: "ADELANTE", backward: "ATRÁS", pingpong: "IDA Y VUELTA", random: "AL AZAR" };
 const secs = (v: number) => `${v.toFixed(2)} s`;
 const two = (v: number) => v.toFixed(2);
 
@@ -38,6 +38,16 @@ type RouteProps = {
   // básicos: lo que cambia el carácter de la señal (siempre a la vista); avanzados: el resto
   advanced?: boolean;
 };
+
+// cada cuántos tiempos del ritmo (pulsos del BPM) pasa algo, con su rótulo
+function Beats({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <View style={styles.beats}>
+      <Text style={styles.note}>{label} · TIEMPOS</Text>
+      <ChipRow chips={DIVISION_CHIPS} value={value} onChange={onChange} />
+    </View>
+  );
+}
 
 // velocidad del LFO en palabras: cada cuánto da una vuelta (lenta) o cuántas da por segundo
 function lfoSpeed(hz: number): string {
@@ -57,7 +67,7 @@ export const RoutePreview = createContext<((commit: () => void) => void) | null>
 
 // true si la fuente tiene ajustes avanzados (para mostrar "Más ajustes")
 export function hasAdvanced(route: Route): boolean {
-  return ["lfo", "adsr", "sh", "seq", "orientation"].includes(route.source);
+  return ["lfo", "adsr", "seq", "orientation"].includes(route.source);
 }
 
 // ajustes propios de la fuente de una modulación
@@ -68,20 +78,12 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
     const lfo = own.lfo ?? scene.lfo;
     if (advanced) {
       return (
-        <View style={styles.root}>
-          <Segmented
-            options={[
-              { id: "free", label: "LIBRE" },
-              { id: "sync", label: `AL RELOJ · ${scene.tempo.bpm}` },
-            ]}
-            value={lfo.sync ? "sync" : "free"}
-            onChange={(m) => patch("lfo", "modo del LFO", { sync: m === "sync" })}
-          />
-          <View style={styles.pair}>
-            <CommitSlider label="Profundidad" format={two} value={lfo.depth} onCommit={(depth) => patch("lfo", "profundidad del LFO", { depth })} />
-            <CommitSlider label="Desfase" format={(v) => `${Math.round(v * 360)}°`} value={lfo.phase} onCommit={(phase) => patch("lfo", "desfase del LFO", { phase })} />
-          </View>
-        </View>
+        <CommitSlider
+          label="Punto de inicio de la onda"
+          format={(v) => `${Math.round(v * 100)} %`}
+          value={lfo.phase}
+          onCommit={(phase) => patch("lfo", "punto de inicio del LFO", { phase })}
+        />
       );
     }
     return (
@@ -91,8 +93,16 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
           value={lfo.shape}
           onChange={(shape) => patch("lfo", "forma del LFO", { shape })}
         />
+        <Segmented
+          options={[
+            { id: "free", label: "LIBRE" },
+            { id: "sync", label: `AL RITMO · ${scene.tempo.bpm} BPM` },
+          ]}
+          value={lfo.sync ? "sync" : "free"}
+          onChange={(m) => patch("lfo", "modo del LFO", { sync: m === "sync" })}
+        />
         {lfo.sync ? (
-          <ChipRow chips={DIVISION_CHIPS} value={lfo.division} onChange={(division) => patch("lfo", "división del LFO", { division })} />
+          <Beats label="UNA VUELTA CADA" value={lfo.division} onChange={(division) => patch("lfo", "división del LFO", { division })} />
         ) : (
           <CommitSlider
             label="Velocidad"
@@ -114,8 +124,8 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
     if (advanced) {
       return (
         <View style={styles.pair}>
-          <CommitSlider label="Caída" format={secs} {...sec} value={a.decay} onCommit={(decay) => patch("adsr", "caída", { decay })} />
-          <CommitSlider label="Sostén" format={two} value={a.sustain} onCommit={(sustain) => patch("adsr", "sostén", { sustain })} />
+          <CommitSlider label="Bajada tras subir" format={secs} {...sec} value={a.decay} onCommit={(decay) => patch("adsr", "caída", { decay })} />
+          <CommitSlider label="Nivel mientras tocas" format={(v) => `${Math.round(v * 100)} %`} value={a.sustain} onCommit={(sustain) => patch("adsr", "sostén", { sustain })} />
         </View>
       );
     }
@@ -139,24 +149,21 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
 
   if (route.source === "sh") {
     const sh = own.sh ?? scene.sh;
-    if (advanced) {
-      return (
-        <Segmented
-          options={[
-            { id: "free", label: "LIBRE" },
-            { id: "sync", label: `AL RELOJ · ${scene.tempo.bpm}` },
-          ]}
-          value={sh.sync ? "sync" : "free"}
-          onChange={(m) => patch("sh", "modo del azar", { sync: m === "sync" })}
-        />
-      );
-    }
+    if (advanced) return null;
     // lo aleatorio vive aquí (el LFO ya no ofrece forma aleatoria): cada cuánto cambia y cómo pasa
     // de un valor al siguiente
     return (
       <View style={styles.root}>
+        <Segmented
+          options={[
+            { id: "free", label: "LIBRE" },
+            { id: "sync", label: `AL RITMO · ${scene.tempo.bpm} BPM` },
+          ]}
+          value={sh.sync ? "sync" : "free"}
+          onChange={(m) => patch("sh", "modo del azar", { sync: m === "sync" })}
+        />
         {sh.sync ? (
-          <ChipRow chips={DIVISION_CHIPS} value={sh.division} onChange={(division) => patch("sh", "división del azar", { division })} />
+          <Beats label="CAMBIA CADA" value={sh.division} onChange={(division) => patch("sh", "división del azar", { division })} />
         ) : (
           <CommitSlider
             label="Velocidad"
@@ -168,7 +175,7 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
             onCommit={(rateHz) => patch("sh", "velocidad del azar", { rateHz })}
           />
         )}
-        <CommitSlider label="Suavizado" format={two} value={sh.slew} onCommit={(slew) => patch("sh", "suavizado del azar", { slew })} />
+        <CommitSlider label="Suavizado" format={(v) => `${Math.round(v * 100)} %`} value={sh.slew} onCommit={(slew) => patch("sh", "suavizado del azar", { slew })} />
       </View>
     );
   }
@@ -186,12 +193,16 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
             value={seq.steps.length}
             onChange={(n) => patch("seq", "largo de la secuencia", { steps: Array.from({ length: n }, (_, i) => seq.steps[i % seq.steps.length]) })}
           />
-          <ChipRow chips={DIVISION_CHIPS} value={seq.division} onChange={(division) => patch("seq", "división de pasos", { division })} />
-          <Segmented options={SEQ_DIRECTIONS.map((d) => ({ id: d, label: DIR_LABEL[d] }))} value={seq.direction} onChange={(direction) => patch("seq", "dirección", { direction })} />
+          <ChipRow chips={SEQ_DIRECTIONS.map((d) => ({ id: d, label: DIR_LABEL[d] }))} value={seq.direction} onChange={(direction) => patch("seq", "dirección", { direction })} />
         </View>
       );
     }
-    return <StepBars steps={seq.steps} onCommit={(steps) => patch("seq", "pasos", { steps })} />;
+    return (
+      <View style={styles.root}>
+        <StepBars steps={seq.steps} onCommit={(steps) => patch("seq", "pasos", { steps })} />
+        <Beats label="AVANZA UN PASO CADA" value={seq.division} onChange={(division) => patch("seq", "división de pasos", { division })} />
+      </View>
+    );
   }
 
   if (route.source === "orientation") {
@@ -200,7 +211,7 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
       return (
         <View style={styles.root}>
           <CommitSlider
-            label="Zona muerta"
+            label="Ignorar movimientos pequeños"
             format={(v) => `${Math.round(v * 100)} %`}
             toValue={(u) => Math.round(u * 30) / 100}
             fromValue={(v) => v / 0.3}
@@ -209,8 +220,8 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
           />
           <Segmented
             options={[
-              { id: "normal", label: "↔ X · ↕ Y" },
-              { id: "swap", label: "↔ Y · ↕ X" },
+              { id: "normal", label: "EJES NORMALES" },
+              { id: "swap", label: "EJES CRUZADOS" },
             ]}
             value={o.swapAxes ? "swap" : "normal"}
             onChange={(v) => patch("orientation", "ejes del giro", { swapAxes: v === "swap" })}
@@ -592,6 +603,7 @@ const styles = StyleSheet.create({
   root: { gap: space.md },
   flex: { flex: 1 },
   pair: { flexDirection: "row", gap: space.lg },
+  beats: { gap: 6 },
   note: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
   // aviso: texto claro sobre gris oscuro (sin color de acento, como el resto de la app)
   warn: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1 },
