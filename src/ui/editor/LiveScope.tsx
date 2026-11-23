@@ -39,53 +39,61 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
   const bipolar = route.source === "lfo" || route.source === "sh" || route.source === "orientation";
   const computed = scopeComputed(route, sources);
   const sweepS = scopeWindowS(route, sources);
-  // barrido en vivo: intercalado [señal, resultado] por columna
-  const trace = useSharedValue<number[]>(new Array(N * 2).fill(0));
-  const lastSlot = useSharedValue(-1);
-  // lo que se dibuja, intercalado [señal, resultado], y la posición de la bolita (0..1) y sus valores
-  const shown = useSharedValue<number[]>(new Array(N * 2).fill(0));
-  const ball = useSharedValue({ u: 0, s: 0, r: 0 });
-  // reloj del editor (lo avanza el lienzo en cada cuadro). La gráfica reacciona a él, como la estela
-  // del gesto: un useFrameCallback propio se registraba tarde al montar la tarjeta y la gráfica no
-  // salía hasta el siguiente render
+  // reloj del editor (lo avanza el lienzo en cada cuadro). Todo lo que se dibuja sale de un solo
+  // valor derivado que lee el reloj en su propio cuerpo, como la estela del gesto: así se dibuja
+  // desde el primer cuadro al montar y se rehace con cada ajuste (Reanimated solo sigue los valores
+  // compartidos que lee el cuerpo, no los leídos dentro de funciones auxiliares)
   const noClock = useSharedValue(0);
   const clock = live ? live.bus.time : noClock;
+  // barrido en vivo (micrófono, giro, azar, ADSR en uso): intercalado [señal, resultado] por columna
+  const trace = useSharedValue<number[]>(new Array(N * 2).fill(0));
+  const lastSlot = useSharedValue(-1);
 
+  // valores de un instante. Las entradas en vivo se leen aquí sin suscribirse: el reloj ya marca
+  // cada cuadro
+  const sample = (t: number, inputs: ModInputs) => {
+    "worklet";
+    const seed = live ? live.seed : 0;
+    const v = sourceValue(route, sources, t, inputs, seed + Math.max(0, index) * 7919, base);
+    return {
+      s: Math.min(1, Math.max(0, bipolar ? (v + 1) / 2 : v)),
+      r: evaluateAxis(route.target.layerId, route.target.param, base, routes, sources, t, inputs, seed),
+    };
+  };
+  const readInputs = (): ModInputs => {
+    "worklet";
+    const bus = live?.bus;
+    return {
+      touch: {},
+      gateOnAt: bus ? bus.gateOn.get() : null,
+      gateOffAt: bus ? bus.gateOff.get() : null,
+      orientation: bus ? oriInput(bus) : { x: 0, y: 0 },
+      mic: live ? live.micLevel.get() : 0,
+      micHitAt: bus ? bus.micHitAt.get() : null,
+      track: null,
+      rec: bus ? recInput(bus) : null,
+    };
+  };
+  // modo del barrido en t: calculado (curva entera) o en vivo, y su ventana
+  const modeAt = (t: number, inputs: ModInputs) => {
+    "worklet";
+    const recording = inputs.rec !== null && inputs.rec.routeId === route.id;
+    const adsrLive = adsrActive(route, sources, t, inputs, LIVE_WINDOW_S);
+    const calc = computed && !recording && !adsrLive;
+    // el ADSR que estás disparando usa el barrido en vivo; el azar, su propia ventana (unos pasos)
+    const w = calc || !adsrLive ? sweepS : LIVE_WINDOW_S;
+    const start = Math.floor(t / w) * w;
+    return { calc, w, start, u: (t - start) / w };
+  };
+
+  // el barrido en vivo se escribe en cada cuadro (al pasar de calculado a en vivo no queda vacío). La
+  // primera vez se llena con el valor actual: una línea plana, nunca una gráfica vacía
   useAnimatedReaction(
     () => clock.get(),
     (t) => {
-      const bus = live?.bus;
-      const rec = bus ? recInput(bus) : null;
-      const inputs: ModInputs = {
-        touch: {},
-        gateOnAt: bus ? bus.gateOn.get() : null,
-        gateOffAt: bus ? bus.gateOff.get() : null,
-        orientation: bus ? oriInput(bus) : { x: 0, y: 0 },
-        mic: live ? live.micLevel.get() : 0,
-        micHitAt: bus ? bus.micHitAt.get() : null,
-        track: null,
-        rec,
-      };
-      const seed = live ? live.seed : 0;
-      const ownSeed = seed + Math.max(0, index) * 7919;
-      const signalAt = (tt: number, inp: ModInputs) => {
-        const v = sourceValue(route, sources, tt, inp, ownSeed, base);
-        return Math.min(1, Math.max(0, bipolar ? (v + 1) / 2 : v));
-      };
-      const resultAt = (tt: number, inp: ModInputs) => evaluateAxis(route.target.layerId, route.target.param, base, routes, sources, tt, inp, seed);
-
-      const recording = rec !== null && rec.routeId === route.id;
-      const adsrLive = adsrActive(route, sources, t, inputs, LIVE_WINDOW_S);
-      const calc = computed && !recording && !adsrLive;
-      // el ADSR que estás disparando usa el barrido en vivo; el azar, su propia ventana (unos pasos)
-      const w = calc || !adsrLive ? sweepS : LIVE_WINDOW_S;
-      const start = Math.floor(t / w) * w;
-      const u = (t - start) / w;
-
-      // el barrido en vivo se escribe siempre (al pasar de calculado a en vivo no queda vacío). La
-      // primera vez se llena con el valor actual: una línea plana, nunca una gráfica vacía
-      const s = signalAt(t, inputs);
-      const r = resultAt(t, inputs);
+      const inputs = readInputs();
+      const { u } = modeAt(t, inputs);
+      const { s, r } = sample(t, inputs);
       const slot = Math.min(N - 1, Math.floor(u * N));
       const prev = lastSlot.get();
       trace.modify((b) => {
@@ -108,61 +116,64 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
         return b;
       });
       lastSlot.set(slot);
-
-      shown.modify((out) => {
-        "worklet";
-        if (calc) {
-          for (let k = 0; k < N; k++) {
-            const tk = start + (k / (N - 1)) * w;
-            const inp = previewInputs(route, sources, tk, inputs);
-            out[k * 2] = signalAt(tk, inp);
-            out[k * 2 + 1] = resultAt(tk, inp);
-          }
-        } else {
-          const b = trace.get();
-          for (let k = 0; k < N * 2; k++) out[k] = b[k];
-        }
-        return out;
-      });
-      // la bolita marca el valor de este instante (en el ADSR de muestra, el del disparo de muestra)
-      const inpNow = calc ? previewInputs(route, sources, t, inputs) : inputs;
-      ball.set({ u, s: calc ? signalAt(t, inpNow) : s, r: calc ? resultAt(t, inpNow) : r });
     },
-    // sin esta lista la reacción solo se rehace cuando cambia lo que lee del reloj y sigue dibujando
-    // con los ajustes anteriores: la curva quedaba vieja aunque la bolita siguiera avanzando
     [route, routes, sources, base, index, bipolar, computed, sweepS, live],
   );
-  // al cambiar un ajuste, el trazo en vivo (micrófono, giro, azar) empieza de nuevo desde el valor
-  // actual: no queda a la vista la vuelta anterior con los ajustes viejos
+  // al cambiar un ajuste, el trazo en vivo empieza de nuevo desde el valor actual: no queda a la
+  // vista la vuelta anterior con los ajustes viejos
   useEffect(() => {
     lastSlot.set(-1);
   }, [route, routes, sources, base, lastSlot]);
 
+  // el cuadro que se dibuja: curva [señal, resultado] y la bolita (posición 0..1 y sus valores)
+  const scope = useDerivedValue(() => {
+    const t = clock.get();
+    const traced = trace.get();
+    const inputs = readInputs();
+    const m = modeAt(t, inputs);
+    const curve = new Array<number>(N * 2);
+    if (m.calc) {
+      for (let k = 0; k < N; k++) {
+        const tk = m.start + (k / (N - 1)) * m.w;
+        const v = sample(tk, previewInputs(route, sources, tk, inputs));
+        curve[k * 2] = v.s;
+        curve[k * 2 + 1] = v.r;
+      }
+    } else {
+      for (let k = 0; k < N * 2; k++) curve[k] = traced[k];
+    }
+    // la bolita marca el valor de este instante (en el ADSR de muestra, el del disparo de muestra)
+    const now = sample(t, m.calc ? previewInputs(route, sources, t, inputs) : inputs);
+    return { curve, u: m.u, s: now.s, r: now.r };
+  });
+
   const h = height - PAD * 2;
   const span = width - PAD_X * 2;
-  const xAt = (k: number) => {
-    "worklet";
-    return PAD_X + (k / (N - 1)) * span;
-  };
-  // tramo de una pista: hasta la bolita (behind) o desde ella (ahead). Recibe los valores ya leídos:
-  // cada useDerivedValue lee shown y ball en su propio cuerpo, porque Reanimated solo se suscribe a
-  // los valores compartidos que ve ahí (leídos dentro de una función auxiliar, la curva no se
-  // redibujaba al cambiar y solo la bolita se movía)
+  // tramo de una pista: hasta la bolita (behind) o desde ella (ahead). Recibe valores ya leídos
   const toPoints = (b: number[], u: number, track: 0 | 1, part: "all" | "behind" | "ahead") => {
     "worklet";
     const cut = Math.round(u * (N - 1));
     const from = part === "ahead" ? cut : 0;
     const to = part === "behind" ? cut : N - 1;
     const out = [];
-    for (let k = from; k <= to; k++) out.push({ x: xAt(k), y: PAD + (1 - b[k * 2 + track]) * h });
+    for (let k = from; k <= to; k++) out.push({ x: PAD_X + (k / (N - 1)) * span, y: PAD + (1 - b[k * 2 + track]) * h });
     return out;
   };
-  const resultPts = useDerivedValue(() => toPoints(shown.get(), ball.get().u, 1, "all"));
-  const behindPts = useDerivedValue(() => toPoints(shown.get(), ball.get().u, 0, "behind"));
-  const aheadPts = useDerivedValue(() => toPoints(shown.get(), ball.get().u, 0, "ahead"));
-  const ballX = useDerivedValue(() => PAD_X + ball.get().u * span);
-  const ballY = useDerivedValue(() => PAD + (1 - ball.get().s) * h);
-  const resultY = useDerivedValue(() => PAD + (1 - ball.get().r) * h);
+  const resultPts = useDerivedValue(() => {
+    const f = scope.get();
+    return toPoints(f.curve, f.u, 1, "all");
+  });
+  const behindPts = useDerivedValue(() => {
+    const f = scope.get();
+    return toPoints(f.curve, f.u, 0, "behind");
+  });
+  const aheadPts = useDerivedValue(() => {
+    const f = scope.get();
+    return toPoints(f.curve, f.u, 0, "ahead");
+  });
+  const ballX = useDerivedValue(() => PAD_X + scope.get().u * span);
+  const ballY = useDerivedValue(() => PAD + (1 - scope.get().s) * h);
+  const resultY = useDerivedValue(() => PAD + (1 - scope.get().r) * h);
   const headTop = useDerivedValue(() => vec(ballX.get(), 0));
   const headBottom = useDerivedValue(() => vec(ballX.get(), height));
   const mid = bipolar ? PAD + h / 2 : PAD + h;
