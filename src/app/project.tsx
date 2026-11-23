@@ -481,6 +481,7 @@ function ProjectView({ project }: { project: Project }) {
                     modFocus={modFocus}
                     onNotice={setNotice}
                     onClose={() => setOverlays(popOverlay)}
+                    backTo={(overlays.length > 1 ? (overlays.at(-2) ?? null) : null) as PanelId | null}
                   onStartStage={startStage}
                   onTriggerScene={triggerScene}
                     exports={exports}

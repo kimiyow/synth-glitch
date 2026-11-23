@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { Canvas, Circle, Path, Skia } from "@shopify/react-native-skia";
+import { useMemo, useState } from "react";
+import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import { findSameGesture, MAX_GESTURE_NAME } from "../../actions/gestureLibrary";
 import type { GestureTransform } from "../../actions/sceneEdits";
-import type { GestureDirection, GesturePreset, Route, SourceConfig } from "../../domain/types";
-import { gestureSpeed, GESTURE_SPEEDS } from "../../modulation/sources";
+import { useLiveMod } from "../../canvas/modBus";
+import type { GestureClip, GestureDirection, GesturePreset, Route, SourceConfig } from "../../domain/types";
+import { gestureSpeed, gestureValue, GESTURE_SPEEDS } from "../../modulation/sources";
 import { useSettings } from "../../state/appSettings";
 import { MAX_GESTURE_PRESETS } from "../../state/settings";
 import { Segmented } from "../kit/Segmented";
 import { useRevealOnFocus } from "../kit/Sheet";
-import { IconButton } from "../kit/IconButton";
 import { confirmDelete } from "../../state/confirm";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
 import { LiveScope } from "./LiveScope";
@@ -75,8 +77,14 @@ export function GesturePanel(props: Props) {
   const saved = clip ? (findSameGesture(presets, clip)?.name ?? null) : null;
 
   const [advanced, setAdvanced] = useState(false);
+  // gesto de la biblioteca en vista previa
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewW, setPreviewW] = useState(0);
 
-  // biblioteca: «usa uno guardado» (sin gesto) o «gestos guardados» (con gesto)
+  // biblioteca: «usa uno guardado» (sin gesto) o «gestos guardados» (con gesto). Tocar un gesto
+  // abre su vista previa (el recorrido y un punto que lo sigue en bucle); desde ahí se usa, se
+  // renombra o se borra
+  const previewed = presets.find((p) => p.id === previewId) ?? null;
   const library = (
     <View style={styles.block}>
       <Text style={styles.section}>
@@ -84,68 +92,98 @@ export function GesturePanel(props: Props) {
       </Text>
       {presets.length === 0 ? (
         <Text style={styles.note}>Aún no hay gestos guardados. Graba uno y toca Guardar para usarlo en otras capas o proyectos.</Text>
+      ) : previewed ? (
+        <View style={styles.preview}>
+          <View style={styles.previewBox} onLayout={(e) => setPreviewW(Math.round(e.nativeEvent.layout.width))}>
+            {previewW > 0 && <GesturePreview preset={previewed} width={previewW} height={PREVIEW_H} />}
+          </View>
+          <View ref={editing ? revealRef : undefined} collapsable={false}>
+            {editing ? (
+              <TextInput
+                value={editing.text}
+                onChangeText={(text) => setEditing({ id: previewed.id, text })}
+                onEndEditing={finishRename}
+                onSubmitEditing={finishRename}
+                onFocus={revealOnFocus}
+                autoFocus
+                selectTextOnFocus
+                maxLength={MAX_GESTURE_NAME}
+                returnKeyType="done"
+                accessibilityLabel={`Nombre de ${previewed.name}`}
+                style={[styles.title, styles.nameInput]}
+              />
+            ) : (
+              <Text style={styles.title}>
+                {previewed.name} <Text style={styles.titleMute}>· {(previewed.durationMs / 1000).toFixed(1)} s</Text>
+              </Text>
+            )}
+          </View>
+          <Text style={styles.note}>
+            El punto es el dedo: lo horizontal mueve {layer?.axes.x ?? "el primer parámetro"} y lo vertical, {layer?.axes.y ?? "el segundo"}.
+          </Text>
+          <View style={styles.actions}>
+            <Pressable accessibilityRole="button" onPress={() => setPreviewId(null)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+              <Text style={styles.actionText}>Cancelar</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Usar ${previewed.name}${layer ? ` en ${layer.label}` : ""}`}
+              disabled={!layer}
+              onPress={() => {
+                setPreviewId(null);
+                onApply(previewed);
+              }}
+              style={({ pressed }) => [styles.action, styles.actionPrimary, !layer && styles.disabled, pressed && styles.pressed]}
+            >
+              <Text style={[styles.actionText, styles.actionTextPrimary]}>Usar este gesto</Text>
+            </Pressable>
+          </View>
+          <View style={styles.linkRow}>
+            <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setEditing({ id: previewed.id, text: previewed.name })}>
+              <Text style={styles.link}>Cambiar nombre</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => {
+                void confirmDelete({
+                  section: "BIBLIOTECA",
+                  title: `¿Borrar «${previewed.name}»?`,
+                  message: "Se borra de la biblioteca de todos los proyectos. No se puede deshacer.",
+                  label: "Borrar gesto",
+                }).then((ok) => {
+                  if (!ok) return;
+                  setPreviewId(null);
+                  onDelete(previewed.id);
+                });
+              }}
+            >
+              <Text style={styles.removeText}>Borrar de la biblioteca</Text>
+            </Pressable>
+          </View>
+        </View>
       ) : (
         <View style={styles.list}>
           {presets.map((p) => (
-            <View key={p.id} style={styles.row}>
+            <Pressable
+              key={p.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${p.name}, ${(p.durationMs / 1000).toFixed(1)} segundos`}
+              accessibilityHint="Muestra cómo se mueve antes de usarlo"
+              onPress={() => setPreviewId(p.id)}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            >
               <View style={styles.glyph}>
                 <SourceGlyph route={asRoute(p)} scene={scene} width={52} height={26} />
               </View>
-              <View style={styles.rowText} ref={editing?.id === p.id ? revealRef : undefined} collapsable={false}>
-                {editing?.id === p.id ? (
-                  <TextInput
-                    value={editing.text}
-                    onChangeText={(text) => setEditing({ id: p.id, text })}
-                    onEndEditing={finishRename}
-                    onSubmitEditing={finishRename}
-                    onFocus={revealOnFocus}
-                    autoFocus
-                    selectTextOnFocus
-                    maxLength={MAX_GESTURE_NAME}
-                    returnKeyType="done"
-                    accessibilityLabel={`Nombre de ${p.name}`}
-                    style={[styles.name, styles.nameInput]}
-                  />
-                ) : (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${p.name}. Toca para renombrar`}
-                    hitSlop={{ top: 8, bottom: 8 }}
-                    onPress={() => setEditing({ id: p.id, text: p.name })}
-                    style={styles.nameRow}
-                  >
-                    <Text style={styles.name} numberOfLines={1}>
-                      {p.name}
-                    </Text>
-                  </Pressable>
-                )}
-                <Text style={styles.dur}>{(p.durationMs / 1000).toFixed(1)} s · toca el nombre para cambiarlo</Text>
+              <View style={styles.rowText}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {p.name}
+                </Text>
+                <Text style={styles.dur}>{(p.durationMs / 1000).toFixed(1)} s</Text>
               </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Usar ${p.name}${layer ? ` en ${layer.label}` : ""}`}
-                disabled={!layer}
-                onPress={() => onApply(p)}
-                hitSlop={{ top: 7, bottom: 7 }}
-                style={({ pressed }) => [styles.apply, !layer && styles.disabled, pressed && styles.pressed]}
-              >
-                <Text style={styles.applyText}>Usar</Text>
-              </Pressable>
-              <IconButton
-                icon="trash"
-                label={`Borrar ${p.name}`}
-                size={32}
-                bare
-                onPress={() => {
-                  void confirmDelete({
-                    section: "BIBLIOTECA",
-                    title: `¿Borrar «${p.name}»?`,
-                    message: "Se borra de la biblioteca de todos los proyectos. No se puede deshacer.",
-                    label: "Borrar gesto",
-                  }).then((ok) => ok && onDelete(p.id));
-                }}
-              />
-            </View>
+              <Text style={styles.rowAction}>Ver</Text>
+            </Pressable>
           ))}
         </View>
       )}
@@ -265,6 +303,38 @@ export function GesturePanel(props: Props) {
   );
 }
 
+// vista previa de un gesto guardado: su recorrido tenue y un punto que lo sigue en bucle a su
+// velocidad real, con el reloj del editor (leído en el cuerpo de cada valor derivado)
+const PREVIEW_H = 120;
+const PREVIEW_PAD = 10;
+function GesturePreview({ preset, width, height }: { preset: GesturePreset; width: number; height: number }) {
+  const live = useLiveMod();
+  const noClock = useSharedValue(0);
+  const clock = live ? live.bus.time : noClock;
+  const clip: GestureClip = { durationMs: preset.durationMs, samples: preset.samples, loop: "smooth" };
+  const w = width - PREVIEW_PAD * 2;
+  const h = height - PREVIEW_PAD * 2;
+  const path = useMemo(() => {
+    const b = Skia.PathBuilder.Make();
+    const frames = Math.floor(preset.samples.length / 2);
+    for (let i = 0; i < frames; i++) {
+      const x = PREVIEW_PAD + preset.samples[i * 2] * w;
+      const y = PREVIEW_PAD + (1 - preset.samples[i * 2 + 1]) * h;
+      if (i === 0) b.moveTo(x, y);
+      else b.lineTo(x, y);
+    }
+    return b.detach();
+  }, [preset, w, h]);
+  const cx = useDerivedValue(() => PREVIEW_PAD + (gestureValue(clip, clock.get(), 0) ?? 0.5) * w);
+  const cy = useDerivedValue(() => PREVIEW_PAD + (1 - (gestureValue(clip, clock.get(), 1) ?? 0.5)) * h);
+  return (
+    <Canvas style={{ width, height }} pointerEvents="none">
+      <Path path={path} style="stroke" strokeWidth={1.5} strokeJoin="round" strokeCap="round" color={colors.inkLineStrong} />
+      <Circle cx={cx} cy={cy} r={7} color={colors.paper} />
+    </Canvas>
+  );
+}
+
 function MirrorToggle({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
     <Pressable
@@ -355,6 +425,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.inkRaised,
   },
   dur: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontVariant: ["tabular-nums"] },
+  preview: { gap: space.sm },
+  previewBox: { height: PREVIEW_H, borderRadius: radius.md, backgroundColor: colors.inkRaised, overflow: "hidden" },
+  linkRow: { flexDirection: "row", justifyContent: "space-between", minHeight: 32, alignItems: "center" },
+  link: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1, textDecorationLine: "underline" },
+  rowAction: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, paddingRight: space.xs },
   apply: { alignItems: "center", justifyContent: "center", minHeight: 32, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.paper },
   applyText: { color: colors.paperText, fontFamily: type.family, fontSize: type.label + 1, fontWeight: "600" },
 });

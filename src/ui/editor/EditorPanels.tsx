@@ -50,8 +50,10 @@ type Props = {
   // modulación que el panel Modulación abre al entrar (null = la primera)
   modFocus: { id: string | null; fresh: boolean } | null;
   onNotice: (text: string) => void;
-  // cierra el panel (✕)
+  // cierra el panel (✕) o, si está encima de otro, vuelve a él
   onClose: () => void;
+  // panel de abajo cuando este se abrió encima (p. ej. Gesto desde Modulación), o null
+  backTo: PanelId | null;
   // entra al modo escenario con el modo elegido
   onStartStage: (mode: StageMode) => void;
   // aplica una escena con la transición elegida
@@ -108,7 +110,7 @@ export function EditorPanels(props: Props) {
   );
 
   return (
-    <PanelSheet key={panel} title={PANEL_TITLE[panel]} onClose={props.onClose}>
+    <PanelSheet key={panel} title={PANEL_TITLE[panel]} onClose={props.onClose} back={props.backTo ? PANEL_TITLE[props.backTo] : null}>
       {panel === "brush" ? (
         <BrushPanel {...props.brush} strokes={project.scene.paint.strokes.length} maxStrokes={MAX_STROKES} />
       ) : panel === "effects" ? (
@@ -208,7 +210,10 @@ export function EditorPanels(props: Props) {
           }}
           onApply={(preset) => {
             if (!selected) return;
-            props.onNotice(applyGesturePreset(routes, selected.id, preset) ? `${preset.name.toUpperCase()} APLICADO` : "MÁXIMO 4 MODULACIONES POR CAPA");
+            const ok = applyGesturePreset(routes, selected.id, preset);
+            props.onNotice(ok ? `${preset.name.toUpperCase()} APLICADO` : "MÁXIMO 4 MODULACIONES POR CAPA");
+            // abierto desde Modulación: se vuelve allí, con la tarjeta GESTO ya lista
+            if (ok && props.backTo) props.onClose();
           }}
           onRename={(id, name) => void renameGesturePreset(id, name)}
           onDelete={removeGesturePreset}

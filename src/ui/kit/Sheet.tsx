@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { selectFeedback } from "../../platform/haptics";
 import { colors, radius, space, type } from "../tokens";
 import { useLayout } from "../useLayout";
+import { Icon } from "./Icon";
 import { IconButton } from "./IconButton";
 
 // los deslizadores bloquean el desplazamiento de la hoja mientras se arrastran: si no, la hoja (que
@@ -48,12 +49,17 @@ export function Sheet({
   maxHeight = 300,
   side = false,
   onClose,
+  onBack,
+  backLabel,
 }: {
   title?: string;
   children: ReactNode;
   maxHeight?: number;
   side?: boolean;
   onClose?: () => void;
+  // abierta encima de otro panel: «‹ <panel>» a la izquierda lo devuelve a ese panel (sin ✕)
+  onBack?: () => void;
+  backLabel?: string;
 }) {
   const [locked, setLocked] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -78,10 +84,31 @@ export function Sheet({
     <View style={[styles.root, side ? styles.side : regular && [styles.floating, { width: panelWidth }]]}>
       <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
       <View style={styles.top}>
-        {/* título de la sección a la izquierda, barrita al centro, ✕ a la derecha */}
-        <Text style={styles.topTitle} numberOfLines={1} accessibilityRole="header">
-          {title?.toUpperCase() ?? ""}
-        </Text>
+        {/* título de la sección (o «‹ volver» si está encima de otro panel) a la izquierda, barrita al
+            centro, ✕ a la derecha */}
+        {onBack ? (
+          <View style={styles.topLeft}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Volver a ${backLabel ?? "el panel anterior"}`}
+              hitSlop={{ top: 6, bottom: 6, right: 12 }}
+              onPress={() => {
+                selectFeedback();
+                onBack();
+              }}
+              style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+            >
+              <Icon name="chevron.left" size={14} />
+              <Text style={styles.backText} numberOfLines={1}>
+                {backLabel ?? "Volver"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text style={styles.topTitle} numberOfLines={1} accessibilityRole="header">
+            {title?.toUpperCase() ?? ""}
+          </Text>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={minimized ? "Mostrar panel" : "Minimizar panel"}
@@ -95,7 +122,7 @@ export function Sheet({
           <View style={[styles.handle, minimized && styles.handleMin]} />
         </Pressable>
         <View style={styles.topRight}>
-          {onClose && <IconButton icon="xmark" label="Cerrar panel" size={32} bare onPress={onClose} />}
+          {onClose && !onBack && <IconButton icon="xmark" label="Cerrar panel" size={32} bare onPress={onClose} />}
         </View>
       </View>
       {/* franja fija (p. ej. la vista en vivo de la modulación abierta): no se desplaza */}
@@ -156,6 +183,10 @@ const styles = StyleSheet.create({
   top: { flexDirection: "row", alignItems: "center", height: 36, marginRight: -space.sm },
   topTitle: { flex: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.4 },
   topRight: { flex: 1, alignItems: "flex-end" },
+  topLeft: { flex: 1, alignItems: "flex-start" },
+  back: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 32 },
+  backPressed: { opacity: 0.6 },
+  backText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1, fontWeight: "600" },
   handleHit: { width: 72, height: 36, alignItems: "center", justifyContent: "center" },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.inkLineStrong },
   handleMin: { width: 48, backgroundColor: colors.inkText },
