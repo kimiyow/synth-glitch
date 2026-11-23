@@ -6,7 +6,6 @@ import { dbToUnit } from "../../modulation/micEnvelope";
 import { DEFAULT_MIC_ROUTE, DIVISIONS, LFO_SHAPES, MAX_BPM, MIN_BPM, SEQ_DIRECTIONS } from "../../modulation/sources";
 import { tapTempo } from "../../modulation/tempo";
 import { ChipRow } from "../ChipRow";
-import { Icon } from "../kit/Icon";
 import { Segmented } from "../kit/Segmented";
 import { SheetScrollLock } from "../kit/Sheet";
 import { Slider } from "../Slider";
@@ -266,7 +265,7 @@ function GestureSummary({ route }: { route: Route }) {
         onPress={() => rec?.open()}
         style={({ pressed }) => [styles.btn, styles.btnRow, pressed && styles.pressed]}
       >
-        {has ? <Icon name="hand.draw" size={13} /> : <View style={styles.recDotSmall} />}
+        {!has && <View style={styles.recDotSmall} />}
         <Text style={styles.btnText}>{has ? "EDITAR EN GESTO" : "GRABAR EN GESTO"}</Text>
       </Pressable>
     </View>

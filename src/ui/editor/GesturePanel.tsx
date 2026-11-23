@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import { findSameGesture, MAX_GESTURE_NAME } from "../../actions/gestureLibrary";
 import type { GestureTransform } from "../../actions/sceneEdits";
@@ -7,7 +7,6 @@ import type { GestureDirection, GesturePreset, Route, SourceConfig } from "../..
 import { gestureSpeed, GESTURE_SPEEDS } from "../../modulation/sources";
 import { useSettings } from "../../state/appSettings";
 import { MAX_GESTURE_PRESETS } from "../../state/settings";
-import { Icon } from "../kit/Icon";
 import { Segmented } from "../kit/Segmented";
 import { useRevealOnFocus } from "../kit/Sheet";
 import { IconButton } from "../kit/IconButton";
@@ -50,9 +49,9 @@ const asRoute = (p: GesturePreset): Route => ({
 
 const SCOPE_H = 56;
 
-// panel Gesto: qué es, el gesto de la capa seleccionada (en bucle, con su señal en vivo) y la
-// biblioteca para llevarlo a otras capas o proyectos
-const SPEED_LABEL: Record<number, string> = { 0.25: "¼×", 0.5: "½×", 1: "1×", 2: "2×", 4: "4×" };
+// panel Gesto en pasos: sin gesto, qué hacer y Grabar (con la biblioteca debajo); con gesto, su
+// señal, Regrabar / Guardar, lo avanzado plegado y la biblioteca. Sin iconos decorativos
+const SPEED_LABEL: Record<number, string> = { 0.25: "0.25×", 0.5: "0.5×", 1: "1×", 2: "2×", 4: "4×" };
 const DIRECTIONS: { id: GestureDirection; label: string }[] = [
   { id: "forward", label: "Adelante" },
   { id: "reverse", label: "Reversa" },
@@ -75,102 +74,16 @@ export function GesturePanel(props: Props) {
   // ofrece guardarlo otra vez. Muestra el nombre actual, también si se renombró
   const saved = clip ? (findSameGesture(presets, clip)?.name ?? null) : null;
 
-  return (
-    <View style={styles.root}>
-      <Text style={styles.intro}>
-        Graba un movimiento del dedo de hasta 10 s. Al soltar, la capa lo repite en bucle. Guárdalo en la biblioteca para aplicarlo a otro efecto.
-      </Text>
+  const [advanced, setAdvanced] = useState(false);
 
-      {!layer ? (
-        <View style={styles.card}>
-          <Text style={styles.cardNote}>Elige una capa en Efectos o Capas para grabar su gesto.</Text>
-        </View>
-      ) : route && clip ? (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.loopBadge} accessible accessibilityLabel={`${layer.label} repite el gesto en bucle`}>
-              <Icon name="repeat" size={12} color={colors.paperText} />
-              <Text style={styles.loopText} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
-                EN BUCLE
-              </Text>
-            </View>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {layer.label} · {(clip.durationMs / 1000).toFixed(1)} s
-            </Text>
-            <IconButton
-              icon={props.trailVisible ? "eye" : "eye.slash"}
-              label={props.trailVisible ? "Ocultar el recorrido sobre la imagen" : "Mostrar el recorrido sobre la imagen"}
-              size={32}
-              bare
-              onPress={props.onToggleTrail}
-            />
-            <IconButton icon="trash" label="Quitar el gesto de la capa" size={32} bare onPress={onRemove} />
-          </View>
-          {/* señal en vivo: se ve avanzar y volver a empezar, así se nota que se repite */}
-          <View style={styles.scope} onLayout={(e) => setScopeW(e.nativeEvent.layout.width)}>
-            {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={layer.params} width={scopeW} height={SCOPE_H} />}
-          </View>
-          <Text style={styles.cardNote}>
-            Mueve {layer.axes.x} y {layer.axes.y}. Transfórmalo sin regrabar:
-          </Text>
-
-          <Text style={styles.label}>VELOCIDAD</Text>
-          <Segmented
-            options={GESTURE_SPEEDS.map((v) => ({ id: v, label: SPEED_LABEL[v] }))}
-            value={gestureSpeed(clip)}
-            onChange={(speed) => props.onTransform({ speed })}
-          />
-          <Text style={styles.label}>DIRECCIÓN</Text>
-          <Segmented options={DIRECTIONS} value={clip.direction ?? "forward"} onChange={(direction) => props.onTransform({ direction })} />
-          <Text style={styles.label}>CIERRE DEL BUCLE</Text>
-          <Segmented
-            options={[
-              { id: "smooth", label: "Suave" },
-              { id: "cut", label: "Corte" },
-            ]}
-            value={clip.loop}
-            onChange={(loop) => props.onTransform({ loop })}
-          />
-          <Text style={styles.label}>ESPEJO</Text>
-          <View style={styles.mirrors}>
-            <MirrorToggle icon="arrow.left.and.right" label={`Invertir ${layer.axes.x}`} on={clip.mirrorX === true} onPress={() => props.onTransform({ mirrorX: !clip.mirrorX })} />
-            <MirrorToggle icon="arrow.up.and.down" label={`Invertir ${layer.axes.y}`} on={clip.mirrorY === true} onPress={() => props.onTransform({ mirrorY: !clip.mirrorY })} />
-          </View>
-          <View style={styles.actions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: saved !== null }}
-              disabled={saved !== null}
-              onPress={onSave}
-              style={({ pressed }) => [styles.action, styles.actionPrimary, saved !== null && styles.actionDone, pressed && styles.pressed]}
-            >
-              <Icon name={saved ? "checkmark" : "tray.and.arrow.down"} size={15} color={saved ? colors.inkText : colors.paperText} />
-              <Text style={[styles.actionText, !saved && styles.actionTextPrimary]} maxFontSizeMultiplier={COMPACT_FONT_SCALE} numberOfLines={1}>
-                {saved ? `En la biblioteca · ${saved}` : "Guardar en biblioteca"}
-              </Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={onRecord} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
-              <View style={styles.recDotSmall} />
-              <Text style={styles.actionText} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
-                Regrabar
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : (
-        <Pressable accessibilityRole="button" onPress={onRecord} style={({ pressed }) => [styles.rec, pressed && styles.pressed]}>
-          <View style={styles.recDot} />
-          <Text style={styles.recText} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
-            Grabar gesto en {layer.label}
-          </Text>
-        </Pressable>
-      )}
-
+  // biblioteca: «usa uno guardado» (sin gesto) o «gestos guardados» (con gesto)
+  const library = (
+    <View style={styles.block}>
       <Text style={styles.section}>
-        BIBLIOTECA <Text style={styles.count}>{presets.length}/{MAX_GESTURE_PRESETS}</Text>
+        {clip ? "Gestos guardados" : "O usa uno guardado"} <Text style={styles.count}>{presets.length}/{MAX_GESTURE_PRESETS}</Text>
       </Text>
       {presets.length === 0 ? (
-        <Text style={styles.empty}>Aún no hay gestos guardados. Graba uno y toca «Guardar en biblioteca» para usarlo en otras capas o proyectos.</Text>
+        <Text style={styles.note}>Aún no hay gestos guardados. Graba uno y toca Guardar para usarlo en otras capas o proyectos.</Text>
       ) : (
         <View style={styles.list}>
           {presets.map((p) => (
@@ -204,21 +117,19 @@ export function GesturePanel(props: Props) {
                     <Text style={styles.name} numberOfLines={1}>
                       {p.name}
                     </Text>
-                    <Icon name="pencil" size={11} color={colors.inkMute} />
                   </Pressable>
                 )}
-                <Text style={styles.dur}>{(p.durationMs / 1000).toFixed(1)} s</Text>
+                <Text style={styles.dur}>{(p.durationMs / 1000).toFixed(1)} s · toca el nombre para cambiarlo</Text>
               </View>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Aplicar ${p.name}${layer ? ` a ${layer.label}` : ""}`}
+                accessibilityLabel={`Usar ${p.name}${layer ? ` en ${layer.label}` : ""}`}
                 disabled={!layer}
                 onPress={() => onApply(p)}
                 hitSlop={{ top: 7, bottom: 7 }}
                 style={({ pressed }) => [styles.apply, !layer && styles.disabled, pressed && styles.pressed]}
               >
-                <Icon name="arrow.down.to.line" size={13} />
-                <Text style={styles.applyText}>APLICAR</Text>
+                <Text style={styles.applyText}>Usar</Text>
               </Pressable>
               <IconButton
                 icon="trash"
@@ -240,9 +151,121 @@ export function GesturePanel(props: Props) {
       )}
     </View>
   );
+
+  if (!layer) {
+    return (
+      <View style={styles.root}>
+        <Text style={styles.note}>Elige una capa en Efectos o Capas para grabar su gesto.</Text>
+      </View>
+    );
+  }
+
+  // sin gesto: qué hacer y cómo, el botón para grabar y la biblioteca debajo
+  if (!route || !clip) {
+    return (
+      <View style={styles.root}>
+        <View style={styles.block}>
+          <Text style={styles.title}>Graba un movimiento para {layer.label}</Text>
+          <Text style={styles.note}>
+            Mueve el dedo sobre la imagen hasta 10 s. Al soltar, {layer.label} repite ese movimiento en bucle: lo horizontal mueve {layer.axes.x} y lo
+            vertical, {layer.axes.y}.
+          </Text>
+        </View>
+        <Pressable accessibilityRole="button" onPress={onRecord} style={({ pressed }) => [styles.rec, pressed && styles.pressed]}>
+          <View style={styles.recDot} />
+          <Text style={styles.recText} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+            Grabar gesto
+          </Text>
+        </Pressable>
+        {library}
+      </View>
+    );
+  }
+
+  // con gesto: el gesto y su señal, regrabar o guardar, lo avanzado plegado y la biblioteca
+  return (
+    <View style={styles.root}>
+      <View style={styles.block}>
+        <Text style={styles.title}>
+          Tu gesto <Text style={styles.titleMute}>· {(clip.durationMs / 1000).toFixed(1)} s en bucle</Text>
+        </Text>
+        {/* señal en vivo: se ve avanzar y volver a empezar, así se nota que se repite */}
+        <View style={styles.scope} onLayout={(e) => setScopeW(e.nativeEvent.layout.width)}>
+          {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={layer.params} width={scopeW} height={SCOPE_H} />}
+        </View>
+      </View>
+
+      <View style={styles.actions}>
+        <Pressable accessibilityRole="button" onPress={onRecord} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+          <View style={styles.recDotSmall} />
+          <Text style={styles.actionText} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+            Regrabar
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: saved !== null }}
+          disabled={saved !== null}
+          onPress={onSave}
+          style={({ pressed }) => [styles.action, styles.actionPrimary, saved !== null && styles.actionDone, pressed && styles.pressed]}
+        >
+          <Text style={[styles.actionText, !saved && styles.actionTextPrimary]} maxFontSizeMultiplier={COMPACT_FONT_SCALE} numberOfLines={1}>
+            {saved ? `Guardado como ${saved}` : "Guardar"}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>Ver el recorrido en la imagen</Text>
+        <Switch value={props.trailVisible} onValueChange={props.onToggleTrail} accessibilityLabel="Ver el recorrido en la imagen" />
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: advanced }}
+        hitSlop={8}
+        onPress={() => setAdvanced((v) => !v)}
+        style={({ pressed }) => [styles.moreBtn, pressed && styles.pressed]}
+      >
+        <Text style={styles.moreText}>{advanced ? "Ocultar opciones avanzadas" : "Opciones avanzadas"}</Text>
+      </Pressable>
+      {advanced && (
+        <View style={styles.block}>
+          <Text style={styles.label}>Velocidad</Text>
+          <Segmented
+            options={GESTURE_SPEEDS.map((v) => ({ id: v, label: SPEED_LABEL[v] }))}
+            value={gestureSpeed(clip)}
+            onChange={(speed) => props.onTransform({ speed })}
+          />
+          <Text style={styles.label}>Dirección</Text>
+          <Segmented options={DIRECTIONS} value={clip.direction ?? "forward"} onChange={(direction) => props.onTransform({ direction })} />
+          <Text style={styles.label}>Al volver a empezar</Text>
+          <Segmented
+            options={[
+              { id: "smooth", label: "Se funde" },
+              { id: "cut", label: "Salta" },
+            ]}
+            value={clip.loop}
+            onChange={(loop) => props.onTransform({ loop })}
+          />
+          <Text style={styles.label}>Espejo</Text>
+          <View style={styles.mirrors}>
+            <MirrorToggle label={`Invertir ${layer.axes.x}`} on={clip.mirrorX === true} onPress={() => props.onTransform({ mirrorX: !clip.mirrorX })} />
+            <MirrorToggle label={`Invertir ${layer.axes.y}`} on={clip.mirrorY === true} onPress={() => props.onTransform({ mirrorY: !clip.mirrorY })} />
+          </View>
+        </View>
+      )}
+
+      {library}
+
+      <Pressable accessibilityRole="button" hitSlop={8} onPress={onRemove} style={({ pressed }) => [styles.moreBtn, pressed && styles.pressed]}>
+        <Text style={styles.removeText}>Quitar gesto de {layer.label}</Text>
+      </Pressable>
+    </View>
+  );
 }
 
-function MirrorToggle({ icon, label, on, onPress }: { icon: "arrow.left.and.right" | "arrow.up.and.down"; label: string; on: boolean; onPress: () => void }) {
+function MirrorToggle({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="switch"
@@ -251,7 +274,6 @@ function MirrorToggle({ icon, label, on, onPress }: { icon: "arrow.left.and.righ
       onPress={onPress}
       style={({ pressed }) => [styles.mirror, on && styles.mirrorOn, pressed && styles.pressed]}
     >
-      <Icon name={icon} size={14} color={on ? colors.paperText : colors.inkText} />
       <Text style={[styles.mirrorText, on && styles.mirrorTextOn]} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
         {label}
       </Text>
@@ -260,7 +282,7 @@ function MirrorToggle({ icon, label, on, onPress }: { icon: "arrow.left.and.righ
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1.2, marginTop: space.xs },
+  label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, marginTop: space.xs },
   mirrors: { flexDirection: "row", gap: space.sm },
   mirror: {
     flex: 1,
@@ -276,22 +298,16 @@ const styles = StyleSheet.create({
   mirrorOn: { backgroundColor: colors.paper },
   mirrorText: { flexShrink: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600" },
   mirrorTextOn: { color: colors.paperText },
-  root: { gap: space.md },
-  intro: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, lineHeight: 18 },
-  card: { gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: colors.inkSurface },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  cardTitle: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.body - 1, fontWeight: "600" },
-  cardNote: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, lineHeight: 17 },
-  loopBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: space.sm,
-    minHeight: 22,
-    borderRadius: radius.pill,
-    backgroundColor: colors.paper,
-  },
-  loopText: { color: colors.paperText, fontFamily: type.family, fontSize: type.micro, fontWeight: "700", letterSpacing: 1 },
+  root: { gap: space.lg },
+  block: { gap: space.sm },
+  title: { color: colors.inkText, fontFamily: type.family, fontSize: type.body, fontWeight: "600" },
+  titleMute: { color: colors.inkMute, fontWeight: "400" },
+  note: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, lineHeight: 18 },
+  switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, minHeight: 44 },
+  switchLabel: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1 },
+  moreBtn: { alignSelf: "flex-start", minHeight: 32, justifyContent: "center" },
+  moreText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1, fontWeight: "600", textDecorationLine: "underline" },
+  removeText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label + 1, textDecorationLine: "underline" },
   scope: { height: SCOPE_H, borderRadius: radius.sm, backgroundColor: colors.inkRaised, overflow: "hidden" },
   actions: { flexDirection: "row", gap: space.sm },
   action: {
@@ -323,9 +339,8 @@ const styles = StyleSheet.create({
   recText: { color: colors.paperText, fontFamily: type.family, fontSize: type.body - 1, fontWeight: "700" },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.6 },
-  section: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2, marginTop: space.xs },
-  count: { fontWeight: "400" },
-  empty: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, lineHeight: 17 },
+  section: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1, fontWeight: "600" },
+  count: { color: colors.inkMute, fontWeight: "400" },
   list: { gap: space.xs },
   row: { flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.sm, borderRadius: radius.md, backgroundColor: colors.inkSurface },
   glyph: { width: 60, height: 34, borderRadius: radius.sm, backgroundColor: colors.inkRaised, alignItems: "center", justifyContent: "center" },
@@ -340,6 +355,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.inkRaised,
   },
   dur: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontVariant: ["tabular-nums"] },
-  apply: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 30, paddingHorizontal: space.sm, borderRadius: radius.pill, backgroundColor: colors.inkRaised },
-  applyText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
+  apply: { alignItems: "center", justifyContent: "center", minHeight: 32, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.paper },
+  applyText: { color: colors.paperText, fontFamily: type.family, fontSize: type.label + 1, fontWeight: "600" },
 });
