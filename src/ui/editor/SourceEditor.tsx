@@ -440,6 +440,9 @@ export function CommitSlider({
         value={Math.min(1, Math.max(0, fromValue(shown)))}
         onChange={(u) => {
           const v = toValue(u);
+          // los valores van redondeados: muchos movimientos dan el mismo; solo un cambio real
+          // actualiza la tarjeta y su gráfica
+          if (v === shown) return;
           setDraft(v);
           preview?.(() => onCommit(v));
         }}
@@ -465,6 +468,7 @@ function StepBars({ steps, onCommit }: { steps: number[]; onCommit: (steps: numb
     const i = Math.min(shown.length - 1, Math.max(0, Math.floor((locationX / size.current.w) * shown.length)));
     const next = [...shown];
     next[i] = Math.round(Math.min(1, Math.max(0, 1 - locationY / size.current.h)) * 100) / 100;
+    if (next[i] === shown[i]) return;
     setDraft(next);
     preview?.(() => onCommit(next));
   };
