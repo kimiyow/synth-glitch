@@ -1,7 +1,7 @@
 import { Canvas, Circle, Path, Skia } from "@shopify/react-native-skia";
 import { useMemo, useState } from "react";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Switch, Text, TextInput, View, type LayoutChangeEvent } from "react-native";
 
 import { findSameGesture, MAX_GESTURE_NAME } from "../../actions/gestureLibrary";
 import type { GestureTransform } from "../../actions/sceneEdits";
@@ -79,7 +79,10 @@ export function GesturePanel(props: Props) {
   const [advanced, setAdvanced] = useState(false);
   // gesto de la biblioteca en vista previa
   const [previewId, setPreviewId] = useState<string | null>(null);
+  // ancho del panel, medido al abrirlo: la vista previa se dibuja con su tamaño desde el primer
+  // toque en «Ver» (si esperaba a medir su recuadro, la primera vez salía vacía)
   const [previewW, setPreviewW] = useState(0);
+  const measure = (e: LayoutChangeEvent) => setPreviewW(Math.round(e.nativeEvent.layout.width));
 
   // biblioteca: «usa uno guardado» (sin gesto) o «gestos guardados» (con gesto). Tocar un gesto
   // abre su vista previa (el recorrido y un punto que lo sigue en bucle); desde ahí se usa, se
@@ -94,7 +97,7 @@ export function GesturePanel(props: Props) {
         <Text style={styles.note}>Aún no hay gestos guardados. Graba uno y toca Guardar para usarlo en otras capas o proyectos.</Text>
       ) : previewed ? (
         <View style={styles.preview}>
-          <View style={styles.previewBox} onLayout={(e) => setPreviewW(Math.round(e.nativeEvent.layout.width))}>
+          <View style={styles.previewBox}>
             {previewW > 0 && <GesturePreview preset={previewed} width={previewW} height={PREVIEW_H} />}
           </View>
           <View ref={editing ? revealRef : undefined} collapsable={false}>
@@ -192,7 +195,7 @@ export function GesturePanel(props: Props) {
 
   if (!layer) {
     return (
-      <View style={styles.root}>
+      <View style={styles.root} onLayout={measure}>
         <Text style={styles.note}>Elige una capa en Efectos o Capas para grabar su gesto.</Text>
       </View>
     );
@@ -201,7 +204,7 @@ export function GesturePanel(props: Props) {
   // sin gesto: qué hacer y cómo, el botón para grabar y la biblioteca debajo
   if (!route || !clip) {
     return (
-      <View style={styles.root}>
+      <View style={styles.root} onLayout={measure}>
         <View style={styles.block}>
           <Text style={styles.title}>Graba un movimiento para {layer.label}</Text>
           <Text style={styles.note}>
@@ -222,7 +225,7 @@ export function GesturePanel(props: Props) {
 
   // con gesto: el gesto y su señal, regrabar o guardar, lo avanzado plegado y la biblioteca
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onLayout={measure}>
       <View style={styles.block}>
         <Text style={styles.title}>
           Tu gesto <Text style={styles.titleMute}>· {(clip.durationMs / 1000).toFixed(1)} s en bucle</Text>
