@@ -28,9 +28,9 @@ const GENERATOR_NOTE: Record<GeneratorId, string> = {
   noise: "Nubes",
   bars: "Datos",
   voronoi: "Celdas",
-  grid: "Horizonte",
+  grid: "Líneas",
   checker: "Casillas",
-  rings: "Túnel",
+  rings: "Ondas",
 };
 
 type Props = {

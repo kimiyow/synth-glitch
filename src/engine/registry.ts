@@ -60,7 +60,7 @@ export const GENERATORS: readonly GeneratorDef[] = [
   { id: "noise", label: "NOISE", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Escala", y: "Velocidad" }, sksl: NOISE_SKSL },
   { id: "bars", label: "BARRAS", defaults: { x: 0.3, y: 0.2 }, axes: { x: "Densidad", y: "Velocidad" }, sksl: BARS_SKSL },
   { id: "voronoi", label: "VORONOI", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Celdas", y: "Velocidad" }, sksl: VORONOI_SKSL },
-  { id: "grid", label: "GRILLA", defaults: { x: 0.4, y: 0.3 }, axes: { x: "Densidad", y: "Avance" }, sksl: GRID_SKSL },
+  { id: "grid", label: "GRILLA", defaults: { x: 0.3, y: 0.2 }, axes: { x: "Celdas", y: "Velocidad" }, sksl: GRID_SKSL },
   { id: "checker", label: "TABLERO", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Casillas", y: "Parpadeo" }, sksl: CHECKER_SKSL },
   { id: "rings", label: "ANILLOS", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Anillos", y: "Velocidad" }, sksl: RINGS_SKSL },
 ];
