@@ -1,6 +1,8 @@
 import { createContext, useContext } from "react";
 import { useSharedValue, type SharedValue } from "react-native-reanimated";
 
+import type { Route } from "../domain/types";
+
 // señales en vivo de la modulación que comparten el lienzo y los paneles: el reloj del preview (s),
 // la compuerta del toque para el ADSR y el último golpe del micrófono. El lienzo las escribe; la
 // vista en vivo de cada modulación las lee en el hilo de UI
@@ -18,6 +20,9 @@ export type ModBus = {
   oriY: SharedValue<number>;
   oriCalibrate: SharedValue<number>;
   oriAvailable: SharedValue<number>;
+  // modulaciones provisionales mientras se arrastra un ajuste (null = las de la escena). El lienzo
+  // las usa en el acto, sin esperar a que la escena cambie al soltar
+  draftRoutes: SharedValue<Route[] | null>;
 };
 
 export function oriInput(bus: ModBus): { x: number; y: number } {
@@ -44,7 +49,8 @@ export function useModBus(): ModBus {
   const oriY = useSharedValue(0);
   const oriCalibrate = useSharedValue(0);
   const oriAvailable = useSharedValue(1);
-  return { time, gateOn, gateOff, micHitAt, recRoute, recX, recY, oriX, oriY, oriCalibrate, oriAvailable };
+  const draftRoutes = useSharedValue<Route[] | null>(null);
+  return { time, gateOn, gateOff, micHitAt, recRoute, recX, recY, oriX, oriY, oriCalibrate, oriAvailable, draftRoutes };
 }
 
 // lo que necesita la vista en vivo además del bus: nivel del micrófono y semilla de la escena

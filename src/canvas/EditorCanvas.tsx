@@ -182,8 +182,15 @@ export function EditorCanvas(props: Props) {
     micHitAt.set(time.get());
   });
   const chainLayers = chain.map((n) => ({ id: n.layerId, params: n.base }));
+  // mientras se arrastra un ajuste de modulación, el efecto sigue el valor provisional; cuando llegan
+  // las modulaciones confirmadas (al soltar) se descarta
+  const draftRoutes = bus.draftRoutes;
+  useEffect(() => {
+    draftRoutes.set(null);
+  }, [routes, draftRoutes]);
   const frame = useDerivedValue<FrameInputs>(() => {
     const t = time.get();
+    const draft = draftRoutes.get();
     const lp = liveParams.get();
     const touch: Record<string, { x: number; y: number }> = {};
     for (let i = 0; i < chainLayers.length; i++) {
@@ -199,7 +206,7 @@ export function EditorCanvas(props: Props) {
       track: null,
       rec: recInput(bus),
     };
-    return { time: t, params: evaluate(chainLayers, routes, sources, t, inputs, seed) };
+    return { time: t, params: evaluate(chainLayers, draft ?? routes, sources, t, inputs, seed) };
   });
   const gate = Gesture.Pan()
     .minDistance(0)

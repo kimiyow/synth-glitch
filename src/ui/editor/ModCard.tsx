@@ -84,14 +84,18 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
       previewing.current = false;
     }
   };
+  const live = useLiveMod();
   const edit = (label: string, recipe: (r: Route) => void) => {
     if (!previewing.current) return updateModulation(committed.id, label, recipe);
-    setDraft((d) => {
-      const next = JSON.parse(JSON.stringify(d && d.from === committed ? d.value : committed)) as Route;
-      recipe(next);
-      return { from: committed, value: next };
-    });
+    const next = JSON.parse(JSON.stringify(route)) as Route;
+    recipe(next);
+    setDraft({ from: committed, value: next });
+    // el efecto en la imagen sigue el valor provisional en el acto (hilo de UI, sin re-render)
+    live?.bus.draftRoutes.set(committedRoutes.map((r) => (r.id === next.id ? next : r)));
   };
+  // una tarjeta que se cierra a mitad de un arrastre no deja el efecto con valores provisionales
+  const draftRoutes = live?.bus.draftRoutes;
+  useEffect(() => () => draftRoutes?.set(null), [draftRoutes]);
   const [scopeW, setScopeW] = useState(0);
   const [more, setMore] = useState(false);
   // elegir fuente es poco frecuente; ajustarla es lo común: los grupos se ven solo al pedirlos
@@ -113,7 +117,6 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
     setPicking(false);
   };
   const sheet = useContext(SheetPin);
-  const live = useLiveMod();
   const cardRef = useRef<ComponentRef<typeof View>>(null);
   const src = MOD_SOURCES.find((s) => s.id === route.source) ?? MOD_SOURCES[0];
   // el gesto mueve los dos parámetros (horizontal → el primero, vertical → el segundo)
