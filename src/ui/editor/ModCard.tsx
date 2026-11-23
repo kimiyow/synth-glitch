@@ -7,13 +7,13 @@ import type { Route, RouteCurve, RouteSettings, SourceConfig, SourceId } from ".
 import { selectFeedback } from "../../platform/haptics";
 import { ChipRow, type Chip } from "../ChipRow";
 import { Icon } from "../kit/Icon";
+import { IconButton } from "../kit/IconButton";
 import { IconTiles, type IconTile } from "../kit/IconTiles";
 import { Segmented } from "../kit/Segmented";
 import { SheetPin } from "../kit/Sheet";
 import { useLiveMod } from "../../canvas/modBus";
 import { defaultRouteSetting } from "../../modulation/sources";
-import { confirmDelete } from "../../state/confirm";
-import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
+import { colors, radius, space, type } from "../tokens";
 import { LiveScope } from "./LiveScope";
 import { SourceGlyph } from "./SourceGlyph";
 import { useGestureRecord } from "./gestureRecord";
@@ -62,6 +62,7 @@ type Props = {
   // recién creada: se abre con los grupos de fuentes a la vista para elegir
   fresh?: boolean;
   onToggle: () => void;
+  onNotice: (text: string) => void;
 };
 
 const percent = (v: number) => `${Math.round(v * 100)} %`;
@@ -69,7 +70,7 @@ const percent = (v: number) => `${Math.round(v * 100)} %`;
 
 // tarjeta de una modulación. Cerrada: una línea (forma, fuente → parámetro, intensidad). Abierta:
 // la señal en vivo, la fuente, el parámetro, su ajuste principal y la intensidad; lo demás plegado
-export function ModCard({ route: committed, index, routes: committedRoutes, params, base, scene, mic, expanded, fresh = false, onToggle }: Props) {
+export function ModCard({ route: committed, index, routes: committedRoutes, params, base, scene, mic, expanded, fresh = false, onToggle, onNotice }: Props) {
   // valor provisional mientras se arrastra un ajuste: la gráfica lo muestra al instante y la escena
   // cambia al soltar (un solo paso de deshacer). Se descarta en cuanto la ruta confirmada cambia
   const [draft, setDraft] = useState<{ from: Route; value: Route } | null>(null);
@@ -163,6 +164,17 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
         </Text>
         <Text style={styles.amount}>{percent(route.amount)}</Text>
         <Icon name={expanded ? "chevron.up" : "chevron.down"} size={12} color={colors.inkMute} />
+        {/* salida rápida: quitarla sin preguntar (se deshace con ↶) */}
+        <IconButton
+          icon="trash"
+          label={`Quitar ${SOURCE_LABEL[route.source]} → ${paramName}`}
+          size={32}
+          bare
+          onPress={() => {
+            removeModulation(route.id);
+            onNotice("MODULACIÓN QUITADA · ↶ PARA DESHACER");
+          }}
+        />
       </Pressable>
 
       {expanded && (
@@ -266,25 +278,6 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
               <Icon name="slider.horizontal.3" size={13} color={colors.inkMute} />
               <Text style={styles.footText}>{more ? "MENOS" : "MÁS"}</Text>
             </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Quitar modulación"
-              hitSlop={4}
-              onPress={() => {
-                void confirmDelete({
-                  section: "MODULACIÓN",
-                  title: `¿Quitar ${SOURCE_LABEL[route.source]} → ${paramName}?`,
-                  message: "Se pierden sus ajustes. Puedes deshacerlo con ↶.",
-                  label: "Quitar modulación",
-                }).then((ok) => ok && removeModulation(route.id));
-              }}
-              style={({ pressed }) => [styles.removeBtn, pressed && styles.pressed]}
-            >
-              <Icon name="trash" size={14} color={colors.inkText} />
-              <Text style={styles.removeText} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
-                QUITAR
-              </Text>
-            </Pressable>
           </View>
         </View>
         </RoutePreview.Provider>
@@ -321,6 +314,4 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   footBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36 },
   footText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 1 },
-  removeBtn: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 36, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.inkRaised },
-  removeText: { color: colors.inkText, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1 },
 });

@@ -104,6 +104,16 @@ export function LayerInspector(props: Props) {
           active={!layer.visible}
           onPress={() => toggleLayerVisible(layer.id)}
         />
+        {/* salida rápida: quitar la capa sin preguntar (se deshace con ↶) */}
+        <IconButton
+          icon="trash"
+          label={`Quitar ${def.label}`}
+          onPress={() => {
+            props.onRemove(layer.id);
+            props.onBack();
+            props.onNotice(`${def.label.toUpperCase()} QUITADO · ↶ PARA DESHACER`);
+          }}
+        />
         <IconButton icon="ellipsis" label="Acciones de la capa" onPress={() => void openLayerActions()} />
       </View>
 
@@ -203,6 +213,7 @@ export function LayerInspector(props: Props) {
               expanded={expanded === r.id}
               fresh={fresh === r.id}
               onToggle={() => setExpanded((e) => (e === r.id ? null : r.id))}
+              onNotice={props.onNotice}
             />
           ))}
         </View>
