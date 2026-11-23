@@ -15,6 +15,7 @@ import { colors } from "../ui/tokens";
 export default function RootLayout() {
   const [intro, setIntro] = useState(true);
   const onboardingSeen = useSettings((s) => s.onboardingSeen);
+  const privacySeen = useSettings((s) => s.privacySeen);
   // el iPad admite todas las orientaciones; el iPhone se queda en vertical
   useEffect(() => {
     if (deviceType !== DeviceType.TABLET) void lockAsync(OrientationLock.PORTRAIT_UP).catch(() => {});
@@ -29,7 +30,10 @@ export default function RootLayout() {
       </Stack>
       {DEV_TOOLS_ENABLED && <PerfHud />}
       {intro && <IntroOverlay onDone={() => setIntro(false)} />}
-      {!intro && !onboardingSeen && <Onboarding onDone={() => settingsStore.getState().update({ onboardingSeen: true })} />}
+      {/* quien ya había visto la introducción ve solo la página de privacidad, una vez */}
+      {!intro && (!onboardingSeen || !privacySeen) && (
+        <Onboarding privacyOnly={onboardingSeen} onDone={() => settingsStore.getState().update({ onboardingSeen: true, privacySeen: true })} />
+      )}
       <ConfirmHost />
     </GestureHandlerRootView>
   );

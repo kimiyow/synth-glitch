@@ -14,6 +14,8 @@ export type AppSettings = {
   holdHintSeen: boolean;
   // el onboarding se muestra en el primer arranque y se puede reabrir
   onboardingSeen: boolean;
+  // aviso de privacidad aceptado (la última página de la introducción)
+  privacySeen: boolean;
   // biblioteca de presets gestuales (compartida entre proyectos)
   gestures: GesturePreset[];
   // presets de escena del usuario (capas + modulaciones, sin foto ni pintura)
@@ -25,7 +27,7 @@ export type AppSettings = {
 export type SceneFadeBeats = 0 | 1 | 2 | 4;
 export const SCENE_FADE_BEATS: readonly SceneFadeBeats[] = [0, 1, 2, 4];
 
-export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false, onboardingSeen: false, gestures: [], scenes: [], sceneFade: 2 };
+export const DEFAULT_SETTINGS: AppSettings = { cameraAspect: "9:16", holdHintSeen: false, onboardingSeen: false, privacySeen: false, gestures: [], scenes: [], sceneFade: 2 };
 
 // presets de escena del usuario que se conservan
 export const MAX_SCENE_PRESETS = 30;
@@ -79,6 +81,7 @@ export function parseSettings(raw: unknown): AppSettings {
       : DEFAULT_SETTINGS.cameraAspect,
     holdHintSeen: typeof o.holdHintSeen === "boolean" ? o.holdHintSeen : DEFAULT_SETTINGS.holdHintSeen,
     onboardingSeen: typeof o.onboardingSeen === "boolean" ? o.onboardingSeen : DEFAULT_SETTINGS.onboardingSeen,
+    privacySeen: typeof o.privacySeen === "boolean" ? o.privacySeen : DEFAULT_SETTINGS.privacySeen,
     gestures: parseGestures(o.gestures),
     scenes: parseScenes(o.scenes),
     sceneFade: SCENE_FADE_BEATS.includes(o.sceneFade as SceneFadeBeats) ? (o.sceneFade as SceneFadeBeats) : DEFAULT_SETTINGS.sceneFade,
@@ -98,9 +101,9 @@ export function createSettingsStore(io: { load: () => unknown; save: (settings: 
     ...initial,
     update(patch) {
       set(patch);
-      const { cameraAspect, holdHintSeen, onboardingSeen, gestures, scenes, sceneFade } = get();
+      const { cameraAspect, holdHintSeen, onboardingSeen, privacySeen, gestures, scenes, sceneFade } = get();
       try {
-        io.save({ cameraAspect, holdHintSeen, onboardingSeen, gestures, scenes, sceneFade });
+        io.save({ cameraAspect, holdHintSeen, onboardingSeen, privacySeen, gestures, scenes, sceneFade });
       } catch {
         // no guardar un ajuste no debe romper la app; se reintenta en el próximo cambio
       }

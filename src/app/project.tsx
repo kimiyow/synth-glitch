@@ -46,6 +46,7 @@ import { useExportJob } from "../ui/editor/useExportJob";
 import { askConfirm } from "../state/confirm";
 import { announce } from "../ui/errors";
 import { Toast } from "../ui/kit/Toast";
+import { PrivacyNotice } from "../ui/PrivacyNotice";
 import { useKeyboardOverlap } from "../ui/useKeyboardOverlap";
 import { colors, space, type } from "../ui/tokens";
 import { useLayout } from "../ui/useLayout";
@@ -320,13 +321,21 @@ function ProjectView({ project }: { project: Project }) {
     onResetXY: resetLayer,
   };
 
-  // menú ⋯: reabrir el onboarding (el modo escenario tiene su propio botón y panel)
+  // menú ⋯: reabrir la introducción o leer el aviso de privacidad (el modo escenario tiene su
+  // propio botón y panel)
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const openMore = () =>
     void askConfirm({
       section: "EDITOR",
       title: "Más opciones",
-      actions: [{ id: "intro", label: "Ver introducción", icon: "questionmark.circle", variant: "secondary" }],
-    }).then((id) => id === "intro" && settingsStore.getState().update({ onboardingSeen: false }));
+      actions: [
+        { id: "intro", label: "Ver introducción", icon: "questionmark.circle", variant: "secondary" },
+        { id: "privacy", label: "Aviso de privacidad", icon: "lock.shield", variant: "secondary" },
+      ],
+    }).then((id) => {
+      if (id === "intro") settingsStore.getState().update({ onboardingSeen: false });
+      if (id === "privacy") setPrivacyOpen(true);
+    });
   const startStage = (mode: StageMode) => {
     if (!image) return setNotice("CARGANDO LA IMAGEN…");
     setOverlays([]);
@@ -476,6 +485,7 @@ function ProjectView({ project }: { project: Project }) {
         )}
       </View>
       {!regular && toolbar}
+      {privacyOpen && <PrivacyNotice onClose={() => setPrivacyOpen(false)} />}
     </SafeAreaView>
   );
 }
