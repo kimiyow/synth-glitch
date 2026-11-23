@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useRef, useState, type ComponentRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { addModulation, MAX_MODS_PER_LAYER, rerollSeed, resetLayer, setBlend, toggleLayerVisible } from "../../actions/sceneEdits";
@@ -8,6 +8,7 @@ import { askConfirm } from "../../state/confirm";
 import { selectFeedback, tapFeedback } from "../../platform/haptics";
 import { ChipRow, type Chip } from "../ChipRow";
 import { Icon } from "../kit/Icon";
+import { SheetPin } from "../kit/Sheet";
 import { IconButton } from "../kit/IconButton";
 import { Slider } from "../Slider";
 import { colors, radius, space, type } from "../tokens";
@@ -90,6 +91,17 @@ export function LayerInspector(props: Props) {
     } else props.onNotice(`MÁXIMO ${MAX_MODS_PER_LAYER} MODULACIONES POR CAPA`);
   };
   const full = mods.length >= MAX_MODS_PER_LAYER;
+  // tocar el título MODULACIÓN lleva a esa sección: baja la hoja hasta ella y abre la primera (sin
+  // modulaciones, crea una, como «Añadir modulación»)
+  const sheet = useContext(SheetPin);
+  const modRef = useRef<ComponentRef<typeof View>>(null);
+  const goToMods = () => {
+    selectFeedback();
+    const first = mods[0];
+    if (!first) return add();
+    if (!mods.some((r) => r.id === expanded)) setExpanded(first.id);
+    setTimeout(() => sheet?.scrollIntoView(modRef), 60);
+  };
 
   return (
     <View style={styles.root}>
@@ -169,10 +181,20 @@ export function LayerInspector(props: Props) {
         </>
       )}
 
-      <View style={styles.modHeader}>
-        <Text style={styles.section}>
-          MODULACIÓN <Text style={styles.count}>{mods.length}/{MAX_MODS_PER_LAYER}</Text>
-        </Text>
+      <View ref={modRef} collapsable={false} style={styles.modHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Modulación, ${mods.length} de ${MAX_MODS_PER_LAYER}`}
+          accessibilityHint={mods.length > 0 ? "Baja a las modulaciones y abre la primera" : "Añade una modulación"}
+          hitSlop={{ top: 10, bottom: 10, right: 12 }}
+          onPress={goToMods}
+          style={({ pressed }) => [styles.modTitle, pressed && styles.pressed]}
+        >
+          <Text style={styles.section}>
+            MODULACIÓN <Text style={styles.count}>{mods.length}/{MAX_MODS_PER_LAYER}</Text>
+          </Text>
+          <Icon name="chevron.down" size={10} color={colors.inkMute} />
+        </Pressable>
         {mods.length > 0 && (
           <Pressable
             accessibilityRole="button"
@@ -236,6 +258,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 32 },
   rowLabel: { width: 62, color: colors.inkText, fontFamily: type.family, fontSize: type.label },
   seed: { flex: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
+  modTitle: { flexDirection: "row", alignItems: "center", gap: 5 },
   modHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.xs },
   chipBtn: {
     flexDirection: "row",
