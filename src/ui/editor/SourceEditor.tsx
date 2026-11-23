@@ -39,6 +39,12 @@ type RouteProps = {
   advanced?: boolean;
 };
 
+// velocidad del LFO en palabras: cada cuánto da una vuelta (lenta) o cuántas da por segundo
+function lfoSpeed(hz: number): string {
+  if (hz < 1) return `1 vuelta cada ${(Math.round(10 / hz) / 10).toString()} s`;
+  return `${(Math.round(hz * 10) / 10).toString()} vueltas por s`;
+}
+
 // vista previa mientras se arrastra: la tarjeta de la modulación ejecuta el onCommit dado sin
 // tocar la escena y la gráfica en vivo muestra el valor provisional. Al soltar se confirma
 export const RoutePreview = createContext<((commit: () => void) => void) | null>(null);
@@ -80,7 +86,7 @@ export function RouteSourceEditor({ route, scene, mic, patch, advanced = false }
         ) : (
           <CommitSlider
             label="Velocidad"
-            format={(v) => `${v.toFixed(2)} Hz`}
+            format={lfoSpeed}
             // escala logarítmica de 0.05 a 10 Hz
             toValue={(u) => Math.round(0.05 * Math.pow(200, u) * 100) / 100}
             fromValue={(hz) => Math.log(hz / 0.05) / Math.log(200)}

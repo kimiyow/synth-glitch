@@ -11,6 +11,7 @@ import { IconTiles, type IconTile } from "../kit/IconTiles";
 import { Segmented } from "../kit/Segmented";
 import { SheetPin } from "../kit/Sheet";
 import { useLiveMod } from "../../canvas/modBus";
+import { scopeWindowS } from "../../modulation/scopeWindow";
 import { defaultRouteSetting } from "../../modulation/sources";
 import { confirmDelete } from "../../state/confirm";
 import { colors, COMPACT_FONT_SCALE, radius, space, type } from "../tokens";
@@ -64,7 +65,9 @@ type Props = {
   onToggle: () => void;
 };
 
-const signed = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}`;
+const percent = (v: number) => `${Math.round(v * 100)} %`;
+// escala de tiempo bajo la gráfica: lo que dura un barrido de la bolita
+const formatWindow = (s: number) => (s < 10 ? `${Math.round(s * 10) / 10} s` : `${Math.round(s)} s`);
 
 // tarjeta de una modulación. Cerrada: una línea (forma, fuente → parámetro, intensidad). Abierta:
 // la señal en vivo, la fuente, el parámetro, su ajuste principal y la intensidad; lo demás plegado
@@ -118,6 +121,8 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
   // el gesto mueve los dos parámetros (horizontal → el primero, vertical → el segundo)
   const isGesture = route.source === "track" || route.source === "orientation";
   const paramName = isGesture ? `${params.x} + ${params.y}` : params[route.target.param];
+  // la línea gris muestra el parámetro de la ruta (en el gesto y el giro, el primero de los dos)
+  const resultName = params[route.target.param];
   const patch = <K extends keyof RouteSettings>(key: K, label: string, p: Partial<NonNullable<RouteSettings[K]>>) => {
     if (!previewing.current) return patchModulationSettings(committed.id, key, label, p);
     // igual que patchModulationSettings, sobre la copia provisional
@@ -142,7 +147,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        accessibilityLabel={`Modulación ${index + 1}: ${src.label} mueve ${paramName}, intensidad ${signed(route.amount)}`}
+        accessibilityLabel={`Modulación ${index + 1}: ${src.label} mueve ${paramName}, intensidad ${percent(route.amount)}`}
         onPress={() => {
           selectFeedback();
           onToggle();
@@ -155,7 +160,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
         <Text style={styles.title} numberOfLines={1}>
           {src.label} <Text style={styles.mute}>→</Text> {paramName}
         </Text>
-        <Text style={styles.amount}>{signed(route.amount)}</Text>
+        <Text style={styles.amount}>{percent(route.amount)}</Text>
         <Icon name={expanded ? "chevron.up" : "chevron.down"} size={12} color={colors.inkMute} />
       </Pressable>
 
@@ -165,13 +170,28 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
           {/* blanco: la señal de la fuente · gris: cómo queda el parámetro */}
           <View style={styles.scope} onLayout={(e) => setScopeW(Math.round(e.nativeEvent.layout.width))}>
             {scopeW > 0 && <LiveScope route={route} routes={routes} sources={scene} base={base} width={scopeW} height={SCOPE_H} />}
-            <View style={styles.legend} pointerEvents="none">
+            <Text style={styles.timeScale} pointerEvents="none">
+              {formatWindow(scopeWindowS(route, scene))}
+            </Text>
+          </View>
+          {/* qué es cada línea, con los nombres reales */}
+          <View style={styles.legend} accessible accessibilityLabel={`Línea blanca: la señal de ${src.label}. Línea gris: cómo se mueve ${resultName}. Punteada: tu valor`}>
+            <View style={styles.legendItem}>
               <View style={[styles.swatch, styles.swatchSignal]} />
-              <Text style={styles.legendText}>{src.label}</Text>
+              <Text style={styles.legendText}>{src.label} · LA SEÑAL</Text>
+            </View>
+            <View style={styles.legendItem}>
               <View style={[styles.swatch, styles.swatchResult]} />
               <Text style={styles.legendText} numberOfLines={1}>
-                {paramName}
+                {resultName.toUpperCase()} · CÓMO SE MUEVE
               </Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={styles.swatchDash}>
+                <View style={[styles.dash, styles.swatchResult]} />
+                <View style={[styles.dash, styles.swatchResult]} />
+              </View>
+              <Text style={styles.legendText}>TU VALOR</Text>
             </View>
           </View>
 
@@ -232,13 +252,16 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
           <RouteSourceEditor route={route} scene={scene} mic={mic} patch={patch} />
 
           <CommitSlider
-            label={route.amount < 0 ? "Intensidad · invertida" : "Intensidad"}
-            format={signed}
+            label={route.amount < 0 ? "Intensidad · al revés" : "Intensidad"}
+            format={percent}
             toValue={(u) => Math.round((u * 2 - 1) * 100) / 100}
             fromValue={(v) => (v + 1) / 2}
             value={route.amount}
             onCommit={(amount) => edit("intensidad", (r) => void (r.amount = amount))}
           />
+          <Text style={styles.hint}>
+            Cuánto mueve la señal a {resultName}: 0 % no lo mueve, 100 % lo lleva de un extremo al otro. En negativo se mueve al revés.
+          </Text>
 
           {more && (
             <View style={styles.more}>
@@ -304,10 +327,15 @@ const styles = StyleSheet.create({
   amount: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
   body: { gap: space.md, paddingHorizontal: space.md, paddingBottom: space.xs },
   scope: { height: SCOPE_H, borderRadius: radius.sm, backgroundColor: colors.ink, overflow: "hidden" },
-  legend: { position: "absolute", top: 6, left: 8, flexDirection: "row", alignItems: "center", gap: 4 },
-  swatch: { width: 8, height: 2, borderRadius: 1 },
+  legend: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: space.md, rowGap: 4, marginTop: -space.sm },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 1 },
+  swatch: { width: 10, height: 2, borderRadius: 1 },
+  swatchDash: { flexDirection: "row", gap: 2, width: 10 },
+  dash: { width: 4, height: 1.5, borderRadius: 1 },
+  timeScale: { position: "absolute", right: 6, bottom: 3, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontVariant: ["tabular-nums"] },
+  hint: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, lineHeight: 15, marginTop: -space.sm },
   swatchSignal: { backgroundColor: colors.inkText },
-  swatchResult: { backgroundColor: colors.inkMute, marginLeft: 6 },
+  swatchResult: { backgroundColor: colors.inkMute },
   legendText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.6 },
   group: { gap: 6 },
   chosen: { flexDirection: "row", alignItems: "center", gap: space.sm },

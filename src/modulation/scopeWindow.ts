@@ -42,17 +42,18 @@ function adsrCycle(route: Route, sources: SourceConfig): { hold: number; cycle: 
 
 // barrido de las fuentes en vivo (micrófono, giro, ADSR en uso)
 export const LIVE_WINDOW_S = 3;
-// ventana mínima y máxima de un barrido calculado
-const SWEEP_MIN_S = 1.5;
+// escala de tiempo de la gráfica: casi fija, así la velocidad se ve como más o menos ondas
+const SWEEP_TARGET_S = 4;
 const SWEEP_MAX_S = 12;
 
-// ventana para una señal de periodo p: un número entero de ciclos (así cada barrido se ve igual y la
-// bolita recorre siempre la misma curva), al menos 1.5 s; un ciclo muy largo se corta a 12 s
+// ventana para una señal de periodo p: cuantos ciclos enteros quepan en unos 4 s (cada barrido se ve
+// igual y la bolita recorre siempre la misma curva). Un ciclo más largo se muestra entero, hasta 12 s
 function periodWindow(p: number): number {
   "worklet";
   if (!(p > 0)) return LIVE_WINDOW_S;
   if (p >= SWEEP_MAX_S) return SWEEP_MAX_S;
-  return p * Math.max(1, Math.ceil(SWEEP_MIN_S / p));
+  if (p >= SWEEP_TARGET_S) return p;
+  return p * Math.floor(SWEEP_TARGET_S / p);
 }
 
 // segundos de un barrido de la gráfica. Los barridos empiezan en múltiplos de la ventana, alineados

@@ -1,4 +1,4 @@
-import { Canvas, Circle, Line, Points, vec } from "@shopify/react-native-skia";
+import { Canvas, Circle, DashPathEffect, Line, Points, vec } from "@shopify/react-native-skia";
 import { useEffect } from "react";
 import { useAnimatedReaction, useDerivedValue, useSharedValue } from "react-native-reanimated";
 
@@ -177,10 +177,15 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
   const headTop = useDerivedValue(() => vec(ballX.get(), 0));
   const headBottom = useDerivedValue(() => vec(ballX.get(), height));
   const mid = bipolar ? PAD + h / 2 : PAD + h;
+  // tu valor: el del parámetro sin modular (la línea gris se mueve alrededor de él)
+  const baseY = PAD + (1 - (route.target.param === "x" ? base.x : base.y)) * h;
 
   return (
     <Canvas style={{ width, height }} pointerEvents="none">
       <Line p1={vec(0, mid)} p2={vec(width, mid)} color={colors.inkLine} strokeWidth={1} />
+      <Line p1={vec(0, baseY)} p2={vec(width, baseY)} color={colors.inkMute} strokeWidth={1} opacity={0.6}>
+        <DashPathEffect intervals={[3, 4]} />
+      </Line>
       <Points points={resultPts} mode="polygon" color={colors.inkMute} strokeWidth={1.5} style="stroke" opacity={0.7} />
       <Points points={aheadPts} mode="polygon" color={colors.inkText} strokeWidth={2} style="stroke" strokeJoin="round" opacity={0.3} />
       <Points points={behindPts} mode="polygon" color={colors.inkText} strokeWidth={2} style="stroke" strokeJoin="round" />
