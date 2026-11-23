@@ -141,6 +141,7 @@ export function StageView({
             <EditorCanvas
               {...canvas}
               brush={null}
+              cover
               xyLayerId={mode === "interactive" ? canvas.xyLayerId : null}
               extraGesture={mode === "interactive" ? blackoutTap : undefined}
             />

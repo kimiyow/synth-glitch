@@ -33,7 +33,7 @@ import { colors, type } from "../ui/tokens";
 import { SceneRenderer, type PaintInput } from "../render/SceneRenderer";
 import { emptyMask, usePaintBuffer } from "./usePaintBuffer";
 import { paintChainIndex } from "../paint/paintStack";
-import { clampAxis, clampZoom, fitContain, screenToImage } from "./viewTransform";
+import { clampAxis, clampZoom, fitContain, fitCover, screenToImage } from "./viewTransform";
 
 export type BrushConfig = {
   tool: BrushTool;
@@ -54,6 +54,8 @@ type Props = {
   working?: SharedValue<number>;
   // gesto adicional simultáneo (modo escenario: blackout con dos dedos)
   extraGesture?: GestureType;
+  // llenar el visor recortando (escenario) en lugar de ajustar la imagen completa
+  cover?: boolean;
   // micrófono: nivel 0..1 y contador de golpes, escritos desde JS
   mic?: { level: SharedValue<number>; hits: SharedValue<number> };
   // señales en vivo compartidas con los paneles (vista en vivo de la modulación)
@@ -106,7 +108,8 @@ export function EditorCanvas(props: Props) {
     setView({ width, height });
   };
 
-  const base = fitContain(view.width || 1, view.height || 1, contentWidth, contentHeight);
+  // cover (escenario): la imagen llena la pantalla sin franjas vacías, en cualquier orientación
+  const base = (props.cover ? fitCover : fitContain)(view.width || 1, view.height || 1, contentWidth, contentHeight);
   const scale = useSharedValue(1);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
@@ -350,7 +353,7 @@ export function EditorCanvas(props: Props) {
   };
 
   return (
-    <View style={styles.root} onLayout={onLayout}>
+    <View style={[styles.root, props.cover && styles.rootFill]} onLayout={onLayout}>
       {view.width > 0 && (
         <GestureDetector gesture={gestures}>
           <Canvas
@@ -414,6 +417,7 @@ export function EditorCanvas(props: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, overflow: "hidden", borderRadius: 22, backgroundColor: colors.inkSurface },
+  rootFill: { borderRadius: 0, backgroundColor: colors.ink },
   reset: {
     position: "absolute",
     top: 8,

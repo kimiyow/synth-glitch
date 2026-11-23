@@ -14,6 +14,15 @@ export function fitContain(viewW: number, viewH: number, imgW: number, imgH: num
   return { x: (viewW - width) / 2, y: (viewH - height) / 2, width, height };
 }
 
+// imagen cover: llena el visor recortando lo que sobra, centrada (modo escenario)
+export function fitCover(viewW: number, viewH: number, imgW: number, imgH: number): Box {
+  "worklet";
+  const scale = Math.max(viewW / imgW, viewH / imgH);
+  const width = imgW * scale;
+  const height = imgH * scale;
+  return { x: (viewW - width) / 2, y: (viewH - height) / 2, width, height };
+}
+
 // traslación en un eje: sin huecos si el contenido es mayor que el visor; si es menor se mueve
 // libre dentro del visor (p. ej. subirla para que un panel no la tape) sin salirse de él
 export function clampAxis(t: number, s: number, offset: number, size: number, view: number): number {
