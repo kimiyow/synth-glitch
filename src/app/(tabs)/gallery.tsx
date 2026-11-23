@@ -14,6 +14,7 @@ import {
   renameProjectById,
 } from "../../actions/projectActions";
 import { reportError } from "../../ui/errors";
+import { PrivacyButton } from "../../ui/PrivacyButton";
 import { ProjectActionsSheet } from "../../ui/gallery/ProjectActionsSheet";
 import { ProjectCard } from "../../ui/gallery/ProjectCard";
 import { colors, type } from "../../ui/tokens";
@@ -73,7 +74,10 @@ export default function GalleryScreen() {
     <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={[styles.header, { paddingHorizontal: margin }]}>
         <Text style={styles.bigTitle}>Galería</Text>
-        <Text style={styles.count}>{projects.length} PROYECTOS</Text>
+        <View style={styles.headerRight}>
+          <Text style={styles.count}>{projects.length} PROYECTOS</Text>
+          <PrivacyButton />
+        </View>
       </View>
       {message && (
         <Text style={[styles.message, { marginHorizontal: margin }]} onPress={() => setMessage(null)}>
@@ -125,6 +129,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   title: { color: colors.inkText, fontFamily: type.family, fontSize: type.title, letterSpacing: 1.2 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "center" },
   bigTitle: { color: colors.inkText, fontFamily: type.family, fontSize: 30, fontWeight: "700" },
   count: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   message: {
