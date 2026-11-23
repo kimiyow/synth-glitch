@@ -166,9 +166,10 @@ const styles = StyleSheet.create({
     borderColor: colors.inkLine,
     marginBottom: space.sm,
   },
+  // llena el alto de su columna: queda a la par del lienzo en lugar de flotar arriba con un hueco abajo
   side: {
+    flex: 1,
     width: SIDE_CARD_WIDTH,
-    maxHeight: "100%",
     alignSelf: "flex-end",
     marginRight: space.lg,
     borderRadius: radius.lg,

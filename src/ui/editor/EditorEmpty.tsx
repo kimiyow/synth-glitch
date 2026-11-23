@@ -57,12 +57,16 @@ export function EditorEmpty(props: Props) {
   const { busy, message, recents, onImport, onCamera, onOpenRecent, onSeeAll, renderGeneratorThumb, onDismissMessage } = props;
   // generador con el que se abre "Crear sin imagen"; null = pantalla de inicio
   const [creating, setCreating] = useState<GeneratorId | null>(null);
-  const { regular } = useLayout();
+  const { regular, landscape, margin } = useLayout();
   const { width } = useWindowDimensions();
-  const blockW = Math.min(width, regular ? PANEL_MAX_WIDTH : CONTENT_MAX_WIDTH);
+  // iPad horizontal: la columna usa casi todo el ancho y los generadores caben en una fila (con la
+  // columna de 640 las tiras se salían solo hacia la derecha y la pantalla se veía descompensada)
+  const blockW = landscape ? width - margin * 2 : Math.min(width, regular ? PANEL_MAX_WIDTH : CONTENT_MAX_WIDTH);
   const inner = blockW - space.xl * 2;
-  const genSize = Math.floor((inner - GAP * 2) / 3);
-  const recentW = Math.floor(regular ? (inner - GAP * 3) / 4 : (inner - GAP * 2) / 3);
+  const perRow = landscape ? GENERATORS.length : 3;
+  const genSize = Math.floor((inner - GAP * (perRow - 1)) / perRow);
+  const recentCols = landscape ? 6 : regular ? 4 : 3;
+  const recentW = Math.floor((inner - GAP * (recentCols - 1)) / recentCols);
   // la tira de recientes empieza alineada con la columna
   const stripInset = Math.max(space.xl, (width - blockW) / 2 + space.xl);
 

@@ -18,6 +18,7 @@ import { reportError } from "../../ui/errors";
 import { Toast } from "../../ui/kit/Toast";
 import { useImportMedia } from "../../ui/useImportMedia";
 import { PermissionScreen } from "../../ui/PermissionScreen";
+import { useLayout } from "../../ui/useLayout";
 import { colors, radius, space, type } from "../../ui/tokens";
 
 const MAX_CLIP_S = 5;
@@ -52,12 +53,15 @@ export default function CameraScreen() {
 
 function CameraCapture() {
   const { width } = useWindowDimensions();
+  // iPad horizontal: visor a lo alto a la izquierda y controles en la columna de la derecha (en
+  // columna, el visor 3:4 dejaba franjas vacías a los lados)
+  const { landscape } = useLayout();
   // figma: visor con márgenes de 18 pt y esquinas redondeadas; se mantiene 3:4 (sensor). En iPad el
   // ancho daría un visor más alto que la pantalla: se limita por el alto disponible para que el
   // obturador y su texto siempre quepan debajo
   const [areaH, setAreaH] = useState(0);
-  const byWidth = width - VIEWFINDER_MARGIN * 2;
-  const maxH = areaH > 0 ? areaH - CONTROLS_MIN_HEIGHT : Infinity;
+  const byWidth = landscape ? width * 0.62 : width - VIEWFINDER_MARGIN * 2;
+  const maxH = areaH > 0 ? areaH - (landscape ? VIEWFINDER_MARGIN * 2 : CONTROLS_MIN_HEIGHT) : Infinity;
   const viewH = Math.round(Math.min((byWidth * 4) / 3, maxH));
   const viewW = Math.round((viewH * 3) / 4);
 
@@ -177,7 +181,7 @@ function CameraCapture() {
     <SafeAreaView style={styles.root} edges={["top"]}>
       <AppHeader />
 
-      <View style={styles.area} onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}>
+      <View style={[styles.area, landscape && styles.areaRow]} onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Visor de la cámara"
@@ -277,6 +281,7 @@ const styles = StyleSheet.create({
   topOverlay: { position: "absolute", top: space.md, left: 0, right: 0, alignItems: "center" },
   bottomOverlay: { position: "absolute", bottom: space.md, left: 0, right: 0, alignItems: "center" },
   area: { flex: 1 },
+  areaRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: VIEWFINDER_MARGIN },
   controls: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.md },
   shutterRow: { flexDirection: "row", alignItems: "center", gap: 44 },
   sideSlot: { width: SIDE_BUTTON, height: SIDE_BUTTON },

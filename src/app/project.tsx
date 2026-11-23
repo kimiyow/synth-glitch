@@ -48,9 +48,10 @@ import { hasUnsavedWork, type SceneState } from "../state/sceneStore";
 import { announce } from "../ui/errors";
 import { Toast } from "../ui/kit/Toast";
 import { PrivacyNotice } from "../ui/PrivacyNotice";
+import { SIDE_CARD_WIDTH } from "../ui/kit/Sheet";
+import { useLayout } from "../ui/useLayout";
 import { useKeyboardOverlap } from "../ui/useKeyboardOverlap";
 import { colors, radius, space, type } from "../ui/tokens";
-import { useLayout } from "../ui/useLayout";
 
 // pantalla del proyecto abierto, apilada sobre las pestañas: se entra desde Cámara, Galería o el
 // editor vacío y "volver" regresa a la pestaña de donde se vino
@@ -94,7 +95,9 @@ function ProjectView({ project }: { project: Project }) {
   const isDraft = useScene((s) => s.draft);
   const canUndo = useScene((s) => s.history.past.length > 0);
   const canRedo = useScene((s) => s.history.future.length > 0);
-  const { regular, landscape } = useLayout();
+  // iPad horizontal: el panel abierto ocupa una columna a la derecha y el lienzo se ajusta al resto
+  // (abajo tapaba la imagen, que ahí llena todo el alto)
+  const { landscape } = useLayout();
   const { ref: keyboardRef, overlap: keyboardOverlap } = useKeyboardOverlap();
   const { media, layers } = project.scene;
   const strokes = project.scene.paint.strokes;
@@ -389,14 +392,12 @@ function ProjectView({ project }: { project: Project }) {
         highlighted={highlighted}
         disabled={{ brush: isClip }}
         onPress={onToolPress}
-        rail={regular}
       />
     </Animated.View>
   );
 
   return (
-    <SafeAreaView style={[styles.root, regular && styles.rootRail]} edges={["top"]}>
-      {regular && toolbar}
+    <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.main}>
         <Animated.View style={chromeStyle}>
           <EditorTopBar
@@ -415,7 +416,7 @@ function ProjectView({ project }: { project: Project }) {
             onMore={openMore}
           />
         </Animated.View>
-        <View style={styles.work}>
+        <View style={[styles.work, landscape && openPanel && styles.workRow]}>
           <View style={styles.canvasArea}>
             {image ? (
               !stage && (
@@ -468,8 +469,7 @@ function ProjectView({ project }: { project: Project }) {
           <View
             ref={keyboardRef}
             style={[
-              styles.overlay,
-              landscape && styles.overlaySide,
+              landscape && openPanel ? styles.sideColumn : styles.overlay,
               keyboardOverlap > 0 && { paddingBottom: keyboardOverlap + 8 },
               recordingRoute !== null && styles.hidden,
             ]}
@@ -538,7 +538,7 @@ function ProjectView({ project }: { project: Project }) {
           />
         )}
       </View>
-      {!regular && toolbar}
+      {toolbar}
       {privacyOpen && <PrivacyNotice onClose={() => setPrivacyOpen(false)} />}
     </SafeAreaView>
   );
@@ -546,12 +546,11 @@ function ProjectView({ project }: { project: Project }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ink },
-  rootRail: { flexDirection: "row" },
   main: { flex: 1 },
   work: { flex: 1 },
+  workRow: { flexDirection: "row" },
+  sideColumn: { width: SIDE_CARD_WIDTH + 16, paddingBottom: 8, justifyContent: "flex-start" },
   overlay: { ...StyleSheet.absoluteFill, justifyContent: "flex-end" },
-  // iPad horizontal: la tarjeta lateral ocupa del borde superior al inferior del área de trabajo
-  overlaySide: { justifyContent: "flex-start", paddingBottom: 8 },
   // oculto sin desmontar: el panel conserva su estado mientras se graba un gesto
   hidden: { display: "none" },
   canvasArea: { flex: 1, marginHorizontal: 18, marginBottom: 8 },

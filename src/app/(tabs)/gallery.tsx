@@ -33,8 +33,9 @@ function loadGallery(set: (projects: ProjectSummary[]) => void) {
 
 export default function GalleryScreen() {
   const { width } = useWindowDimensions();
-  const { regular, margin } = useLayout();
-  const columns = regular ? 4 : 2;
+  const { regular, landscape, margin } = useLayout();
+  // iPad horizontal: más columnas para llenar el ancho
+  const columns = landscape ? 6 : regular ? 4 : 2;
   const cardWidth = Math.floor((width - margin * 2 - GAP * (columns - 1)) / columns);
 
   const [projects, setProjects] = useState<ProjectSummary[]>([]);

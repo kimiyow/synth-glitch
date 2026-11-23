@@ -20,21 +20,16 @@ type Props = {
   highlighted: ToolButtonId | null;
   disabled: Partial<Record<ToolButtonId, boolean>>;
   onPress: (id: ToolButtonId) => void;
-  // iPad: riel vertical a la izquierda en lugar de la barra inferior
-  rail?: boolean;
 };
 
 // barra de herramientas modular: cada botón es un interruptor (el marcado se apaga al tocarlo)
-export function EditorToolbar({ highlighted, disabled, onPress, rail = false }: Props) {
+export function EditorToolbar({ highlighted, disabled, onPress }: Props) {
   const insets = useSafeAreaInsets();
   const { sideInset } = useLayout();
   return (
     <View
-      style={
-        rail
-          ? [styles.rail, { paddingBottom: insets.bottom, paddingLeft: Math.max(insets.left, 8) }]
-          : [styles.root, { paddingBottom: Math.max(insets.bottom, 8), paddingHorizontal: sideInset }]
-      }
+      // iPad (vertical y horizontal): las herramientas se agrupan centradas en el ancho de los paneles
+      style={[styles.root, { paddingBottom: Math.max(insets.bottom, 8), paddingHorizontal: sideInset }]}
     >
       {BUTTONS.map(({ id, label, icon }) => (
         <ToolModule
@@ -51,15 +46,6 @@ export function EditorToolbar({ highlighted, disabled, onPress, rail = false }: 
 }
 
 const styles = StyleSheet.create({
-  rail: {
-    paddingTop: 64,
-    paddingRight: 8,
-    gap: 18,
-    alignItems: "center",
-    backgroundColor: colors.ink,
-    borderRightColor: colors.inkLine,
-    borderRightWidth: StyleSheet.hairlineWidth,
-  },
   root: {
     flexDirection: "row",
     justifyContent: "space-around",
