@@ -44,7 +44,7 @@ import type { TileRef } from "../ui/editor/EffectsPanel";
 import { popOverlay, pushOverlay, toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../ui/editor/panels";
 import { useExportJob } from "../ui/editor/useExportJob";
 import { askConfirm } from "../state/confirm";
-import { hasUnsavedWork } from "../state/sceneStore";
+import { hasUnsavedWork, type SceneState } from "../state/sceneStore";
 import { announce } from "../ui/errors";
 import { Toast } from "../ui/kit/Toast";
 import { PrivacyNotice } from "../ui/PrivacyNotice";
@@ -360,10 +360,27 @@ function ProjectView({ project }: { project: Project }) {
       if (id === "intro") settingsStore.getState().update({ onboardingSeen: false });
       if (id === "privacy") setPrivacyOpen(true);
     });
+  // el escenario no toca la edición: al entrar se guarda el estado del proyecto (escena, deshacer y
+  // estado de guardado) y al salir se restaura tal cual, aunque se hayan disparado escenas
+  const stageSnapshot = useRef<Pick<SceneState, "project" | "history" | "saveStatus"> | null>(null);
   const startStage = (mode: StageMode) => {
     if (!image) return setNotice("CARGANDO LA IMAGEN…");
+    const { project: p, history, saveStatus } = sceneStore.getState();
+    stageSnapshot.current = { project: p, history, saveStatus };
     setOverlays([]);
     setStage(mode);
+  };
+  const exitStage = () => {
+    const snap = stageSnapshot.current;
+    stageSnapshot.current = null;
+    if (snap && snap.project?.id === sceneStore.getState().project?.id) {
+      if (fadeTimer.current) clearTimeout(fadeTimer.current);
+      setFade(null);
+      sceneOriginal.current = null;
+      sceneStore.setState(snap);
+      setSelectedId((id) => (snap.project?.scene.layers.some((l) => l.id === id) ? id : (snap.project?.scene.layers.at(-1)?.id ?? null)));
+    }
+    setStage(null);
   };
 
   const toolbar = (
@@ -517,7 +534,7 @@ function ProjectView({ project }: { project: Project }) {
             onScene={triggerScene}
             fadeBeats={sceneFade}
             onFadeBeats={(b) => settingsStore.getState().update({ sceneFade: b })}
-            onExit={() => setStage(null)}
+            onExit={exitStage}
           />
         )}
       </View>
