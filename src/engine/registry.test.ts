@@ -38,8 +38,8 @@ describe("registro de efectos", () => {
 });
 
 describe("registro de generadores", () => {
-  it("tiene los 3 generadores de GEN-01 en orden", () => {
-    expect(GENERATORS.map((g) => g.id)).toEqual(["noise", "bars", "voronoi"]);
+  it("tiene los generadores en orden (los 3 de GEN-01 y grilla, tablero y anillos)", () => {
+    expect(GENERATORS.map((g) => g.id)).toEqual(["noise", "bars", "voronoi", "grid", "checker", "rings"]);
   });
 
   it.each(GENERATORS.map((g) => [g.id, g.sksl]))("%s declara el contrato con blend y una sola main", (_id, sksl) => {

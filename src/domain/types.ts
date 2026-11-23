@@ -1,7 +1,7 @@
 // tipos de datos que comparte toda la app. Este archivo no importa nada
 
 export type EffectId = "chromatic" | "scanlines" | "datamosh" | "vhs" | "pixelate" | "wave" | "crt" | "pixelsort" | "databend";
-export type GeneratorId = "noise" | "bars" | "voronoi";
+export type GeneratorId = "noise" | "bars" | "voronoi" | "grid" | "checker" | "rings";
 export type StampEffect = "datamosh" | "chromatic" | "pixel" | "smear";
 
 // x, y, size normalizados al ancho de la imagen

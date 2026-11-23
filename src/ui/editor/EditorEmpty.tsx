@@ -28,6 +28,9 @@ const GENERATOR_NOTE: Record<GeneratorId, string> = {
   noise: "Grano y nubes",
   bars: "Barras de datos",
   voronoi: "Celdas",
+  grid: "Cuadrícula de líneas",
+  checker: "Casillas que parpadean",
+  rings: "Círculos que se expanden",
 };
 
 type Props = {
@@ -108,7 +111,7 @@ export function EditorEmpty(props: Props) {
           <Text style={styles.section} accessibilityRole="header">
             Sin imagen
           </Text>
-          <View style={styles.row}>
+          <View style={styles.genRow}>
             {GENERATORS.map((g) => (
               <Pressable
                 key={g.id}
@@ -301,6 +304,8 @@ const styles = StyleSheet.create({
   sectionInRow: { marginBottom: 0 },
   link: { color: colors.inkMute, fontFamily: type.family, fontSize: type.body - 1, fontWeight: "600" },
   row: { flexDirection: "row", gap: GAP },
+  // seis generadores: dos filas de tres
+  genRow: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
 
   // tarjetas (modo y generador comparten superficie, radio y textos)
   mode: {
@@ -364,7 +369,7 @@ const styles = StyleSheet.create({
     fontSize: type.label + 1,
     lineHeight: 18,
   },
-  formGenRow: { alignSelf: "stretch", flexDirection: "row", gap: space.sm, justifyContent: "space-between", marginTop: space.md },
+  formGenRow: { alignSelf: "stretch", flexDirection: "row", flexWrap: "wrap", gap: space.sm, justifyContent: "space-between", marginTop: space.md },
   formGen: { alignItems: "center", gap: 6 },
   formGenThumb: {
     padding: 1,

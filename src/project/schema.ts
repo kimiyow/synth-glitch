@@ -20,7 +20,7 @@ export const SCHEMA_VERSION = 1;
 export const MAX_STROKES = 400;
 
 const EFFECT_IDS: readonly EffectId[] = ["chromatic", "scanlines", "datamosh", "vhs", "pixelate", "wave", "crt", "pixelsort", "databend"];
-const GENERATOR_IDS: readonly GeneratorId[] = ["noise", "bars", "voronoi"];
+const GENERATOR_IDS: readonly GeneratorId[] = ["noise", "bars", "voronoi", "grid", "checker", "rings"];
 const STAMP_EFFECTS: readonly StampEffect[] = ["datamosh", "chromatic", "pixel", "smear"];
 const BLENDS = ["replace", "screen", "multiply", "difference"] as const;
 const SOURCES = ["touch", "lfo", "adsr", "sh", "seq", "mic", "track", "tempo"] as const;

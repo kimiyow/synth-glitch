@@ -9,7 +9,10 @@ import { SCANLINES_SKSL } from "./effects/scanlines.sksl";
 import { VHS_SKSL } from "./effects/vhs.sksl";
 import { WAVE_SKSL } from "./effects/wave.sksl";
 import { BARS_SKSL } from "./generators/bars.sksl";
+import { CHECKER_SKSL } from "./generators/checker.sksl";
+import { GRID_SKSL } from "./generators/grid.sksl";
 import { NOISE_SKSL } from "./generators/noise.sksl";
+import { RINGS_SKSL } from "./generators/rings.sksl";
 import { VORONOI_SKSL } from "./generators/voronoi.sksl";
 
 export type EffectDef = {
@@ -57,6 +60,9 @@ export const GENERATORS: readonly GeneratorDef[] = [
   { id: "noise", label: "NOISE", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Escala", y: "Velocidad" }, sksl: NOISE_SKSL },
   { id: "bars", label: "BARRAS", defaults: { x: 0.3, y: 0.2 }, axes: { x: "Densidad", y: "Velocidad" }, sksl: BARS_SKSL },
   { id: "voronoi", label: "VORONOI", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Celdas", y: "Velocidad" }, sksl: VORONOI_SKSL },
+  { id: "grid", label: "GRILLA", defaults: { x: 0.3, y: 0.2 }, axes: { x: "Celdas", y: "Velocidad" }, sksl: GRID_SKSL },
+  { id: "checker", label: "TABLERO", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Casillas", y: "Parpadeo" }, sksl: CHECKER_SKSL },
+  { id: "rings", label: "ANILLOS", defaults: { x: 0.3, y: 0.3 }, axes: { x: "Anillos", y: "Velocidad" }, sksl: RINGS_SKSL },
 ];
 
 export const GENERATOR_BY_ID: Readonly<Record<GeneratorId, GeneratorDef>> = Object.fromEntries(
