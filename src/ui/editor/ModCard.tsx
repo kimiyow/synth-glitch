@@ -218,7 +218,7 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
 
           {isGesture ? (
             <Text style={styles.axes} numberOfLines={1}>
-              ↔ {params.x} · ↕ {params.y}
+              Horizontal mueve {params.x} · vertical mueve {params.y}
             </Text>
           ) : (
             <Segmented
