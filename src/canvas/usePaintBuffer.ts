@@ -1,6 +1,6 @@
 import type { SkImage, SkSurface } from "@shopify/react-native-skia";
 import { Skia } from "@shopify/react-native-skia";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { runOnUI, useSharedValue } from "react-native-reanimated";
 
 import { drawMaskStamp, drawOriginal, drawStamp, paintBufferSize, replayMask, replayStrokes } from "../paint/brushEngine";
@@ -137,5 +137,19 @@ export function usePaintBuffer(original: SkImage | null, mediaW: number, mediaH:
     }
   };
 
-  return { shown, mask, beginStroke, addStamps, cancelStroke, liveCommitted, ready: original !== null };
+  // el buffer se llena en el hilo de UI un momento después de montar; si el nodo de pintura se monta
+  // antes, Skia deja la escena en negro hasta el siguiente render. Se monta cuando ya hay buffer
+  // (se consulta desde JS: avisar desde el hilo de UI cerraba Expo Go)
+  const [builtFor, setBuiltFor] = useState<SkImage | null>(null);
+  useEffect(() => {
+    if (!original) return;
+    const id = setInterval(() => {
+      if (shown.get() === null) return;
+      clearInterval(id);
+      setBuiltFor(original);
+    }, 30);
+    return () => clearInterval(id);
+  }, [original, shown]);
+
+  return { shown, mask, beginStroke, addStamps, cancelStroke, liveCommitted, ready: original !== null && builtFor === original };
 }
