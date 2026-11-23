@@ -24,8 +24,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.ink }}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
-        {/* sin deslizar desde el borde: salir siempre pasa por la confirmación de cambios */}
-        <Stack.Screen name="project" options={{ gestureEnabled: false }} />
+        {/* se vuelve también deslizando desde el borde; con cambios sin guardar, la pantalla frena la
+            salida y pregunta (usePreventRemove en project.tsx) */}
+        <Stack.Screen name="project" />
         <Stack.Screen name="test-lab" />
       </Stack>
       {DEV_TOOLS_ENABLED && <PerfHud />}

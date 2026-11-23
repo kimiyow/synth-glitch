@@ -1,5 +1,5 @@
 import { useImage, useVideo } from "@shopify/react-native-skia";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, usePreventRemove } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
@@ -44,11 +44,12 @@ import type { TileRef } from "../ui/editor/EffectsPanel";
 import { popOverlay, pushOverlay, toggleOverlay, type OverlayStack, type PanelId, type ToolButtonId } from "../ui/editor/panels";
 import { useExportJob } from "../ui/editor/useExportJob";
 import { askConfirm } from "../state/confirm";
+import { hasUnsavedWork } from "../state/sceneStore";
 import { announce } from "../ui/errors";
 import { Toast } from "../ui/kit/Toast";
 import { PrivacyNotice } from "../ui/PrivacyNotice";
 import { useKeyboardOverlap } from "../ui/useKeyboardOverlap";
-import { colors, space, type } from "../ui/tokens";
+import { colors, radius, space, type } from "../ui/tokens";
 import { useLayout } from "../ui/useLayout";
 
 // pantalla del proyecto abierto, apilada sobre las pestañas: se entra desde Cámara, Galería o el
@@ -76,6 +77,19 @@ const CHROME_DIM = 0.3;
 
 function ProjectView({ project }: { project: Project }) {
   const readOnly = useScene((s) => s.readOnly);
+  // salir (botón Volver, deslizar desde el borde o el sistema) con trabajo sin guardar se frena y
+  // pregunta; un solo camino para todas las salidas
+  const unsavedWork = useScene((s) => hasUnsavedWork(s));
+  // salida ya confirmada: primero se apaga la protección y, en el render siguiente, se repite
+  const [leaving, setLeaving] = useState<{ repeat: () => void } | null>(null);
+  usePreventRemove(unsavedWork && leaving === null, ({ repeat }) => {
+    void confirmLeave().then((leave) => {
+      if (leave) setLeaving({ repeat });
+    });
+  });
+  useEffect(() => {
+    leaving?.repeat();
+  }, [leaving]);
   const saveStatus = useScene((s) => s.saveStatus);
   const isDraft = useScene((s) => s.draft);
   const canUndo = useScene((s) => s.history.past.length > 0);
@@ -154,7 +168,12 @@ function ProjectView({ project }: { project: Project }) {
   // con Capas o Modulación abiertos el dedo ajusta X/Y de la capa abierta solo mientras siguen
   // abiertos; al cerrarlos vuelve la herramienta que había
   const fingerTool = openPanel === "layers" || openPanel === "mod" ? "effects" : activeTool;
+  // pista de inicio: con el editor recién abierto (sin herramienta ni panel) se dice por dónde
+  // empezar, hasta que se toca un botón de la barra
+  const [toolTouched, setToolTouched] = useState(false);
+  const showStartHint = !readOnly && !toolTouched && activeTool === null && openPanel === null;
   const onToolPress = (id: ToolButtonId) => {
+    setToolTouched(true);
     if (id === highlighted) {
       if (openPanel === id) setOverlays([]);
       if (id === activeTool) setActiveTool(null);
@@ -362,13 +381,11 @@ function ProjectView({ project }: { project: Project }) {
             canUndo={canUndo && !readOnly}
             canRedo={canRedo && !readOnly}
             unsaved={!readOnly && (isDraft || saveStatus.state !== "saved")}
+            readOnly={readOnly}
+            onSave={() => void exports.onExportAction("project")}
             exportOpen={openPanel === "export"}
             stageOpen={openPanel === "stage"}
-            onBack={() => {
-              void confirmLeave().then((leave) => {
-                if (leave) leaveProject();
-              });
-            }}
+            onBack={leaveProject}
             onUndo={() => sceneStore.getState().undo()}
             onRedo={() => sceneStore.getState().redo()}
             onExport={() => togglePanel("export")}
@@ -429,6 +446,11 @@ function ProjectView({ project }: { project: Project }) {
             pointerEvents="box-none"
           >
             {notice && <Toast text={notice} style={styles.notice} />}
+            {showStartHint && !notice && (
+              <View style={styles.startHint} pointerEvents="none" accessibilityLiveRegion="polite">
+                <Text style={styles.startHintText}>Elige Pincel para pintar o Efectos para añadir uno</Text>
+              </View>
+            )}
             {openPanel && (
               <LiveModContext.Provider value={{ bus, micLevel: mic.level, seed: project.scene.seed }}>
                 <GestureRecordContext.Provider value={gestureRecord}>
@@ -504,5 +526,14 @@ const styles = StyleSheet.create({
   noImage: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.inkSurface, borderRadius: 12 },
   label: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   notice: { marginBottom: 20 },
+  startHint: {
+    alignSelf: "center",
+    marginBottom: 20,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.inkSurface,
+  },
+  startHintText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label + 1 },
   warning: { position: "absolute", top: space.sm },
 });

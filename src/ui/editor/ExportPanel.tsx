@@ -29,7 +29,6 @@ type Props = {
 const ROWS: { id: ExportAction; icon: SFSymbol; label: string }[] = [
   { id: "jpg", icon: "photo", label: "JPG" },
   { id: "gif", icon: "sparkles.rectangle.stack", label: "GIF" },
-  { id: "project", icon: "folder", label: "Guardar proyecto" },
   { id: "share", icon: "square.and.arrow.up", label: "Compartir" },
   { id: "gesture", icon: "hand.draw", label: "Preset gestual" },
 ];
