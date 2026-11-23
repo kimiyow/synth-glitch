@@ -459,6 +459,8 @@ export function CommitSlider({
   onCommit,
   toValue = (u) => Math.round(u * 100) / 100,
   fromValue = (v) => v,
+  centered,
+  marks,
 }: {
   label: string;
   format: (v: number) => string;
@@ -466,6 +468,8 @@ export function CommitSlider({
   onCommit: (v: number) => void;
   toValue?: (u: number) => number;
   fromValue?: (v: number) => number;
+  centered?: boolean;
+  marks?: { left: string; mid: string; right: string };
 }) {
   const [draft, setDraft] = useState<number | null>(null);
   const preview = useContext(RoutePreview);
@@ -475,6 +479,8 @@ export function CommitSlider({
       <Slider
         label={label}
         valueText={format(shown)}
+        centered={centered}
+        marks={marks}
         value={Math.min(1, Math.max(0, fromValue(shown)))}
         onChange={(u) => {
           const v = toValue(u);

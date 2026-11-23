@@ -247,10 +247,12 @@ export function ModCard({ route: committed, index, routes: committedRoutes, para
             format={percent}
             toValue={(u) => Math.round((u * 2 - 1) * 100) / 100}
             fromValue={(v) => (v + 1) / 2}
+            centered
+            marks={{ left: "− AL REVÉS", mid: "0 · QUIETO", right: "NORMAL +" }}
             value={route.amount}
             onCommit={(amount) => edit("intensidad", (r) => void (r.amount = amount))}
           />
-          <Text style={styles.hint}>Cuánto se mueve. En negativo, al revés.</Text>
+          <Text style={styles.hint}>Cuánto se mueve. A la izquierda del centro, al revés.</Text>
 
           {more && (
             <View style={styles.more}>

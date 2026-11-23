@@ -18,7 +18,14 @@ type Props = {
   valueText?: string;
   // icono antes del nombre (p. ej. modulado o bloqueado por una modulación)
   badge?: SFSymbol;
+  // valor con centro (p. ej. intensidad de -100 % a +100 %): la barra se llena desde el medio, hay
+  // una marca en el centro que atrae a la perilla y, opcionalmente, rótulos bajo la pista
+  centered?: boolean;
+  marks?: { left: string; mid: string; right: string };
 };
+
+// cerca del centro, la perilla se queda en el centro: así es fácil volver a 0
+const CENTER_SNAP = 0.03;
 
 const THUMB = 18;
 // movimiento (pt) que decide si el dedo arrastra el deslizador (horizontal) o desplaza la hoja
@@ -27,7 +34,7 @@ const INTENT_SLOP = 6;
 // deslizador moderno: pista fina, perilla blanca y valor a la derecha (responder de RN). No cambia
 // el valor hasta saber la intención: un arrastre horizontal lo ajusta; uno vertical se cede a la
 // hoja (scroll) sin tocar el valor; un toque sin arrastre salta al punto tocado al soltar
-export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, valueText, badge }: Props) {
+export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, valueText, badge, centered = false, marks }: Props) {
   const [width, setWidth] = useState(1);
   const [active, setActive] = useState(false);
   // la perilla sigue al dedo con su propio estado; el padre puede tardar en actualizar value
@@ -35,8 +42,10 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
   const lockSheet = useContext(SheetScrollLock);
   // inicio del toque y si ya se decidió que es un arrastre del deslizador
   const touch = useRef({ x: 0, y: 0, engaged: false, cancelled: false });
-  const valueAt = (e: GestureResponderEvent) =>
-    Math.min(1, Math.max(0, (e.nativeEvent.locationX - THUMB / 2) / Math.max(1, width - THUMB)));
+  const valueAt = (e: GestureResponderEvent) => {
+    const u = Math.min(1, Math.max(0, (e.nativeEvent.locationX - THUMB / 2) / Math.max(1, width - THUMB)));
+    return centered && Math.abs(u - 0.5) < CENTER_SNAP ? 0.5 : u;
+  };
   const update = (e: GestureResponderEvent) => {
     const next = valueAt(e);
     setDrag(next);
@@ -116,10 +125,28 @@ export function Slider({ label, value, onChange, onSlidingStart, onSlidingEnd, v
         {/* sin toques en los hijos: así locationX siempre es relativo a la pista y la perilla no
             salta cuando el dedo pasa por encima de ella */}
         <View style={styles.track} pointerEvents="none">
-          <View style={[styles.fill, { width: `${v * 100}%` }]} />
+          {centered ? (
+            <View style={[styles.fill, styles.fillCentered, { left: `${Math.min(v, 0.5) * 100}%`, width: `${Math.abs(v - 0.5) * 100}%` }]} />
+          ) : (
+            <View style={[styles.fill, { width: `${v * 100}%` }]} />
+          )}
         </View>
+        {centered && <View pointerEvents="none" style={styles.centerMark} />}
         <View pointerEvents="none" style={[styles.thumb, active && styles.thumbOn, { left: v * Math.max(0, width - THUMB) }]} />
       </View>
+      {marks && (
+        <View style={styles.marks} pointerEvents="none" importantForAccessibility="no-hide-descendants">
+          <Text style={[styles.mark, styles.markLeft]} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+            {marks.left}
+          </Text>
+          <Text style={[styles.mark, styles.markMid]} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+            {marks.mid}
+          </Text>
+          <Text style={[styles.mark, styles.markRight]} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+            {marks.right}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -134,6 +161,14 @@ const styles = StyleSheet.create({
   hit: { height: 36, justifyContent: "center" },
   track: { height: 3, marginHorizontal: THUMB / 2, borderRadius: 2, backgroundColor: colors.inkRaised, overflow: "hidden" },
   fill: { height: 3, backgroundColor: colors.inkText },
+  fillCentered: { position: "absolute", top: 0 },
+  // marca del centro: más alta que la pista, debajo de la perilla
+  centerMark: { position: "absolute", left: "50%", marginLeft: -1, width: 2, height: 12, borderRadius: 1, backgroundColor: colors.inkMute },
+  marks: { flexDirection: "row", marginTop: -6, paddingHorizontal: 2 },
+  mark: { flex: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, letterSpacing: 0.6 },
+  markLeft: { textAlign: "left" },
+  markMid: { textAlign: "center" },
+  markRight: { textAlign: "right" },
   thumb: {
     position: "absolute",
     width: THUMB,
