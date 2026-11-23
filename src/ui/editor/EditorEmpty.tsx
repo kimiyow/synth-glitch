@@ -23,14 +23,14 @@ const GAP = space.sm;
 // en "Crear sin imagen" (formulario angosto)
 const FORM_GEN_THUMB = 88;
 
-// qué hace cada generador, en una línea
+// qué es cada generador, en una o dos palabras (cabe en la tarjeta)
 const GENERATOR_NOTE: Record<GeneratorId, string> = {
-  noise: "Grano y nubes",
-  bars: "Barras de datos",
+  noise: "Nubes",
+  bars: "Datos",
   voronoi: "Celdas",
-  grid: "Cuadrícula de líneas",
-  checker: "Casillas que parpadean",
-  rings: "Círculos que se expanden",
+  grid: "Líneas",
+  checker: "Casillas",
+  rings: "Ondas",
 };
 
 type Props = {
