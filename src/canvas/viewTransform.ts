@@ -14,12 +14,13 @@ export function fitContain(viewW: number, viewH: number, imgW: number, imgH: num
   return { x: (viewW - width) / 2, y: (viewH - height) / 2, width, height };
 }
 
-// traslación en un eje: sin huecos si el contenido es mayor que el visor; centrado si es menor
+// traslación en un eje: sin huecos si el contenido es mayor que el visor; si es menor se mueve
+// libre dentro del visor (p. ej. subirla para que un panel no la tape) sin salirse de él
 export function clampAxis(t: number, s: number, offset: number, size: number, view: number): number {
   "worklet";
-  const scaled = size * s;
-  if (scaled <= view) return (view - scaled) / 2 - offset * s;
-  return Math.min(-offset * s, Math.max(view - (offset + size) * s, t));
+  const lo = Math.min(-offset * s, view - (offset + size) * s);
+  const hi = Math.max(-offset * s, view - (offset + size) * s);
+  return Math.min(hi, Math.max(lo, t));
 }
 
 export function clampZoom(s: number): number {
