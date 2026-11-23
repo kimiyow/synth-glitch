@@ -20,10 +20,18 @@ export const colors = {
   // fondo de las hojas: con 0.9, el peor caso (blanco detrás) queda ≈ #2A2A2A y el gris de texto
   // sigue en ≈ 5:1
   sheet: "rgba(18,18,18,0.9)",
+  // copias desplazadas del wordmark en el glitch de entrada (IntroOverlay)
+  ghostLight: "#BFBFBF",
+  ghostDark: "#5A5A5A",
 } as const;
 
 export const type = {
   family: "Helvetica Neue",
+  // wordmark de la entrada
+  hero: 44,
+  // título grande de pantalla (Galería) y lema de la entrada
+  largeTitle: 30,
+  lead: 22,
   display: 34,
   title: 20,
   body: 15,

@@ -426,5 +426,5 @@ const styles = StyleSheet.create({
   },
   resetText: { color: colors.inkText, fontFamily: type.family, fontSize: type.label },
   previewWrap: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },
-  preview: { borderColor: colors.inkText, borderWidth: 1, backgroundColor: "rgba(255,255,255,0.15)" },
+  preview: { borderColor: colors.inkText, borderWidth: 1, backgroundColor: colors.inkLine },
 });

@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.inkText, fontFamily: type.family, fontSize: type.title, letterSpacing: 1.2 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "center" },
-  bigTitle: { color: colors.inkText, fontFamily: type.family, fontSize: 30, fontWeight: "700" },
+  bigTitle: { color: colors.inkText, fontFamily: type.family, fontSize: type.largeTitle, fontWeight: "700" },
   count: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, letterSpacing: 1.2 },
   message: {
     color: colors.paperText,

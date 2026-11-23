@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   sectionRow: { flex: 1, flexDirection: "row", alignItems: "center", gap: 5 },
   sectionText: { color: colors.inkMute, fontFamily: type.family, fontSize: type.micro, fontWeight: "600", letterSpacing: 1.2 },
   rowWrap: { height: ROW_H },
-  rowLifted: { zIndex: 10, shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  rowLifted: { zIndex: 10, shadowColor: colors.ink, shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   rowDragging: { backgroundColor: colors.inkRaised },
   // la fila levantada crece un poco (no con "Reducir movimiento")
   rowGrow: { transform: [{ scale: 1.02 }] },
