@@ -111,32 +111,33 @@ export function EditorEmpty(props: Props) {
           <Text style={styles.section} accessibilityRole="header">
             Sin imagen
           </Text>
-          <View style={styles.genRow}>
-            {GENERATORS.map((g) => (
-              <Pressable
-                key={g.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Crear sin imagen con ${g.label}: ${GENERATOR_NOTE[g.id]}`}
-                disabled={busy}
-                onPress={() => {
-                  selectFeedback();
-                  setCreating(g.id);
-                }}
-                style={({ pressed }) => [styles.genCard, { width: genSize }, pressed && styles.pressed, busy && styles.disabled]}
-              >
-                <View style={[styles.genThumb, { width: genSize, height: genSize }]}>{renderGeneratorThumb(g.id, genSize)}</View>
-                <View style={styles.genText}>
-                  <Text style={styles.cardTitle} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
-                    {g.label.charAt(0) + g.label.slice(1).toLowerCase()}
-                  </Text>
-                  <Text style={styles.cardNote} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
-                    {GENERATOR_NOTE[g.id]}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
         </View>
+        {/* tira que se desliza, como Recientes: empieza alineada con la columna y llega al borde */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.recents, { paddingHorizontal: stripInset }]}>
+          {GENERATORS.map((g) => (
+            <Pressable
+              key={g.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Crear sin imagen con ${g.label}: ${GENERATOR_NOTE[g.id]}`}
+              disabled={busy}
+              onPress={() => {
+                selectFeedback();
+                setCreating(g.id);
+              }}
+              style={({ pressed }) => [styles.genCard, { width: genSize }, pressed && styles.pressed, busy && styles.disabled]}
+            >
+              <View style={[styles.genThumb, { width: genSize, height: genSize }]}>{renderGeneratorThumb(g.id, genSize)}</View>
+              <View style={styles.genText}>
+                <Text style={styles.cardTitle} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+                  {g.label.charAt(0) + g.label.slice(1).toLowerCase()}
+                </Text>
+                <Text style={styles.cardNote} numberOfLines={1} maxFontSizeMultiplier={COMPACT_FONT_SCALE}>
+                  {GENERATOR_NOTE[g.id]}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
 
         {shown.length > 0 && (
           <>
@@ -228,7 +229,14 @@ function CreateGenerative({
       <Segmented options={ASPECTS.map((a) => ({ id: a, label: a }))} value={aspect} onChange={setAspect} />
 
       <Text style={styles.label}>GENERADOR</Text>
-      <View style={styles.formGenRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.formGenStrip}
+        contentContainerStyle={styles.formGenRow}
+        // abre con el generador elegido a la vista
+        contentOffset={{ x: Math.max(0, GENERATORS.findIndex((g) => g.id === initial) - 1) * (genSize + 6 + space.md), y: 0 }}
+      >
         {GENERATORS.map((g) => {
           const on = g.id === generator;
           return (
@@ -250,7 +258,7 @@ function CreateGenerative({
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       <Text style={styles.label}>MOVIMIENTO</Text>
       <Segmented
@@ -304,8 +312,6 @@ const styles = StyleSheet.create({
   sectionInRow: { marginBottom: 0 },
   link: { color: colors.inkMute, fontFamily: type.family, fontSize: type.body - 1, fontWeight: "600" },
   row: { flexDirection: "row", gap: GAP },
-  // seis generadores: dos filas de tres
-  genRow: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
 
   // tarjetas (modo y generador comparten superficie, radio y textos)
   mode: {
@@ -369,7 +375,9 @@ const styles = StyleSheet.create({
     fontSize: type.label + 1,
     lineHeight: 18,
   },
-  formGenRow: { alignSelf: "stretch", flexDirection: "row", flexWrap: "wrap", gap: space.sm, justifyContent: "space-between", marginTop: space.md },
+  // llega a los bordes de la pantalla: compensa el margen del formulario
+  formGenStrip: { alignSelf: "stretch", marginHorizontal: -space.xl, marginTop: space.md, flexGrow: 0 },
+  formGenRow: { gap: space.md, paddingHorizontal: space.xl },
   formGen: { alignItems: "center", gap: 6 },
   formGenThumb: {
     padding: 1,
