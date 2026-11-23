@@ -131,9 +131,9 @@ function ProjectView({ project }: { project: Project }) {
     setNotice(samples.length > 0 ? "MICRÓFONO CALIBRADO" : "SIN LECTURAS · REVISA EL PERMISO");
   };
 
-  // PINCEL activo al abrir (en clips no aplica)
-  // herramienta del dedo; null = ninguna (el dedo no pinta ni ajusta; el pellizco sigue)
-  const [activeTool, setActiveTool] = useState<"brush" | "effects" | null>(isClip ? "effects" : "brush");
+  // herramienta del dedo; null = ninguna (el dedo no pinta ni ajusta; el pellizco sigue). Al abrir
+  // el editor no hay ninguna ni panel marcado: el usuario elige
+  const [activeTool, setActiveTool] = useState<"brush" | "effects" | null>(null);
   const [overlays, setOverlays] = useState<OverlayStack>([]);
   const openPanel = (overlays.at(-1) ?? null) as PanelId | null;
   const togglePanel = (id: PanelId) => setOverlays((stack) => toggleOverlay(stack, id));
