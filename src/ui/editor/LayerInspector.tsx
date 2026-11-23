@@ -1,4 +1,4 @@
-import { useContext, useRef, useState, type ComponentRef } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { addModulation, MAX_MODS_PER_LAYER, rerollSeed, resetLayer, setBlend, toggleLayerVisible } from "../../actions/sceneEdits";
@@ -8,11 +8,10 @@ import { askConfirm } from "../../state/confirm";
 import { selectFeedback, tapFeedback } from "../../platform/haptics";
 import { ChipRow, type Chip } from "../ChipRow";
 import { Icon } from "../kit/Icon";
-import { SheetPin } from "../kit/Sheet";
 import { IconButton } from "../kit/IconButton";
 import { Slider } from "../Slider";
 import { colors, radius, space, type } from "../tokens";
-import { ModCard, SOURCE_LABEL } from "./ModCard";
+import { ModCard, SOURCE_ICON, SOURCE_LABEL } from "./ModCard";
 import type { MicView } from "./SourceEditor";
 
 const BLENDS: readonly Chip<BlendMode>[] = [
@@ -37,8 +36,13 @@ type Props = ParamDrag & {
   onBack: () => void;
   onRemove: (layerId: string) => void;
   onNotice: (text: string) => void;
-  // atajo Modulación: solo las modulaciones, con la primera abierta
+  // panel Modulación: solo las modulaciones, con la indicada (o la primera) abierta. fresh = recién
+  // creada: se abre eligiendo fuente
   focus?: "mod";
+  focusRoute?: { id: string | null; fresh: boolean } | null;
+  // fuera del panel Modulación (Capas, Efectos) las modulaciones solo se resumen: tocarlas abre el
+  // panel Modulación con esa abierta (null = la primera)
+  onOpenMod?: (layerId: string, routeId: string | null, fresh: boolean) => void;
 };
 
 export function layerDef(layer: Layer) {
@@ -52,9 +56,11 @@ export function LayerInspector(props: Props) {
   const def = layerDef(layer);
   const mods = routes.filter((r) => r.target.layerId === layer.id);
   const focusMod = props.focus === "mod";
-  const [expanded, setExpanded] = useState<string | null>(() => (focusMod ? (mods[0]?.id ?? null) : null));
+  // la modulación pedida solo cuenta si es de esta capa (en la lista del panel se puede elegir otra)
+  const asked = focusMod && props.focusRoute?.id && mods.some((r) => r.id === props.focusRoute?.id) ? props.focusRoute : null;
+  const [expanded, setExpanded] = useState<string | null>(() => (focusMod ? (asked?.id ?? mods[0]?.id ?? null) : null));
   // la última modulación creada se abre eligiendo fuente
-  const [fresh, setFresh] = useState<string | null>(null);
+  const [fresh, setFresh] = useState<string | null>(() => (asked?.fresh ? asked.id : null));
   // acciones de la capa en la hoja común: restablecer o quitar. La propia hoja es la confirmación
   const openLayerActions = async () => {
     const n = mods.length;
@@ -84,24 +90,21 @@ export function LayerInspector(props: Props) {
     const xCount = mods.filter((r) => r.target.param === "x").length;
     const yCount = mods.length - xCount;
     const id = addModulation(routes, layer.id, xCount <= yCount ? "x" : "y");
-    if (id) {
-      tapFeedback();
-      setExpanded(id);
-      setFresh(id);
-    } else props.onNotice(`MÁXIMO ${MAX_MODS_PER_LAYER} MODULACIONES POR CAPA`);
+    if (!id) return props.onNotice(`MÁXIMO ${MAX_MODS_PER_LAYER} MODULACIONES POR CAPA`);
+    tapFeedback();
+    // fuera del panel Modulación, la nueva se edita allí
+    if (!focusMod && props.onOpenMod) return props.onOpenMod(layer.id, id, true);
+    setExpanded(id);
+    setFresh(id);
   };
   const full = mods.length >= MAX_MODS_PER_LAYER;
-  // tocar el título MODULACIÓN lleva a esa sección: baja la hoja hasta ella y abre la primera (sin
-  // modulaciones, crea una, como «Añadir modulación»)
-  const sheet = useContext(SheetPin);
-  const modRef = useRef<ComponentRef<typeof View>>(null);
-  const goToMods = () => {
+  // fuera del panel Modulación: resumen de una línea por modulación; editar se hace en el panel
+  const summary = !focusMod && props.onOpenMod !== undefined;
+  const openMod = (routeId: string | null) => {
     selectFeedback();
-    const first = mods[0];
-    if (!first) return add();
-    if (!mods.some((r) => r.id === expanded)) setExpanded(first.id);
-    setTimeout(() => sheet?.scrollIntoView(modRef), 60);
+    props.onOpenMod?.(layer.id, routeId, false);
   };
+  const percent = (v: number) => `${Math.round(v * 100)} %`;
 
   return (
     <View style={styles.root}>
@@ -181,20 +184,10 @@ export function LayerInspector(props: Props) {
         </>
       )}
 
-      <View ref={modRef} collapsable={false} style={styles.modHeader}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Modulación, ${mods.length} de ${MAX_MODS_PER_LAYER}`}
-          accessibilityHint={mods.length > 0 ? "Baja a las modulaciones y abre la primera" : "Añade una modulación"}
-          hitSlop={{ top: 10, bottom: 10, right: 12 }}
-          onPress={goToMods}
-          style={({ pressed }) => [styles.modTitle, pressed && styles.pressed]}
-        >
-          <Text style={styles.section}>
-            MODULACIÓN <Text style={styles.count}>{mods.length}/{MAX_MODS_PER_LAYER}</Text>
-          </Text>
-          <Icon name="chevron.down" size={10} color={colors.inkMute} />
-        </Pressable>
+      <View style={styles.modHeader}>
+        <Text style={styles.section}>
+          MODULACIÓN <Text style={styles.count}>{mods.length}/{MAX_MODS_PER_LAYER}</Text>
+        </Text>
         {mods.length > 0 && (
           <Pressable
             accessibilityRole="button"
@@ -220,6 +213,37 @@ export function LayerInspector(props: Props) {
           <Icon name="plus" size={16} />
           <Text style={styles.emptyTitle}>Añadir modulación</Text>
         </Pressable>
+      ) : summary ? (
+        <View style={styles.cards}>
+          {mods.map((r) => {
+            const param = r.source === "track" ? `${def.axes.x} + ${def.axes.y}` : def.axes[r.target.param];
+            return (
+              <Pressable
+                key={r.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${SOURCE_LABEL[r.source]} mueve ${param}, intensidad ${percent(r.amount)}`}
+                accessibilityHint="Abre esta modulación en el panel Modulación"
+                onPress={() => openMod(r.id)}
+                style={({ pressed }) => [styles.modRow, pressed && styles.pressed]}
+              >
+                <Icon name={SOURCE_ICON[r.source]} size={14} />
+                <Text style={styles.modRowTitle} numberOfLines={1}>
+                  {SOURCE_LABEL[r.source]} <Text style={styles.count}>→</Text> {param}
+                </Text>
+                <Text style={styles.modRowAmount}>{percent(r.amount)}</Text>
+                <Icon name="chevron.right" size={12} color={colors.inkMute} />
+              </Pressable>
+            );
+          })}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => openMod(null)}
+            style={({ pressed }) => [styles.chipBtn, styles.editMods, pressed && styles.pressed]}
+          >
+            <Icon name="waveform.path" size={14} />
+            <Text style={styles.chipBtnText}>EDITAR EN MODULACIÓN</Text>
+          </Pressable>
+        </View>
       ) : (
         <View style={styles.cards}>
           {mods.map((r, i) => (
@@ -258,7 +282,18 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 32 },
   rowLabel: { width: 62, color: colors.inkText, fontFamily: type.family, fontSize: type.label },
   seed: { flex: 1, color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
-  modTitle: { flexDirection: "row", alignItems: "center", gap: 5 },
+  modRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    minHeight: 44,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.inkSurface,
+  },
+  modRowTitle: { flex: 1, color: colors.inkText, fontFamily: type.family, fontSize: type.label, fontWeight: "600", letterSpacing: 0.6 },
+  modRowAmount: { color: colors.inkMute, fontFamily: type.family, fontSize: type.label, fontVariant: ["tabular-nums"] },
+  editMods: { alignSelf: "center", marginTop: space.xs },
   modHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.xs },
   chipBtn: {
     flexDirection: "row",

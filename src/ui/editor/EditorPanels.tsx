@@ -45,6 +45,10 @@ type Props = {
   onOpenEffects: () => void;
   // fila PINTURA de Capas: abre el pincel
   onOpenBrush: () => void;
+  // abre el panel Modulación en la capa y modulación dadas (desde el resumen de Capas o Efectos)
+  onOpenMod: (layerId: string, routeId: string | null, fresh: boolean) => void;
+  // modulación que el panel Modulación abre al entrar (null = la primera)
+  modFocus: { id: string | null; fresh: boolean } | null;
   onNotice: (text: string) => void;
   // cierra el panel (✕)
   onClose: () => void;
@@ -97,6 +101,8 @@ export function EditorPanels(props: Props) {
       onRemove={props.onRemove}
       onNotice={props.onNotice}
       focus={focus}
+      focusRoute={focus === "mod" ? props.modFocus : null}
+      onOpenMod={props.onOpenMod}
       {...paramDrag}
     />
   );

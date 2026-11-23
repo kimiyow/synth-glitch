@@ -164,7 +164,16 @@ function ProjectView({ project }: { project: Project }) {
     if (id === "brush" || id === "effects") setActiveTool(id);
     // Modulación abre la capa seleccionada; sin selección, la de arriba
     if (id === "mod" && !selected && layers.length > 0) setSelectedId(layers.at(-1)?.id ?? null);
+    if (id === "mod") setModFocus(null);
     setOverlays([id]);
+  };
+  // desde el resumen de modulaciones de Capas o Efectos: el panel Modulación en esa capa, con la
+  // modulación tocada abierta (la barra marca Modulación)
+  const [modFocus, setModFocus] = useState<{ id: string | null; fresh: boolean } | null>(null);
+  const openMod = (layerId: string, routeId: string | null, fresh: boolean) => {
+    setSelectedId(layerId);
+    setModFocus({ id: routeId, fresh });
+    setOverlays(["mod"]);
   };
 
   // fichas: apagada → enciende y selecciona; encendida → selecciona. desde el detalle se quita
@@ -435,6 +444,8 @@ function ProjectView({ project }: { project: Project }) {
                     onRemove={onRemove}
                     onOpenEffects={() => onToolPress("effects")}
                     onOpenBrush={() => onToolPress("brush")}
+                    onOpenMod={openMod}
+                    modFocus={modFocus}
                     onNotice={setNotice}
                     onClose={() => setOverlays(popOverlay)}
                   onStartStage={startStage}
