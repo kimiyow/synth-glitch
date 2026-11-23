@@ -155,8 +155,8 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
       // la bolita marca el valor de este instante (en el ADSR de muestra, el del disparo de muestra)
       ball.set({ u, v: calc ? valueAt(c, t, previewInputs(c.route, c.sources, t, inputs)) : v });
     },
-    // valores compartidos estables: la reacción no se rehace con cada render ni con cada ajuste
-    [clock, micLevel, cfg],
+    // sin lista de dependencias: en iOS se ignora (Reanimated avisa en cada render). La reacción
+    // solo usa valores compartidos estables; los ajustes le llegan por cfg
   );
 
   const h = height - PAD * 2;
