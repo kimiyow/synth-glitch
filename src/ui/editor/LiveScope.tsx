@@ -36,7 +36,7 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
   const live = useLiveMod();
   const index = routes.findIndex((r) => r.id === route.id);
   const bipolar = route.source === "lfo" || route.source === "sh" || route.source === "orientation";
-  const computed = scopeComputed(route);
+  const computed = scopeComputed(route, sources);
   const sweepS = scopeWindowS(route, sources);
   // barrido en vivo: intercalado [señal, resultado] por columna
   const trace = useSharedValue<number[]>(new Array(N * 2).fill(0));
@@ -74,8 +74,10 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
       const resultAt = (tt: number, inp: ModInputs) => evaluateAxis(route.target.layerId, route.target.param, base, routes, sources, tt, inp, seed);
 
       const recording = rec !== null && rec.routeId === route.id;
-      const calc = computed && !recording && !adsrActive(route, sources, t, inputs, LIVE_WINDOW_S);
-      const w = calc ? sweepS : LIVE_WINDOW_S;
+      const adsrLive = adsrActive(route, sources, t, inputs, LIVE_WINDOW_S);
+      const calc = computed && !recording && !adsrLive;
+      // el ADSR que estás disparando usa el barrido en vivo; el azar, su propia ventana (unos pasos)
+      const w = calc || !adsrLive ? sweepS : LIVE_WINDOW_S;
       const start = Math.floor(t / w) * w;
       const u = (t - start) / w;
 
@@ -83,7 +85,7 @@ export function LiveScope({ route, routes, sources, base, width, height }: Props
       // primera vez se llena con el valor actual: una línea plana, nunca una gráfica vacía
       const s = signalAt(t, inputs);
       const r = resultAt(t, inputs);
-      const slot = Math.min(N - 1, Math.floor((t / LIVE_WINDOW_S - Math.floor(t / LIVE_WINDOW_S)) * N));
+      const slot = Math.min(N - 1, Math.floor(u * N));
       const prev = lastSlot.get();
       trace.modify((b) => {
         "worklet";

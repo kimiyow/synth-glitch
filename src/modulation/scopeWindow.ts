@@ -10,11 +10,15 @@ import { cycleHz, gesturePeriodS, routeLfo, routeSeq, routeSh } from "./sources"
 const PREVIEW_HOLD_S = 0.5;
 const PREVIEW_GAP_S = 0.3;
 
-// true si la curva se puede calcular para cualquier instante (no depende de entradas en vivo)
-export function scopeComputed(route: Route): boolean {
+// true si la curva se dibuja calculada entera (se repite igual en cada vuelta). Lo que es al azar
+// (AZAR, LFO aleatorio, pasos en orden aleatorio) cambia en cada vuelta: la bolita lo va dibujando
+// según sale, como el micrófono, en lugar de mostrar de golpe valores que aún no ocurren
+export function scopeComputed(route: Route, sources: SourceConfig): boolean {
   "worklet";
   const s = route.source;
-  if (s === "lfo" || s === "sh" || s === "seq" || s === "tempo" || s === "adsr") return true;
+  if (s === "lfo") return routeLfo(route, sources).shape !== "random";
+  if (s === "seq") return routeSeq(route, sources).direction !== "random";
+  if (s === "tempo" || s === "adsr") return true;
   if (s === "track") {
     const g = route.settings === undefined ? undefined : route.settings.gesture;
     return g !== undefined && g.samples.length >= 4 && g.durationMs > 0;
